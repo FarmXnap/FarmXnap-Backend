@@ -10,7 +10,7 @@ export default class AuthMiddleware {
   /**
    * The URL to redirect to, when authentication fails
    */
-  redirectTo = '/login'
+  // redirectTo = '/login'
 
   async handle(
     ctx: HttpContext,
@@ -19,7 +19,10 @@ export default class AuthMiddleware {
       guards?: (keyof Authenticators)[]
     } = {}
   ) {
-    await ctx.auth.authenticateUsing(options.guards, { loginRoute: this.redirectTo })
+    // await ctx.auth.authenticateUsing(options.guards, { loginRoute: this.redirectTo })
+
+    // Calling authenticateUsing without a loginRoute option forces Adonis to throw an E_UNAUTHORIZED_ACCESS error (401)
+    await ctx.auth.authenticateUsing(options.guards)
 
     return next()
   }
