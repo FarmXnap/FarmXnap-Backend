@@ -1,10 +1,12 @@
-import React from 'react'
+import { Route, Routes } from "react-router-dom"
+import Landing from "./pages/Landing"
 
 const App = () => {
   return (
     <>
-
-    <h1 className='text-emerald-400 font-bold'>FARMXNAP IS HERE</h1>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+      </Routes>
       
     </>
   )
