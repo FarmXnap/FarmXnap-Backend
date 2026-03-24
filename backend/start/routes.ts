@@ -9,6 +9,7 @@
 
 import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
+import { UserRolesEnum } from '#models/user'
 
 router
   .group(() => {
@@ -57,6 +58,14 @@ router
       .post('auth/logout', [() => import('#controllers/auth_controller'), 'logout'])
       .as('logout')
       .use(middleware.auth())
+
+    // Product routes
+    router
+      .resource('products', () => import('#controllers/products_controller'))
+      .apiOnly()
+      .only(['store', 'index'])
+      .middleware('index', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
+      .middleware('store', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
   })
   .prefix('api/v1')
   .as('api.v1')
