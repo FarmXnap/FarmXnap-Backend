@@ -16,7 +16,8 @@ router
     router
       .resource('users', () => import('#controllers/users_controller'))
       .apiOnly()
-      .only(['store'])
+      .only(['store', 'index'])
+      .middleware('index', middleware.admin_auth())
 
     // Resourceful routes for `farmer_profiles`.
     router
@@ -32,6 +33,15 @@ router
       )
       .apiOnly()
       .only(['store'])
+
+    // Route for admin to verify an agro-dealer
+    router
+      .patch('users/:user_id/agro_dealer_profiles/:id/verify', [
+        () => import('#controllers/agro_dealer_profiles_controller'),
+        'verify',
+      ])
+      .as('users.agro_dealer_profiles.verify')
+      .use(middleware.admin_auth())
 
     // Login routes.
     router

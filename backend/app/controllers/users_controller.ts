@@ -1,4 +1,4 @@
-import User from '#models/user'
+import User, { UserRolesEnum } from '#models/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
 import { rules, schema } from '@adonisjs/validator'
@@ -70,6 +70,65 @@ export default class UsersController {
           },
         },
       },
+    })
+  }
+
+  /**
+   * List farmer profiles or agro-dealer profiles for admin.
+   *
+   * `GET /api/v1/users`
+   */
+  public async index({ response }: HttpContext) {
+    const users = await User.query()
+      .select([
+        'id',
+        'phone_number',
+        'role' /** Client should use the role to determine the profile list screen on the admin dashboard */,
+      ])
+      .whereNotNull('role')
+      .preload('farmerProfile', (farmerProfileQuery) => {
+        farmerProfileQuery.select([
+          'id',
+          'user_id',
+          'full_name',
+          'state',
+          'lga',
+          'primary_crop',
+          'created_at',
+          'updated_at',
+        ])
+      })
+      .preload('agroDealerProfile', (agroDealerProfileQuery) => {
+        agroDealerProfileQuery.select([
+          'id',
+          'user_id',
+          'business_name',
+          'cac_registration_number',
+          'state',
+          'is_verified',
+          'created_at',
+          'updated_at',
+        ])
+      })
+      .orderBy('updated_at', 'desc')
+
+    return response.ok({
+      data: users.map((user) => ({
+        ...user.serialize(),
+        links: {
+          ...(user.role === UserRolesEnum.AgroDealer && user.agroDealerProfile
+            ? {
+                verify_agro_dealer: {
+                  method: 'PATCH',
+                  href: router.makeUrl('api.v1.users.agro_dealer_profiles.verify', [
+                    user.id,
+                    user.agroDealerProfile.id,
+                  ]),
+                },
+              }
+            : {}),
+        },
+      })),
     })
   }
 }
