@@ -1,10 +1,10 @@
-# hack-farmxnap-api
+# FarmXnap API
 
 ## Base URL
 
 The base URL for all API requests is:
 
-`https://hack-farmxnap-api.onrender.com/api/v1`
+`https://farmxnap-api.onrender.com/api/v1`
 
 The endpoints are **HATEOAS-compliant** i.e relevant action links are returned in the responses.
 
