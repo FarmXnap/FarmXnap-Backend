@@ -114,8 +114,8 @@ export default class FarmerProfilesController {
       }),
       messages: {
         'image.required': 'Image is required.',
-        'image.size': `Image size must not exceed ${maxSize}.`,
-        'image.extnames': `Image extension is not supported. Only ${supportedExtNames.join(', ')}`,
+        'image.file.size': `Image size must not exceed ${maxSize}.`,
+        'image.file.extname': `Image extension is not supported. Only ${supportedExtNames.join(', ')} are supported.`,
       },
     })
 
@@ -135,6 +135,21 @@ export default class FarmerProfilesController {
 
     if (!aiResult) {
       return response.ok({ data: [] })
+    }
+
+    if (aiResult.crop === 'INVALID') {
+      return response.badRequest({ error: aiResult.instructions })
+    }
+
+    if (aiResult.disease === 'HEALTHY') {
+      return response.ok({
+        data: {
+          diagnosis: {
+            instructions: aiResult.instructions,
+            crop: aiResult.crop,
+          },
+        },
+      })
     }
 
     const vectorSearch = `to_tsvector('english', p.name || ' ' || COALESCE(p.description, '') || ' ' || p.target_problems)`
@@ -194,6 +209,15 @@ export default class FarmerProfilesController {
       }
     )
 
-    return response.ok({ data: result?.rows ?? [] })
+    return response.ok({
+      data: {
+        diagnosis: {
+          crop: aiResult.crop,
+          disease: aiResult.disease,
+          instructions: aiResult.instructions,
+        },
+        treatments: result?.rows ?? [],
+      },
+    })
   }
 }
