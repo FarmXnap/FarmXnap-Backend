@@ -463,8 +463,6 @@ Fetch a list of products by a verified agro-dealer.
 
 ### **8. Scan an image and get diagnosis and treatment results**
 
-Create a product.
-
 - **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
 - **Auth Required:** Yes
 - **Authorization:** `farmer` role
