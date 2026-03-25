@@ -461,6 +461,143 @@ Fetch a list of products by a verified agro-dealer.
 }
 ```
 
+### **8. Scan an image and get diagnosis and treatment results**
+
+Create a product.
+
+- **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` role
+- **Content-Type:** `multipart/form-data`
+
+```
+{
+  image: file
+}
+```
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "data": {
+    "diagnosis": {
+      "crop": "Maize",
+      "disease": "Eyespot",
+      "instructions": "Apply a recommended fungicide containing active ingredients like Azoxystrobin to control the spread of the disease."
+    },
+    "treatments": [
+      {
+        "name": "Azoxystrobin",
+        "active_ingredient": "Azoxystrobin",
+        "price": "75190.60",
+        "stock_quantity": 24,
+        "unit": "1kg",
+        "description": "Systemic protection for maize leaves against aggressive fungal infections.",
+        "target_problems": "Maize eyespot, rust, rice blast, and powdery mildew.",
+        "category": "Fungicide",
+        "business_name": "Bailey - Schmidt",
+        "business_address": "3098 Newton Road",
+        "state": "Lagos",
+        "bank": "Stokes Group",
+        "account_number": "5239701059",
+        "phone_number": "28653272469",
+        "rank": 3
+      },
+      {
+        "name": "Mancozeb 80WP",
+        "active_ingredient": "Mancozeb 80WP",
+        "price": "74574.84",
+        "stock_quantity": 50,
+        "unit": "1kg",
+        "description": "A protective wettable powder for maize and other cereal crops...",
+        "target_problems": "Maize leaf spot, blight, and rust",
+        "category": "Fungicide",
+        "business_name": "Bailey - Schmidt",
+        "business_address": "3098 Newton Road",
+        "state": "Lagos",
+        "bank": "Stokes Group",
+        "account_number": "5239701059",
+        "phone_number": "28653272469",
+        "rank": 0.8121841996908188
+      }
+    ]
+  }
+}
+```
+
+If the crop in the image is diagnosed as healthy, a success response is still returned:
+
+```json
+{
+  "data": {
+    "diagnosis": {
+      "crop": "Maize",
+      "instructions": "Your crop looks healthy! Keep up the good work with regular weeding and watering."
+    }
+  }
+}
+```
+
+### **Frontend Implementation Note**
+
+> The treatment results are returned in descending order of relevance based on a weighted PostgreSQL similarity search. The rank field represents how closely the product matches the AI's diagnosed active ingredient and target crop.
+> To provide a better user experience for the farmer, use the rank value to label the results:
+
+```JavaScript
+/**
+ * Higher rank indicates a stronger match between the AI diagnosis
+ * and the specific product's active ingredients/crop category.
+ */
+const getMatchLabel = (rank) => {
+  if (rank > 2.5) return "Best Match (Exact Chemical)";
+  if (rank > 0.5) return "Recommended for this Crop";
+  return "General Treatment";
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You do not have permission to access this resource."
+}
+```
+
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": [
+    "Image is required.",
+    "Image extension is not supported. Only jpg, jpeg, png, webp, heic, heif are supported.",
+    "Image size must not exceed 10mb."
+  ]
+}
+```
+
+If the image is not of a crop:
+
+400 (Bad request)
+
+```json
+{
+  "error": "This doesn't look like a crop. Please upload a clear photo of the affected plant leaves."
+}
+```
+
+---
+
 ### **8. Create a Product by A Verified Agro-dealer**
 
 Create a product.
