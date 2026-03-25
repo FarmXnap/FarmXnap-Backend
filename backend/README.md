@@ -461,7 +461,90 @@ Fetch a list of products by a verified agro-dealer.
 }
 ```
 
-### **8. Scan an image and get diagnosis and treatment results**
+### **8. Create a Product by A Verified Agro-dealer**
+
+Create a product.
+
+- **Endpoint:** `POST /products/`
+- **Auth Required:** Yes
+- **Authorization:** Verified `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Request Body:**
+
+JSON
+
+```json
+{
+  "name": "Mancozeb 80WP",
+  "active_ingredient": "Mancozeb 80WP",
+  "price": 3500,
+  "stock_quantity": 4,
+  "description": "This product targets the following... and should be applied by...", // optional
+  "category": "Fungicide",
+  "unit": "1 kg",
+  "target_problems": "Early blight, Downy mildew" // optional
+}
+```
+
+**Success Response (201 Created):**
+
+```json
+{
+  "message": "Product created successfully.",
+  "data": {
+    "id": "lbap3onpjxz49st1u857e6p1",
+    "name": "Mancozeb 80WP"
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You do not have permission to access this resource."
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You cannot perform this action until you complete verification.'"
+}
+```
+
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": [
+    "Product name is required.",
+    "Active Ingredient is required.",
+    "Price is required.",
+    "Stock Quantity is required",
+    "Stock Quantity must be a number.",
+    "Category is required.",
+    "Category is invalid.",
+    "Unit is required."
+  ]
+}
+```
+
+---
+
+### **9. Scan an image and get diagnosis and treatment results**
 
 - **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
 - **Auth Required:** Yes
@@ -591,89 +674,6 @@ If the image is not of a crop:
 ```json
 {
   "error": "This doesn't look like a crop. Please upload a clear photo of the affected plant leaves."
-}
-```
-
----
-
-### **8. Create a Product by A Verified Agro-dealer**
-
-Create a product.
-
-- **Endpoint:** `POST /products/`
-- **Auth Required:** Yes
-- **Authorization:** Verified `agrodealer` role
-- **Content-Type:** `application/json`
-
-**Request Body:**
-
-JSON
-
-```json
-{
-  "name": "Mancozeb 80WP",
-  "active_ingredient": "Mancozeb 80WP",
-  "price": 3500,
-  "stock_quantity": 4,
-  "description": "This product targets the following... and should be applied by...", // optional
-  "category": "Fungicide",
-  "unit": "1 kg",
-  "target_problems": "Early blight, Downy mildew" // optional
-}
-```
-
-**Success Response (201 Created):**
-
-```json
-{
-  "message": "Product created successfully.",
-  "data": {
-    "id": "lbap3onpjxz49st1u857e6p1",
-    "name": "Mancozeb 80WP"
-  }
-}
-```
-
-**Error Responses**
-
-401 (Unauthorized)
-
-```json
-{
-  "error": "Unauthorized access"
-}
-```
-
-403 (Forbidden)
-
-```json
-{
-  "error": "You do not have permission to access this resource."
-}
-```
-
-403 (Forbidden)
-
-```json
-{
-  "error": "You cannot perform this action until you complete verification.'"
-}
-```
-
-422 (Unprocessable Entity)
-
-```json
-{
-  "errors": [
-    "Product name is required.",
-    "Active Ingredient is required.",
-    "Price is required.",
-    "Stock Quantity is required",
-    "Stock Quantity must be a number.",
-    "Category is required.",
-    "Category is invalid.",
-    "Unit is required."
-  ]
 }
 ```
 
