@@ -70,7 +70,7 @@ export default function Landing() {
         <div className="landing-hero">
           <div className="landing-live-badge" style={{ display: 'inline-flex', width: 'fit-content', marginBottom: 10 }}>
             <div className="landing-live-dot" />
-            AI-powered · For Free
+            AI-powered
           </div>
           <p className="landing-eyebrow">For Nigerian Farmers</p>
           <h1 className="landing-title">

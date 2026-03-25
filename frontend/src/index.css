@@ -13,10 +13,10 @@
   --color-brand-amber:       #EF9F27;
   --color-brand-muted:       #8DB8A4;
 
-  --font-family-syne: 'Clash Display', sans-serif;
-  --font-family-dm:   'Cabinet Grotesk', sans-serif;
-  --font-syne: 'Clash Display', sans-serif;
-  --font-dm:   'Cabinet Grotesk', sans-serif;
+  --font-family-syne: 'Syne', sans-serif;
+  --font-family-dm:   'DM Sans', sans-serif;
+  --font-syne: 'Syne', sans-serif;
+  --font-dm:   'DM Sans', sans-serif;
 }
 
 /* ── DARK (default) ── */
@@ -365,7 +365,7 @@
 .landing-root { height: 100dvh; min-height: 100dvh; width: 100%; max-width: 430px; margin: 0 auto; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; position: relative; font-family: var(--font-dm); transition: background 0.25s ease; }
 .landing-root::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 1; opacity: 0.6; }
 .landing-body { flex: 1; min-height: 0; overflow: hidden; position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 0 4px; }
-.landing-topbar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 16px) 20px 12px; }
+.landing-topbar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 36px) 20px 16px; }
 .landing-logo { font-family: var(--font-syne); font-weight: 800; font-size: 20px; color: var(--tx); letter-spacing: -0.5px; }
 .landing-logo span { color: #1D9E75; }
 .landing-live-badge { display: flex; align-items: center; gap: 6px; background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.25); border-radius: 100px; padding: 5px 10px; font-size: 11px; color: #1D9E75; font-weight: 500; }
