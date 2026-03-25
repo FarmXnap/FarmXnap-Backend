@@ -3,6 +3,8 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { rules, schema } from '@adonisjs/validator'
 import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
+import fs from 'node:fs/promises'
+import AiService, { AIDiagnosis } from '#services/ai_service'
 
 export default class FarmerProfilesController {
   /**
@@ -92,5 +94,106 @@ export default class FarmerProfilesController {
         },
       },
     })
+  }
+
+  /**
+   * Scan a crop and get diagnosis and treatment.
+   *
+   * `POST /api/v1/farmer_profiles/:farmer_profile_id/diagnose`
+   */
+  public async diagnose({ request, response }: HttpContext) {
+    const maxSize = '10mb'
+    const supportedExtNames = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']
+
+    const { image } = await request.validate({
+      schema: schema.create({
+        image: schema.file({
+          size: maxSize,
+          extnames: supportedExtNames,
+        }),
+      }),
+      messages: {
+        'image.required': 'Image is required.',
+        'image.size': `Image size must not exceed ${maxSize}.`,
+        'image.extnames': `Image extension is not supported. Only ${supportedExtNames.join(', ')}`,
+      },
+    })
+
+    if (!image.tmpPath) {
+      return response.badRequest({ error: 'File upload failed' })
+    }
+
+    const imageBuffer = await fs.readFile(image.tmpPath)
+
+    const mimeType = image.extname === 'jpg' ? 'image/jpeg' : `image/${image.extname}`
+
+    let aiResult: AIDiagnosis | null = null
+
+    try {
+      aiResult = await AiService.diagnose(imageBuffer, mimeType)
+    } catch {}
+
+    if (!aiResult) {
+      return response.ok({ data: [] })
+    }
+
+    const vectorSearch = `to_tsvector('english', p.name || ' ' || COALESCE(p.description, '') || ' ' || p.target_problems)`
+    const querySearch = `websearch_to_tsquery('english', :searchTerm)`
+    // plainto_tsquery
+    // prefer websearch_to_tsquery to plainto_tsquery
+
+    /**
+     * @todo Improve rank to factor in location proximity
+     */
+    const result = await db.rawQuery(
+      `
+      SELECT
+        p.name,
+        p.active_ingredient,
+        p.price,
+        p.stock_quantity,
+        p.unit,
+        p.description,
+        p.target_problems,
+        p.category,
+        adp.business_name,
+        adp.business_address,
+        adp.state,
+        adp.bank,
+        adp.account_number,
+        u.phone_number,
+        -- Ranking: full text search is weighted higher than fuzzy similarity
+        (
+          ts_rank(
+            ${vectorSearch},
+            ${querySearch}
+          ) * 2
+          + similarity(p.name, :searchTerm)
+          -- Also boost active ingredient similarity
+          + similarity(p.active_ingredient, :activeIngredient) * 3
+        ) AS rank
+      FROM products p
+        JOIN agro_dealer_profiles adp ON p.agro_dealer_profile_id = adp.id
+        JOIN users u on adp.user_id = u.id
+      WHERE adp.is_verified = true
+        AND p.category ILIKE :category
+        AND (
+          ${vectorSearch} @@ ${querySearch}
+          OR p.name % :searchTerm
+          OR p.target_problems % :searchTerm
+          OR p.active_ingredient % :activeIngredient 
+          OR p.active_ingredient ILIKE :activeIngredientWildcard
+        )
+      ORDER BY rank desc
+      `,
+      {
+        category: aiResult.category,
+        searchTerm: aiResult.search_term,
+        activeIngredient: aiResult.active_ingredient,
+        activeIngredientWildcard: `%${aiResult.active_ingredient}%`,
+      }
+    )
+
+    return response.ok({ data: result?.rows ?? [] })
   }
 }

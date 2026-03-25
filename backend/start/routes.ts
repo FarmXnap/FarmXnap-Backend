@@ -26,6 +26,15 @@ router
       .apiOnly()
       .only(['store'])
 
+    // Route for farmer to scan a crop and get treatment results.
+    router
+      .post('farmer_profiles/:farmer_profile_id/diagnose', [
+        () => import('#controllers/farmer_profiles_controller'),
+        'diagnose',
+      ])
+      .as('farmer_profiles.diagnose')
+      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
+
     // Resourceful routes for `agro_dealer_profiles`.
     router
       .resource(
