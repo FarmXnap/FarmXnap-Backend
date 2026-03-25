@@ -2,9 +2,10 @@
 // REAL: POST /users, POST /farmer_profiles, POST /agro_dealer_profiles
 //       POST /auth/login_request, POST /auth/login_verify, POST /auth/logout
 //       GET  /users (admin), PATCH /agro_dealer_profiles/:id/verify (admin)
-// MOCK: Diagnosis, Orders, Escrow, Payouts, Farmer/Dealer dashboards
+//       GET  /products, POST /products (dealer product management)
+//       POST /farmer_profiles/:id/diagnose (crop diagnosis)
+// MOCK: Orders, Escrow, Payouts, Farmer/Dealer dashboards
 //       (no backend endpoints exist for these yet)
-// REAL: GET /products, POST /products (dealer product management)
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://farmxnap.onrender.com/api/v1'
@@ -18,16 +19,13 @@ const getToken = () => {
 }
 
 const normalizePhone = (phone) => {
-  // Strip all non-digits
   const digits = phone.replace(/\D/g, '')
-  // Remove country code if already included (234...) or leading 0
   const stripped = digits.startsWith('234') ? digits.slice(3)
                  : digits.startsWith('0')   ? digits.slice(1)
                  : digits
   return '+234' + stripped
 }
 
-// Core fetch — throws Error with API message on non-2xx
 const apiCall = async (method, path, body, token, pin) => {
   const headers = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -38,7 +36,6 @@ const apiCall = async (method, path, body, token, pin) => {
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
-    // Try every possible error field the API might return
     const msg = json.error
       || json.message
       || json.msg
@@ -63,14 +60,12 @@ const friendlyHttpError = (status) => {
   }
 }
 
-// Wake up Render server (free tier sleeps after inactivity)
 export const pingServer = async () => {
   try {
     await fetch(`${BASE_URL}/health`, { method: 'GET' })
   } catch { /* ignore */ }
 }
 
-// Admin fetch — X-Admin-Secret header
 const adminCall = async (method, path, body) => {
   const headers = { 'X-Admin-Secret': 'hack-one-milli' }
   if (body) headers['Content-Type'] = 'application/json'
@@ -86,6 +81,21 @@ const adminCall = async (method, path, body) => {
   return json
 }
 
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+const getStoredUser = () => {
+  try {
+    const s = localStorage.getItem('farmxnap-auth')
+    return s ? JSON.parse(s)?.state?.user : null
+  } catch { return null }
+}
+
+const getStoredDealer = () => {
+  try {
+    const s = localStorage.getItem('farmxnap-auth')
+    return s ? JSON.parse(s)?.state?.user : null
+  } catch { return null }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ✅  REAL API ENDPOINTS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,8 +107,6 @@ export const requestOTP = async (phone) => {
   const uid   = res.data.user.id
   const token = res.data.token
   const norm  = normalizePhone(phone)
-  // Store in both sessionStorage AND localStorage as backup
-  // (sessionStorage clears on tab close; localStorage survives navigation)
   const keys = { 'farmxnap-otp': otp, 'farmxnap-uid': uid, 'farmxnap-phone': norm, 'farmxnap-temp-token': token }
   Object.entries(keys).forEach(([k, v]) => {
     sessionStorage.setItem(k, v)
@@ -107,7 +115,7 @@ export const requestOTP = async (phone) => {
   return { success: true, message: res.message }
 }
 
-// 2. POST /users/:id/farmer_profiles — register farmer (OTP + PIN + details together)
+// 2. POST /users/:id/farmer_profiles — register farmer
 export const submitFarmerDetails = async (data) => {
   const { transaction_pin, ...details } = data
   const uid       = sessionStorage.getItem('farmxnap-uid')       || localStorage.getItem('farmxnap-uid')
@@ -129,26 +137,25 @@ export const submitFarmerDetails = async (data) => {
     message: res.message,
     token:   res.data.token,
     user: {
-      id:    res.data.user.id,
-      role:  res.data.user.role,
-      phone: normalizePhone(details.phone),
-      name:  details.name,
-      crop:  details.crop,
-      state: details.state,
+      id:                res.data.user.id,
+      farmer_profile_id: res.data.user.farmer_profile_id || res.data.user.id,
+      role:              res.data.user.role,
+      phone:             normalizePhone(details.phone),
+      name:              details.name,
+      crop:              details.crop,
+      state:             details.state,
     },
     role: res.data.user.role,
   }
 }
 
-// 3. POST /users/:id/agro_dealer_profiles — register dealer (OTP + PIN + details together)
+// 3. POST /users/:id/agro_dealer_profiles — register dealer
 export const submitDealerDetails = async (data) => {
   const { transaction_pin, ...details } = data
   const uid       = sessionStorage.getItem('farmxnap-uid')       || localStorage.getItem('farmxnap-uid')
   const otp       = sessionStorage.getItem('farmxnap-otp')       || localStorage.getItem('farmxnap-otp')
   const tempToken = sessionStorage.getItem('farmxnap-temp-token') || localStorage.getItem('farmxnap-temp-token')
-
   if (!uid) throw new Error('Session expired. Please start registration again.')
-
   const res = await apiCall('POST', `/users/${uid}/agro_dealer_profiles`, {
     otp,
     transaction_pin,
@@ -159,13 +166,10 @@ export const submitDealerDetails = async (data) => {
     bank:                    details.bank,
     account_number:          details.account_number,
   }, tempToken)
-
   ;['farmxnap-otp','farmxnap-uid','farmxnap-phone','farmxnap-temp-token'].forEach(k => { sessionStorage.removeItem(k); localStorage.removeItem(k) })
-
-  // Store dealer profile in auth for dashboard
   const fullUser = {
     id:                      res.data.user.id,
-    role:                    'dealer',  // normalize agrodealer → dealer
+    role:                    'dealer',
     business_name:           details.business_name,
     business_address:        details.business_address,
     state:                   details.state,
@@ -201,24 +205,17 @@ export const verifyOTP = async (phone, code) => {
   sessionStorage.removeItem('farmxnap-otp')
   const rawRole = res.data.user.role
   const role    = rawRole === 'agrodealer' ? 'dealer' : rawRole
-
-  // For dealers: default is_verified to false — ProtectedRoute will redirect
-  // to /dealer-pending if not verified. Dealer must be approved by admin first.
-  // The backend login_verify endpoint does not currently return is_verified,
-  // so we fetch verification status separately after login.
   let is_verified = role === 'farmer' ? true : false
-
-  // If backend returns is_verified directly, use it
   if (role === 'dealer' && res.data.user.is_verified === true) {
     is_verified = true
   }
-
   return {
     success: true,
     message: res.message,
     token:   res.data.token,
     user: {
       id:          res.data.user.id,
+      farmer_profile_id: res.data.user.farmer_profile_id || res.data.user.id,
       role,
       phone:       res.data.user.phone_number,
       is_verified,
@@ -239,17 +236,12 @@ export const logoutUser = async () => {
   return 'Logout successful.'
 }
 
-// 7. GET /users — list all registered users with profiles
-// Response shape per docs:
-// { data: [ { id, phone_number, role, farmerProfile, agroDealerProfile, links } ] }
+// 7. GET /users — admin list all users with profiles
 export const adminGetAllUsers = async () => {
   const res   = await adminCall('GET', '/users')
-  // Defensive: API may return { data: [...] } or just [...]
   const users = Array.isArray(res.data) ? res.data
               : Array.isArray(res)      ? res
               : []
-
-
 
   const farmers = users
     .filter(u => u.farmerProfile)
@@ -293,30 +285,206 @@ export const adminGetAllUsers = async () => {
       }
     })
 
-  // Inject a mock suspended dealer for demo purposes
-  const mockSuspended = {
-    id: 'mock-suspended-001', profile_id: 'mock-profile-001',
-    business_name: 'FarmCure Supplies', business_address: '34 Market Rd, Aba',
-    phone: '+2348099887766', state: 'Abia', lga: 'Aba North',
-    cac_number: 'RC-5544332', bank: 'Zenith Bank', account_number: '2109876543',
-    is_verified: false, status: 'suspended',
-    joined: '10 Feb 2026', verify_href: null, products: 0, orders: 0, revenue: 0,
-  }
-  const allDealers = [...dealers]
-  if (!allDealers.find(d => d.status === 'suspended')) allDealers.push(mockSuspended)
-  return { farmers, dealers: allDealers, raw: users }
+  return { farmers, dealers, raw: users }
 }
 
 // 8. PATCH /users/:user_id/agro_dealer_profiles/:id/verify
 export const adminVerifyDealer = async (userId, profileId, verifyHref) => {
-  // Always build from IDs — most reliable approach
-  // verifyHref is kept as param for future use but IDs are cleaner
   const path = `/users/${userId}/agro_dealer_profiles/${profileId}/verify`
   const res = await adminCall('PATCH', path)
   return {
     success: true,
     message: res.message || 'AgroDealer verified successfully.',
     data:    res.data,
+  }
+}
+
+// 9. POST /farmer_profiles/:farmer_profile_id/diagnose — crop diagnosis
+export const diagnoseCrop = async (imageFile, cropType) => {
+  const token = getToken()
+  if (!token) throw new Error('Please sign in to use diagnosis.')
+
+  const stored = getStoredUser()
+  const farmerProfileId = stored?.farmer_profile_id || stored?.id
+  if (!farmerProfileId) throw new Error('Farmer profile not found. Please sign in again.')
+
+  const formData = new FormData()
+
+  if (imageFile instanceof File || imageFile instanceof Blob) {
+    formData.append('image', imageFile)
+  } else if (typeof imageFile === 'string' && imageFile.startsWith('data:')) {
+    const fetchRes = await fetch(imageFile)
+    const blob = await fetchRes.blob()
+    const ext = blob.type.split('/')[1] || 'jpg'
+    formData.append('image', blob, `scan.${ext}`)
+  } else if (typeof imageFile === 'string') {
+    const byteString = atob(imageFile)
+    const ab = new ArrayBuffer(byteString.length)
+    const ia = new Uint8Array(ab)
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i)
+    const blob = new Blob([ab], { type: 'image/jpeg' })
+    formData.append('image', blob, 'scan.jpg')
+  } else {
+    throw new Error('Invalid image format.')
+  }
+
+  const headers = { 'Authorization': `Bearer ${token}` }
+
+  const response = await fetch(
+    `${BASE_URL}/farmer_profiles/${farmerProfileId}/diagnose`,
+    { method: 'POST', headers, body: formData }
+  )
+
+  const json = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const msg = json.error
+      || json.message
+      || (json.errors ? (Array.isArray(json.errors) ? json.errors.join(' ') : json.errors) : null)
+      || friendlyHttpError(response.status)
+    throw new Error(msg)
+  }
+
+  const { diagnosis, treatments } = json.data
+
+  // Healthy crop — no disease detected
+  if (!diagnosis.disease) {
+    return {
+      crop:              diagnosis.crop,
+      disease:           null,
+      healthy:           true,
+      instructions:      diagnosis.instructions,
+      confidence:        100,
+      symptoms:          [],
+      remedy:            diagnosis.instructions,
+      treatment_product: null,
+      treatments:        [],
+      nearby_dealers:    [],
+      scanned_at:        new Date().toISOString(),
+    }
+  }
+
+  const getMatchLabel = (rank) => {
+    if (rank > 2.5) return 'Best Match (Exact Chemical)'
+    if (rank > 0.5) return 'Recommended for this Crop'
+    return 'General Treatment'
+  }
+
+  const mappedTreatments = (treatments || []).map(t => ({
+    id:                `${t.business_name}-${t.name}`.replace(/\s/g, '-').toLowerCase(),
+    name:              t.name,
+    active_ingredient: t.active_ingredient,
+    price:             parseFloat(t.price) || 0,
+    stock:             t.stock_quantity ?? 0,
+    stock_quantity:    t.stock_quantity ?? 0,
+    unit:              t.unit,
+    description:       t.description || '',
+    category:          t.category,
+    target_problems:   t.target_problems || '',
+    in_stock:          (t.stock_quantity ?? 0) > 0,
+    dealer_name:       t.business_name,
+    dealer_address:    t.business_address,
+    dealer_state:      t.state,
+    dealer_phone:      t.phone_number,
+    dealer_bank:       t.bank,
+    dealer_account:    t.account_number,
+    rank:              t.rank,
+    match_label:       getMatchLabel(t.rank),
+  }))
+
+  const bestTreatment = mappedTreatments[0] || null
+
+  return {
+    crop:              diagnosis.crop,
+    disease:           diagnosis.disease,
+    healthy:           false,
+    instructions:      diagnosis.instructions,
+    confidence:        null,
+    symptoms:          [],
+    remedy:            diagnosis.instructions,
+    treatment_product: bestTreatment
+      ? { id: bestTreatment.id, name: `${bestTreatment.name} (${bestTreatment.unit})`, price: bestTreatment.price }
+      : null,
+    treatments:        mappedTreatments,
+    nearby_dealers:    mappedTreatments.map(t => ({
+      id:           t.id,
+      name:         t.dealer_name,
+      address:      t.dealer_address,
+      phone:        t.dealer_phone,
+      price:        t.price,
+      in_stock:     t.in_stock,
+      stock_count:  t.stock,
+      product_name: t.name,
+      match_label:  t.match_label,
+      rank:         t.rank,
+      verified:     true,
+    })),
+    scanned_at: new Date().toISOString(),
+  }
+}
+
+// 10. GET /products — list all products for authenticated dealer
+export const getDealerProducts = async () => {
+  const token = getToken()
+  const res = await apiCall('GET', '/products', undefined, token)
+  const raw = res.data || []
+  return raw.map(p => ({
+    id:                p.id,
+    name:              p.name,
+    category:          p.category,
+    unit:              p.unit,
+    price:             parseFloat(p.price) || 0,
+    stock:             p.stock_quantity ?? 0,
+    stock_quantity:    p.stock_quantity ?? 0,
+    in_stock:          (p.stock_quantity ?? 0) > 0,
+    disease_target:    p.target_problems || '',
+    target_problems:   p.target_problems || '',
+    active_ingredient: p.active_ingredient || '',
+    description:       p.description || '',
+    links:             p.links,
+  }))
+}
+
+// 11. POST /products — create a new product
+export const createProduct = async (data) => {
+  const token = getToken()
+  const res = await apiCall('POST', '/products', {
+    name:              data.name,
+    active_ingredient: data.active_ingredient,
+    price:             Number(data.price),
+    stock_quantity:    Number(data.stock_quantity),
+    description:       data.description || undefined,
+    category:          data.category,
+    unit:              data.unit,
+    target_problems:   data.target_problems || undefined,
+  }, token)
+  return { success: true, message: res.message, data: res.data }
+}
+
+// 12. POST /products — create product (alternate entry point used by dealer dashboard)
+export const addProduct = async (data) => {
+  const token = getToken()
+  const res = await apiCall('POST', '/products', {
+    name:              data.name,
+    active_ingredient: data.active_ingredient || data.name,
+    price:             Number(data.price),
+    stock_quantity:    Number(data.stock),
+    description:       data.description || undefined,
+    category:          data.category,
+    unit:              data.unit,
+    target_problems:   data.disease_target || data.target_problems || undefined,
+  }, token)
+  return {
+    id:              res.data?.id || 'prod-' + Date.now(),
+    name:            data.name,
+    category:        data.category,
+    unit:            data.unit,
+    price:           Number(data.price),
+    stock:           Number(data.stock),
+    stock_quantity:  Number(data.stock),
+    in_stock:        Number(data.stock) > 0,
+    disease_target:  data.disease_target || '',
+    target_problems: data.disease_target || '',
   }
 }
 
@@ -328,36 +496,12 @@ export const verifyDealerPhone = async (phone, code) => ({ success: true, phone 
 // 🔶  MOCK DATA — no backend endpoints yet
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Diagnosis ─────────────────────────────────────────────────────────────────
-const MOCK_DIAGNOSES = {
-  cassava: { disease: 'Cassava mosaic disease', confidence: 93, symptoms: ['Yellow mosaic pattern on leaves','Leaf distortion and curling','Stunted plant growth','Pale green or yellow leaf color'], remedy: 'Apply Imidacloprid 200SL to control whitefly vectors. Remove and destroy infected stems immediately. Use certified disease-free planting material for replanting.', treatment_product: { id: 'prod-001', name: 'Imidacloprid 200SL (500ml)', price: 4200 } },
-  maize:   { disease: 'Northern leaf blight',  confidence: 87, symptoms: ['Long elliptical grey-green lesions','Lesions turn tan as they mature','Premature death of leaves'], remedy: 'Apply Mancozeb 80WP fungicide at first sign of disease. Ensure proper plant spacing for air circulation. Remove infected crop debris after harvest.', treatment_product: { id: 'prod-002', name: 'Mancozeb 80WP (1kg)', price: 3500 } },
-  tomato:  { disease: 'Early blight',          confidence: 91, symptoms: ['Dark brown spots with concentric rings','Yellow halo around lesions','Lower leaves affected first'], remedy: 'Spray Copper oxychloride 50WP every 7-10 days. Remove affected leaves and destroy them. Avoid overhead irrigation to reduce leaf wetness.', treatment_product: { id: 'prod-003', name: 'Copper oxychloride 50WP (500g)', price: 2800 } },
-  yam:     { disease: 'Yam anthracnose',        confidence: 78, symptoms: ['Dark water-soaked lesions on leaves','Die-back of shoot tips','Reddish-brown streaks on stems'], remedy: 'Apply Carbendazim 50WP fungicide. Treat seed yams with wood ash before planting. Rotate crops to reduce soil-borne infection.', treatment_product: { id: 'prod-004', name: 'Carbendazim 50WP (250g)', price: 1900 } },
-  rice:    { disease: 'Rice blast',             confidence: 89, symptoms: ['Diamond-shaped lesions with grey centres','Reddish-brown borders on lesions','Neck rot causing panicle to fall'], remedy: 'Apply Tricyclazole 75WP at booting stage. Use resistant varieties. Avoid excessive nitrogen fertilisation.', treatment_product: { id: 'prod-005', name: 'Tricyclazole 75WP (100g)', price: 2200 } },
-  pepper:  { disease: 'Pepper mosaic virus',    confidence: 82, symptoms: ['Mosaic yellowing on young leaves','Leaf curling and distortion','Reduced fruit size and yield'], remedy: 'Remove and destroy infected plants immediately. Control aphid vectors with Acetamiprid spray. Use virus-free transplants.', treatment_product: { id: 'prod-006', name: 'Acetamiprid 20SP (100g)', price: 1500 } },
-}
-
-const MOCK_DEALERS_NEARBY = [
-  { id: 'dealer-001', name: 'AgroFirst PH',  address: '12 Agricultural Rd, Rumuola, PH',     distance_km: 1.2, price: 4200, in_stock: true,  phone: '+234 701 234 5678', rating: 4.8, reviews: 124, verified: true,  delivery_hours: 4, stock_count: 18, badge: 'Top seller' },
-  { id: 'dealer-002', name: 'FarmMart',       address: '45 Oil Mill Rd, Diobu, PH',            distance_km: 2.8, price: 3900, in_stock: true,  phone: '+234 802 345 6789', rating: 4.5, reviews: 87,  verified: true,  delivery_hours: 6, stock_count: 7,  badge: 'Best price' },
-  { id: 'dealer-003', name: 'GreenLeaf Agro', address: '8 Ikwerre Rd, Mile 3, PH',             distance_km: 4.1, price: 4500, in_stock: false, phone: '+234 703 456 7890', rating: 4.2, reviews: 43,  verified: false, delivery_hours: 8, stock_count: 0,  badge: null },
-  { id: 'dealer-004', name: 'AgriWorld',      address: '3 Aba Rd, Rumuomasi, PH',              distance_km: 5.3, price: 4100, in_stock: true,  phone: '+234 806 567 8901', rating: 4.6, reviews: 61,  verified: true,  delivery_hours: 5, stock_count: 23, badge: 'Fast delivery' },
-]
-
-export const diagnoseCrop = async (imageBase64, cropType) => {
-  await delay(2200)
-  const key    = cropType?.toLowerCase() || 'cassava'
-  const result = MOCK_DIAGNOSES[key] || MOCK_DIAGNOSES.cassava
-  return { ...result, nearby_dealers: MOCK_DEALERS_NEARBY, scanned_at: new Date().toISOString() }
-}
-
-// ── Farmer ────────────────────────────────────────────────────────────────────
+// ── Farmer Dashboard ──────────────────────────────────────────────────────────
 const MOCK_HISTORY = [
   { id: 'scan-001', crop: 'Cassava', disease: 'Cassava mosaic disease', date: 'Mar 18, 2026', confidence: 93, status: 'treated', symptoms: ['Yellow mosaic pattern on leaves','Leaf distortion and curling','Stunted plant growth','Pale green or yellow leaf colour'], remedy: 'Apply Imidacloprid 200SL to control whitefly vectors. Remove and destroy infected stems immediately. Use certified disease-free planting material for replanting.', treatment_product: { id: 'prod-001', name: 'Imidacloprid 200SL (500ml)', price: 4200 }, order: { id: 'ord-001', ref: 'ORD-00234', status: 'delivered', dealer: 'AgroFirst Port Harcourt', dealer_phone: '+234 701 234 5678', amount: 4872, date_ordered: 'Mar 18, 2026', date_delivered: 'Mar 19, 2026', escrow_status: 'released' } },
-  { id: 'scan-002', crop: 'Maize',   disease: 'Northern leaf blight',   date: 'Mar 12, 2026', confidence: 87, status: 'treated', symptoms: ['Long elliptical grey-green lesions','Lesions turn tan as they mature','Premature death of leaves'],                                    remedy: 'Apply Mancozeb 80WP fungicide at first sign of disease. Ensure proper plant spacing for air circulation. Remove infected crop debris after harvest.',                                    treatment_product: { id: 'prod-002', name: 'Mancozeb 80WP (1kg)', price: 3500 },             order: { id: 'ord-002', ref: 'ORD-00218', status: 'delivered', dealer: 'GreenField Supplies',        dealer_phone: '+234 802 345 6789', amount: 3828, date_ordered: 'Mar 12, 2026', date_delivered: 'Mar 13, 2026', escrow_status: 'released' } },
-  { id: 'scan-003', crop: 'Tomato',  disease: 'Early blight',           date: 'Mar 5, 2026',  confidence: 91, status: 'pending', symptoms: ['Dark brown spots with concentric rings','Yellow halo around lesions','Lower leaves affected first'],                                   remedy: 'Spray Copper oxychloride 50WP every 7–10 days. Remove affected leaves and destroy them. Avoid overhead irrigation to reduce leaf wetness.',                                         treatment_product: { id: 'prod-003', name: 'Copper oxychloride 50WP (500g)', price: 2800 },   order: null },
-  { id: 'scan-004', crop: 'Yam',     disease: 'Yam anthracnose',        date: 'Feb 28, 2026', confidence: 78, status: 'treated', symptoms: ['Irregular brown leaf spots','Tip dieback on stems','Tuber rot at harvest'],                                                          remedy: 'Apply Carbendazim 50WP at planting and at 4-week intervals. Store tubers in a cool, dry, well-ventilated place. Remove and burn infected plant parts.',                            treatment_product: { id: 'prod-004', name: 'Carbendazim 50WP (250g)', price: 1900 },          order: { id: 'ord-003', ref: 'ORD-00198', status: 'dispatched', dealer: 'NaturaFarm Store',          dealer_phone: '+234 803 456 7891', amount: 2228, date_ordered: 'Feb 28, 2026', date_delivered: null, escrow_status: 'held' } },
+  { id: 'scan-002', crop: 'Maize', disease: 'Northern leaf blight', date: 'Mar 12, 2026', confidence: 87, status: 'treated', symptoms: ['Long elliptical grey-green lesions','Lesions turn tan as they mature','Premature death of leaves'], remedy: 'Apply Mancozeb 80WP fungicide at first sign of disease. Ensure proper plant spacing for air circulation. Remove infected crop debris after harvest.', treatment_product: { id: 'prod-002', name: 'Mancozeb 80WP (1kg)', price: 3500 }, order: { id: 'ord-002', ref: 'ORD-00218', status: 'delivered', dealer: 'GreenField Supplies', dealer_phone: '+234 802 345 6789', amount: 3828, date_ordered: 'Mar 12, 2026', date_delivered: 'Mar 13, 2026', escrow_status: 'released' } },
+  { id: 'scan-003', crop: 'Tomato', disease: 'Early blight', date: 'Mar 5, 2026', confidence: 91, status: 'pending', symptoms: ['Dark brown spots with concentric rings','Yellow halo around lesions','Lower leaves affected first'], remedy: 'Spray Copper oxychloride 50WP every 7–10 days. Remove affected leaves and destroy them. Avoid overhead irrigation to reduce leaf wetness.', treatment_product: { id: 'prod-003', name: 'Copper oxychloride 50WP (500g)', price: 2800 }, order: null },
+  { id: 'scan-004', crop: 'Yam', disease: 'Yam anthracnose', date: 'Feb 28, 2026', confidence: 78, status: 'treated', symptoms: ['Irregular brown leaf spots','Tip dieback on stems','Tuber rot at harvest'], remedy: 'Apply Carbendazim 50WP at planting and at 4-week intervals. Store tubers in a cool, dry, well-ventilated place. Remove and burn infected plant parts.', treatment_product: { id: 'prod-004', name: 'Carbendazim 50WP (250g)', price: 1900 }, order: { id: 'ord-003', ref: 'ORD-00198', status: 'dispatched', dealer: 'NaturaFarm Store', dealer_phone: '+234 803 456 7891', amount: 2228, date_ordered: 'Feb 28, 2026', date_delivered: null, escrow_status: 'held' } },
 ]
 
 const MOCK_FARMER_ACTIVE_ORDERS = [
@@ -366,25 +510,18 @@ const MOCK_FARMER_ACTIVE_ORDERS = [
   { id: 'ord-006', ref: 'ORD-00321', scan_id: 'scan-002', product: 'Mancozeb 80WP (1kg)', crop: 'Maize', disease: 'Northern leaf blight', dealer: 'GreenField Supplies', dealer_phone: '+234 802 345 6789', dealer_address: '88 Market Rd, Onitsha', amount: 3500, status: 'paid', date_ordered: 'Mar 24, 2026', escrow_status: 'held', expires_at: '2026-03-31T10:00:00Z' },
 ]
 
-// getFarmerProfile reads from the persisted auth store so real signup data shows
-const getStoredUser = () => {
-  try {
-    const s = localStorage.getItem('farmxnap-auth')
-    return s ? JSON.parse(s)?.state?.user : null
-  } catch { return null }
-}
-
 const MOCK_TIPS = [
-  { id: 1, title: 'Best time to spray fungicide',   body: 'Apply fungicide in the early morning or late evening to prevent evaporation and maximise leaf absorption. Avoid spraying before rain.',      crop: 'All crops', tag: 'Prevention'  },
-  { id: 2, title: 'Cassava mosaic early signs',      body: 'Watch for yellowing and twisting of young leaves. Early detection and treatment saves up to 80% of your yield.',                            crop: 'Cassava',   tag: 'Detection'   },
-  { id: 3, title: 'Crop rotation benefits',          body: 'Rotating maize with legumes like cowpea replenishes soil nitrogen and breaks pest cycles naturally. Rotate every season.',                  crop: 'Maize',     tag: 'Soil health' },
-  { id: 4, title: 'Escrow protects your money',      body: 'Your payment is held safely by Interswitch until you confirm delivery. Never release escrow before inspecting your treatment products.',    crop: 'All crops', tag: 'Finance'     },
-  { id: 5, title: 'How to confirm delivery',         body: 'After your dealer delivers, go to Orders tab → tap the order → enter your PIN to confirm. This releases payment to the dealer.',             crop: 'All crops', tag: 'How-to'      },
-  { id: 6, title: 'Tomato blight prevention',        body: 'Space tomato plants at least 60cm apart for airflow. Avoid watering leaves — drip irrigate at the base to prevent fungal spread.',         crop: 'Tomato',    tag: 'Prevention'  },
+  { id: 1, title: 'Best time to spray fungicide', body: 'Apply fungicide in the early morning or late evening to prevent evaporation and maximise leaf absorption. Avoid spraying before rain.', crop: 'All crops', tag: 'Prevention' },
+  { id: 2, title: 'Cassava mosaic early signs', body: 'Watch for yellowing and twisting of young leaves. Early detection and treatment saves up to 80% of your yield.', crop: 'Cassava', tag: 'Detection' },
+  { id: 3, title: 'Crop rotation benefits', body: 'Rotating maize with legumes like cowpea replenishes soil nitrogen and breaks pest cycles naturally. Rotate every season.', crop: 'Maize', tag: 'Soil health' },
+  { id: 4, title: 'Escrow protects your money', body: 'Your payment is held safely by Interswitch until you confirm delivery. Never release escrow before inspecting your treatment products.', crop: 'All crops', tag: 'Finance' },
+  { id: 5, title: 'How to confirm delivery', body: 'After your dealer delivers, go to Orders tab → tap the order → enter your PIN to confirm. This releases payment to the dealer.', crop: 'All crops', tag: 'How-to' },
+  { id: 6, title: 'Tomato blight prevention', body: 'Space tomato plants at least 60cm apart for airflow. Avoid watering leaves — drip irrigate at the base to prevent fungal spread.', crop: 'Tomato', tag: 'Prevention' },
 ]
 
 export const getFarmerActiveOrders = async () => { await delay(600); return MOCK_FARMER_ACTIVE_ORDERS }
 export const getFarmerHistory      = async () => { await delay(700); return MOCK_HISTORY }
+
 export const getFarmerProfile = async () => {
   await delay(300)
   const stored = getStoredUser()
@@ -404,11 +541,11 @@ export const getFarmerProfile = async () => {
     money_saved:       stored?.money_saved  || 0,
   }
 }
-export const getFarmTips           = async () => { await delay(400); return MOCK_TIPS }
+
+export const getFarmTips = async () => { await delay(400); return MOCK_TIPS }
 
 export const updateFarmerProfile = async (data) => {
   await delay(700)
-  // Merge into auth store so changes persist
   const stored = getStoredUser() || {}
   const updated = { ...stored, ...data }
   try {
@@ -425,64 +562,79 @@ export const updateFarmerProfile = async (data) => {
 export const farmerConfirmDelivery = async (orderId, pin) => {
   await delay(1000)
   const idx = MOCK_FARMER_ACTIVE_ORDERS.findIndex(o => o.id === orderId)
-  if (idx !== -1) { MOCK_FARMER_ACTIVE_ORDERS[idx].status = 'delivered'; MOCK_FARMER_ACTIVE_ORDERS[idx].escrow_status = 'released' }
+  if (idx !== -1) {
+    MOCK_FARMER_ACTIVE_ORDERS[idx].status = 'delivered'
+    MOCK_FARMER_ACTIVE_ORDERS[idx].escrow_status = 'released'
+  }
   const sIdx = MOCK_HISTORY.findIndex(s => s.order?.id === orderId)
-  if (sIdx !== -1) { MOCK_HISTORY[sIdx].status = 'treated'; MOCK_HISTORY[sIdx].order.status = 'delivered'; MOCK_HISTORY[sIdx].order.escrow_status = 'released'; MOCK_HISTORY[sIdx].order.date_delivered = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) }
+  if (sIdx !== -1) {
+    MOCK_HISTORY[sIdx].status = 'treated'
+    MOCK_HISTORY[sIdx].order.status = 'delivered'
+    MOCK_HISTORY[sIdx].order.escrow_status = 'released'
+    MOCK_HISTORY[sIdx].order.date_delivered = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+  }
   return { success: true }
 }
 
-// ── Orders & Payments ─────────────────────────────────────────────────────────
+// ── Orders & Payments (Mock) ──────────────────────────────────────────────────
 export const createOrder = async ({ item, dealer, payment_method, pin }) => {
   await delay(1000)
   const orderId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase()
   const ref     = 'FXNAP-' + Math.random().toString(36).slice(2, 10).toUpperCase()
-  return { success: true, order: { id: orderId, reference: ref, item, dealer, payment_method, status: 'escrow_held', escrow_status: 'held', paid_at: new Date().toISOString(), expires_at: new Date(Date.now() + 48*60*60*1000).toISOString(), auto_release_at: new Date(Date.now() + 120*60*60*1000).toISOString() } }
+  return {
+    success: true,
+    order: {
+      id: orderId, reference: ref, item, dealer, payment_method,
+      status: 'escrow_held', escrow_status: 'held',
+      paid_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 48*60*60*1000).toISOString(),
+      auto_release_at: new Date(Date.now() + 120*60*60*1000).toISOString(),
+    },
+  }
 }
-export const initiatePayment   = async (orderId)       => { await delay(2000); return { status: 'success', reference: 'FXNAP-' + Math.random().toString(36).slice(2, 10).toUpperCase() } }
-export const confirmDelivery   = async (orderId, pin)  => { await delay(1200); return { success: true, status: 'completed', funds_released: true } }
-export const getOrderStatus    = async (orderId)       => { await delay(600);  return { status: 'dispatched', dispatched_at: new Date().toISOString() } }
-export const releaseEscrow     = async (orderId, pin)  => { await delay(1400); return { success: true, message: 'Escrow released. Dealer payout queued.', payout_queued: true } }
+
+export const initiatePayment   = async (orderId)        => { await delay(2000); return { status: 'success', reference: 'FXNAP-' + Math.random().toString(36).slice(2, 10).toUpperCase() } }
+export const confirmDelivery   = async (orderId, pin)   => { await delay(1200); return { success: true, status: 'completed', funds_released: true } }
+export const getOrderStatus    = async (orderId)        => { await delay(600);  return { status: 'dispatched', dispatched_at: new Date().toISOString() } }
+export const releaseEscrow     = async (orderId, pin)   => { await delay(1400); return { success: true, message: 'Escrow released. Dealer payout queued.', payout_queued: true } }
 export const refundEscrow      = async (orderId, reason) => { await delay(1200); return { success: true, message: 'Refund initiated to farmer via Interswitch' } }
-export const initiateInterswitchPayment = async ({ amount }) => { await delay(1200); return { success: true, payment_ref: 'ISNG-' + Math.random().toString(36).slice(2, 10).toUpperCase(), payment_url: 'https://pay.interswitch.com/pay/mock', amount, status: 'pending' } }
-export const verifyInterswitchPayment   = async (paymentRef)  => { await delay(1000); return { success: true, status: 'escrow_held', escrow_ref: paymentRef, message: 'Payment verified and held in escrow' } }
 
-// ── Dealer ────────────────────────────────────────────────────────────────────
-// getDealerProfile reads from the persisted auth store so real signup data shows
-const getStoredDealer = () => {
-  try {
-    const s = localStorage.getItem('farmxnap-auth')
-    return s ? JSON.parse(s)?.state?.user : null
-  } catch { return null }
+export const initiateInterswitchPayment = async ({ amount }) => {
+  await delay(1200)
+  return {
+    success: true,
+    payment_ref: 'ISNG-' + Math.random().toString(36).slice(2, 10).toUpperCase(),
+    payment_url: 'https://pay.interswitch.com/pay/mock',
+    amount, status: 'pending',
+  }
 }
 
-const MOCK_DEALER_ORDERS = [
-  { id: 'order-001', ref: 'FXNAP-A7B2C3', farmer: 'Emeka Okonkwo',  farmer_phone: '+2348034567890', farmer_location: 'Rumuola, Obio-Akpor LGA',       farmer_state: 'Rivers State', crop: 'Cassava', disease: 'Cassava mosaic disease', product: 'Imidacloprid 200SL (500ml)',   quantity: 1, unit_price: 4200, delivery_fee: 500, platform_fee: 190, amount: 4750, escrow_status: 'held',     status: 'pending',   date: 'Mar 19, 2026', paid_at: 'Mar 19, 2026 09:14', notes: 'Please deliver between 9am–5pm weekdays' },
-  { id: 'order-002', ref: 'FXNAP-E5F6G7', farmer: 'Amaka Chukwu',   farmer_phone: '+2348021112233', farmer_location: 'Abakpa Nike, Enugu East LGA',    farmer_state: 'Enugu State',  crop: 'Tomato',  disease: 'Early blight',            product: 'Copper oxychloride 50WP (500g)', quantity: 2, unit_price: 2800, delivery_fee: 500, platform_fee: 116, amount: 3200, escrow_status: 'released', status: 'delivered', date: 'Mar 18, 2026', paid_at: 'Mar 16, 2026 11:30', delivered_at: 'Mar 18, 2026 14:20', notes: '' },
-  { id: 'order-003', ref: 'FXNAP-I9J0K1', farmer: 'Bola Adeyemi',   farmer_phone: '+2347056789012', farmer_location: 'Bodija, Ibadan North LGA',        farmer_state: 'Oyo State',    crop: 'Maize',   disease: 'Northern leaf blight',    product: 'Mancozeb 80WP (1kg)',           quantity: 1, unit_price: 3500, delivery_fee: 500, platform_fee: 140, amount: 2800, escrow_status: 'released', status: 'delivered', date: 'Mar 17, 2026', paid_at: 'Mar 15, 2026 08:45', delivered_at: 'Mar 17, 2026 10:00', notes: 'Call before arriving' },
-  { id: 'order-004', ref: 'FXNAP-M3N4O5', farmer: 'Chidi Nwosu',    farmer_phone: '+2348062345678', farmer_location: 'Rumuokoro, Obio-Akpor LGA',      farmer_state: 'Rivers State', crop: 'Yam',     disease: 'Yam anthracnose',         product: 'Carbendazim 50WP (250g)',       quantity: 2, unit_price: 1900, delivery_fee: 500, platform_fee: 76,  amount: 2200, escrow_status: 'held',     status: 'pending',   date: 'Mar 17, 2026', paid_at: 'Mar 17, 2026 15:22', notes: '' },
-  { id: 'order-005', ref: 'FXNAP-P6Q7R8', farmer: 'Sunday Okafor',  farmer_phone: '+2347089012345', farmer_location: 'Ikeja, Lagos Island LGA',          farmer_state: 'Lagos State',  crop: 'Rice',    disease: 'Rice blast',              product: 'Tricyclazole 75WP (100g)',      quantity: 3, unit_price: 2200, delivery_fee: 500, platform_fee: 88,  amount: 3300, escrow_status: 'held',     status: 'dispatched', date: 'Mar 20, 2026', paid_at: 'Mar 20, 2026 07:30', notes: 'Call before delivery' },
-  { id: 'order-006', ref: 'FXNAP-S9T0U1', farmer: 'Fatima Aliyu',   farmer_phone: '+2348112223344', farmer_location: 'Kano Municipal LGA',               farmer_state: 'Kano State',   crop: 'Pepper',  disease: 'Pepper mosaic virus',     product: 'Acetamiprid 20SP (100g)',       quantity: 1, unit_price: 1500, delivery_fee: 500, platform_fee: 60,  amount: 1500, escrow_status: 'refunded', status: 'refunded',   date: 'Mar 15, 2026', paid_at: 'Mar 15, 2026 12:00', notes: 'Product was out of stock' },
-]
+export const verifyInterswitchPayment = async (paymentRef) => {
+  await delay(1000)
+  return { success: true, status: 'escrow_held', escrow_ref: paymentRef, message: 'Payment verified and held in escrow' }
+}
 
-const MOCK_PRODUCTS = [
-  { id: 'prod-001', name: 'Imidacloprid 200SL',     category: 'Insecticide', price: 4200, stock: 24, unit: '500ml', disease_target: 'Mosaic virus, Whitefly',    in_stock: true,  image_placeholder: 'IM' },
-  { id: 'prod-002', name: 'Mancozeb 80WP',          category: 'Fungicide',   price: 3500, stock: 18, unit: '1kg',   disease_target: 'Blight, Rust',              in_stock: true,  image_placeholder: 'MZ' },
-  { id: 'prod-003', name: 'Copper oxychloride 50WP',category: 'Fungicide',   price: 2800, stock: 0,  unit: '500g',  disease_target: 'Early blight, Downy mildew',in_stock: false, image_placeholder: 'CO' },
-  { id: 'prod-004', name: 'Carbendazim 50WP',       category: 'Fungicide',   price: 1900, stock: 35, unit: '250g',  disease_target: 'Anthracnose, Wilt',         in_stock: true,  image_placeholder: 'CB' },
-  { id: 'prod-005', name: 'Tricyclazole 75WP',      category: 'Fungicide',   price: 2200, stock: 9,  unit: '100g',  disease_target: 'Rice blast',                in_stock: true,  image_placeholder: 'TC' },
-  { id: 'prod-006', name: 'Acetamiprid 20SP',       category: 'Insecticide', price: 1500, stock: 0,  unit: '100g',  disease_target: 'Mosaic virus, Aphids',      in_stock: false, image_placeholder: 'AC' },
+// ── Dealer Dashboard (Mock except products) ───────────────────────────────────
+const MOCK_DEALER_ORDERS = [
+  { id: 'order-001', ref: 'FXNAP-A7B2C3', farmer: 'Emeka Okonkwo', farmer_phone: '+2348034567890', farmer_location: 'Rumuola, Obio-Akpor LGA', farmer_state: 'Rivers State', crop: 'Cassava', disease: 'Cassava mosaic disease', product: 'Imidacloprid 200SL (500ml)', quantity: 1, unit_price: 4200, delivery_fee: 500, platform_fee: 190, amount: 4750, escrow_status: 'held', status: 'pending', date: 'Mar 19, 2026', paid_at: 'Mar 19, 2026 09:14', notes: 'Please deliver between 9am–5pm weekdays' },
+  { id: 'order-002', ref: 'FXNAP-E5F6G7', farmer: 'Amaka Chukwu', farmer_phone: '+2348021112233', farmer_location: 'Abakpa Nike, Enugu East LGA', farmer_state: 'Enugu State', crop: 'Tomato', disease: 'Early blight', product: 'Copper oxychloride 50WP (500g)', quantity: 2, unit_price: 2800, delivery_fee: 500, platform_fee: 116, amount: 3200, escrow_status: 'released', status: 'delivered', date: 'Mar 18, 2026', paid_at: 'Mar 16, 2026 11:30', delivered_at: 'Mar 18, 2026 14:20', notes: '' },
+  { id: 'order-003', ref: 'FXNAP-I9J0K1', farmer: 'Bola Adeyemi', farmer_phone: '+2347056789012', farmer_location: 'Bodija, Ibadan North LGA', farmer_state: 'Oyo State', crop: 'Maize', disease: 'Northern leaf blight', product: 'Mancozeb 80WP (1kg)', quantity: 1, unit_price: 3500, delivery_fee: 500, platform_fee: 140, amount: 2800, escrow_status: 'released', status: 'delivered', date: 'Mar 17, 2026', paid_at: 'Mar 15, 2026 08:45', delivered_at: 'Mar 17, 2026 10:00', notes: 'Call before arriving' },
+  { id: 'order-004', ref: 'FXNAP-M3N4O5', farmer: 'Chidi Nwosu', farmer_phone: '+2348062345678', farmer_location: 'Rumuokoro, Obio-Akpor LGA', farmer_state: 'Rivers State', crop: 'Yam', disease: 'Yam anthracnose', product: 'Carbendazim 50WP (250g)', quantity: 2, unit_price: 1900, delivery_fee: 500, platform_fee: 76, amount: 2200, escrow_status: 'held', status: 'pending', date: 'Mar 17, 2026', paid_at: 'Mar 17, 2026 15:22', notes: '' },
+  { id: 'order-005', ref: 'FXNAP-P6Q7R8', farmer: 'Sunday Okafor', farmer_phone: '+2347089012345', farmer_location: 'Ikeja, Lagos Island LGA', farmer_state: 'Lagos State', crop: 'Rice', disease: 'Rice blast', product: 'Tricyclazole 75WP (100g)', quantity: 3, unit_price: 2200, delivery_fee: 500, platform_fee: 88, amount: 3300, escrow_status: 'held', status: 'dispatched', date: 'Mar 20, 2026', paid_at: 'Mar 20, 2026 07:30', notes: 'Call before delivery' },
+  { id: 'order-006', ref: 'FXNAP-S9T0U1', farmer: 'Fatima Aliyu', farmer_phone: '+2348112223344', farmer_location: 'Kano Municipal LGA', farmer_state: 'Kano State', crop: 'Pepper', disease: 'Pepper mosaic virus', product: 'Acetamiprid 20SP (100g)', quantity: 1, unit_price: 1500, delivery_fee: 500, platform_fee: 60, amount: 1500, escrow_status: 'refunded', status: 'refunded', date: 'Mar 15, 2026', paid_at: 'Mar 15, 2026 12:00', notes: 'Product was out of stock' },
 ]
 
 const MOCK_DEALER_PAYOUTS = [
-  { id: 'pay-001', amount: 32400,  status: 'completed',  date: '14 Mar 2026', order_ref: 'ORD-00234', product: 'Mancozeb 80WP',      farmer: 'Emeka Okonkwo',  bank: 'Access Bank', account: '0123456789' },
-  { id: 'pay-002', amount: 18700,  status: 'completed',  date: '11 Mar 2026', order_ref: 'ORD-00218', product: 'Copper Fungicide',    farmer: 'Adaeze Nwosu',   bank: 'Access Bank', account: '0123456789' },
-  { id: 'pay-003', amount: 45000,  status: 'pending',    date: '17 Mar 2026', order_ref: 'ORD-00261', product: 'Ridomil Gold',        farmer: 'Ifeanyi Chukwu', bank: 'Access Bank', account: '0123456789' },
-  { id: 'pay-004', amount: 12600,  status: 'pending',    date: '18 Mar 2026', order_ref: 'ORD-00270', product: 'Lambda Insecticide',  farmer: 'Blessing Eze',   bank: 'Access Bank', account: '0123456789' },
-  { id: 'pay-005', amount: 27500,  status: 'processing', date: '19 Mar 2026', order_ref: 'ORD-00279', product: 'Emamectin Benzoate',  farmer: 'Chidi Okonkwo',  bank: 'Access Bank', account: '0123456789' },
+  { id: 'pay-001', amount: 32400, status: 'completed', date: '14 Mar 2026', order_ref: 'ORD-00234', product: 'Mancozeb 80WP', farmer: 'Emeka Okonkwo', bank: 'Access Bank', account: '0123456789' },
+  { id: 'pay-002', amount: 18700, status: 'completed', date: '11 Mar 2026', order_ref: 'ORD-00218', product: 'Copper Fungicide', farmer: 'Adaeze Nwosu', bank: 'Access Bank', account: '0123456789' },
+  { id: 'pay-003', amount: 45000, status: 'pending', date: '17 Mar 2026', order_ref: 'ORD-00261', product: 'Ridomil Gold', farmer: 'Ifeanyi Chukwu', bank: 'Access Bank', account: '0123456789' },
+  { id: 'pay-004', amount: 12600, status: 'pending', date: '18 Mar 2026', order_ref: 'ORD-00270', product: 'Lambda Insecticide', farmer: 'Blessing Eze', bank: 'Access Bank', account: '0123456789' },
+  { id: 'pay-005', amount: 27500, status: 'processing', date: '19 Mar 2026', order_ref: 'ORD-00279', product: 'Emamectin Benzoate', farmer: 'Chidi Okonkwo', bank: 'Access Bank', account: '0123456789' },
 ]
 
-export const getDealerOrders  = async () => { await delay(700); return MOCK_DEALER_ORDERS }
-export const getDealerStats   = async () => { await delay(500); return { orders_today: 3, revenue_today: 10372, new_leads: 2, total_orders: 6 } }
+export const getDealerOrders = async () => { await delay(700); return MOCK_DEALER_ORDERS }
+export const getDealerStats  = async () => { await delay(500); return { orders_today: 3, revenue_today: 10372, new_leads: 2, total_orders: 6 } }
+
 export const getDealerProfile = async () => {
   await delay(300)
   const stored = getStoredDealer()
@@ -512,9 +664,7 @@ export const updateOrderStatus = async (orderId, status) => {
   if (idx !== -1) {
     MOCK_DEALER_ORDERS[idx].status = status
     if (status === 'dispatched') {
-      // Record dispatch timestamp
       MOCK_DEALER_ORDERS[idx].dispatched_at = new Date().toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
-      // Sync to farmer's active orders by matching product name
       const dealerOrder = MOCK_DEALER_ORDERS[idx]
       const farmerIdx = MOCK_FARMER_ACTIVE_ORDERS.findIndex(o =>
         o.product === dealerOrder.product || o.ref === dealerOrder.ref
@@ -541,73 +691,6 @@ export const updateDealerProfile = async (data) => {
     }
   } catch {}
   return { success: true, user: updated }
-}
-
-// GET /products — list all products for the authenticated dealer
-export const getDealerProducts = async () => {
-  const token = getToken()
-  const res = await apiCall('GET', '/products', undefined, token)
-  const raw = res.data || []
-  // Normalize API fields to dashboard field names
-  return raw.map(p => ({
-    id:             p.id,
-    name:           p.name,
-    category:       p.category,
-    unit:           p.unit,
-    price:          parseFloat(p.price) || 0,
-    stock:          p.stock_quantity ?? 0,
-    stock_quantity: p.stock_quantity ?? 0,
-    in_stock:       (p.stock_quantity ?? 0) > 0,
-    disease_target: p.target_problems || '',
-    target_problems:p.target_problems || '',
-    active_ingredient: p.active_ingredient || '',
-    description:    p.description || '',
-    links:          p.links,
-  }))
-}
-
-// POST /products — create a new product
-export const createProduct = async (data) => {
-  const token = getToken()
-  const res = await apiCall('POST', '/products', {
-    name:               data.name,
-    active_ingredient:  data.active_ingredient,
-    price:              Number(data.price),
-    stock_quantity:     Number(data.stock_quantity),
-    description:        data.description || undefined,
-    category:           data.category,
-    unit:               data.unit,
-    target_problems:    data.target_problems || undefined,
-  }, token)
-  return { success: true, message: res.message, data: res.data }
-}
-
-// POST /products — create new product (real API)
-export const addProduct = async (data) => {
-  const token = getToken()
-  const res = await apiCall('POST', '/products', {
-    name:               data.name,
-    active_ingredient:  data.active_ingredient || data.name,
-    price:              Number(data.price),
-    stock_quantity:     Number(data.stock),
-    description:        data.description || undefined,
-    category:           data.category,
-    unit:               data.unit,
-    target_problems:    data.disease_target || data.target_problems || undefined,
-  }, token)
-  // Return normalized product
-  return {
-    id:              res.data?.id || 'prod-' + Date.now(),
-    name:            data.name,
-    category:        data.category,
-    unit:            data.unit,
-    price:           Number(data.price),
-    stock:           Number(data.stock),
-    stock_quantity:  Number(data.stock),
-    in_stock:        Number(data.stock) > 0,
-    disease_target:  data.disease_target || '',
-    target_problems: data.disease_target || '',
-  }
 }
 
 // No PATCH /products endpoint yet — update mock locally
