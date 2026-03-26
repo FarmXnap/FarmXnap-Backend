@@ -1,9 +1,10 @@
 import User, { UserRolesEnum } from '#models/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
-import { rules, schema } from '@adonisjs/validator'
+import { schema } from '@adonisjs/validator'
 import { generateOtp } from '../../helpers/utils.js'
 import router from '@adonisjs/core/services/router'
+import { rules } from '#services/validator_rules'
 
 export default class UsersController {
   /**
@@ -14,7 +15,7 @@ export default class UsersController {
   public async store({ request, response }: HttpContext) {
     const { phone_number: phoneNumber } = await request.validate({
       schema: schema.create({
-        phone_number: schema.string([rules.trim(), rules.escape(), rules.mobile()]),
+        phone_number: schema.string([rules.trim(), rules.stripTags(), rules.mobile()]),
         // email: schema.string([...stringRules, rules.email()]),
         // password: schema.string([rules.minLength(8)]),
       }),

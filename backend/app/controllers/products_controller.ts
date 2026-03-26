@@ -1,8 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import { rules, schema } from '@adonisjs/validator'
+import { schema } from '@adonisjs/validator'
 import Product, { productCategories } from '#models/product'
 import router from '@adonisjs/core/services/router'
 import AgroDealerProfile from '#models/agro_dealer_profile'
+import { rules } from '#services/validator_rules'
 
 export default class ProductsController {
   /**
@@ -52,7 +53,7 @@ export default class ProductsController {
       return response.forbidden(unverified)
     }
 
-    const stringRules = [rules.trim(), rules.escape()]
+    const stringRules = [rules.trim(), rules.stripTags()]
     const numberRules = [rules.unsigned()]
 
     const payload = await request.validate({
