@@ -74,6 +74,7 @@ test.group('Users / List', (group) => {
           business_name: user.agroDealerProfile.business_name,
           cac_registration_number: user.agroDealerProfile.cac_registration_number,
           state: user.agroDealerProfile.state,
+          lga: user.agroDealerProfile.lga,
           is_verified: user.agroDealerProfile.is_verified,
           created_at: user.agroDealerProfile.created_at.toISO(),
           updated_at: user.agroDealerProfile.updated_at.toISO(),

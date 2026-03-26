@@ -124,6 +124,12 @@ JSON
     "user": {
       "id": "hbj6l649zdfw0jc425yu5d9y",
       "role": "farmer"
+    },
+    "links": {
+      "view": {
+        "method": "GET",
+        "href": "/api/v1/users/hbj6l649zdfw0jc425yu5d9y/farmers/hbj6l649zdfw0jc425yu5d9y"
+      }
     }
   }
 }
@@ -209,6 +215,12 @@ JSON
     "user": {
       "id": "hbj6l649zdfw0jc425yu5d9y",
       "role": "agrodealer"
+    },
+    "links": {
+      "view": {
+        "method": "GET",
+        "href": "/api/v1/users/hbj6l649zdfw0jc425yu5d9y/agro_dealer_profiles/hbj6l649zdfw0jc425yu5d9y"
+      }
     }
   }
 }
@@ -403,7 +415,128 @@ JSON
 
 ---
 
-### **7. List Products by A Verified Agro-dealer**
+### **7. Show a Farmer Profile**
+
+Show a farmer profile.
+
+- **Endpoint:** `GET /users/:user_id/farmer_profiles/:id`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` role
+- **Content-Type:** `application/json`
+
+**Success Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": "zrqwoufihdhskwngo2kqgo6c",
+    "role": "farmer",
+    "phone_number": "8012344689",
+    "farmerProfile": {
+      "id": "x08f79tom3cvy2lvl30lxs52",
+      "user_id": "zrqwoufihdhskwngo2kqgo6c",
+      "full_name": "Martins Oke",
+      "state": "Zamfara",
+      "lga": "Gusau LG",
+      "address": "321 Salvatore Path",
+      "primary_crop": "Maize",
+      "created_at": "2026-03-26T19:16:39.247+00:00",
+      "updated_at": "2026-03-26T19:16:39.247+00:00"
+    }
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You do not have permission to access this resource."
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You are not authorized to view this profile.'"
+}
+```
+
+### **8. Show an AgroDealer Profile**
+
+Show an agro-dealer profile.
+
+- **Endpoint:** `GET /users/:user_id/agro_dealer_profiles/:id`
+- **Auth Required:** Yes
+- **Authorization:** `agro_dealer` role
+- **Content-Type:** `application/json`
+
+**Success Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": "j5yb3da3d5syyss6loaioinz",
+    "role": "agrodealer",
+    "phone_number": "8012344689",
+    "agroDealerProfile": {
+      "id": "h4zz268z6ff0l8zsosceiftl",
+      "user_id": "j5yb3da3d5syyss6loaioinz",
+      "cac_registration_number": "nihil",
+      "business_name": "Hudson, Jacobi and Runte",
+      "business_address": "6070 County Line Road",
+      "state": "Anambra",
+      "lga": "Nnewi-North",
+      "bank": "Feeney, Bernier and Kshlerin",
+      "account_number": "6415761219",
+      "is_verified": true,
+      "created_at": "2026-03-26T21:44:31.318+00:00",
+      "updated_at": "2026-03-26T21:44:31.318+00:00"
+    }
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You do not have permission to access this resource."
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You are not authorized to view this profile.'"
+}
+```
+
+---
+
+### **9. List Products by A Verified Agro-dealer**
 
 Fetch a list of products by a verified agro-dealer.
 
@@ -463,7 +596,7 @@ Fetch a list of products by a verified agro-dealer.
 }
 ```
 
-### **8. Create a Product by A Verified Agro-dealer**
+### **10. Create a Product by A Verified Agro-dealer**
 
 Create a product.
 
@@ -546,7 +679,7 @@ JSON
 
 ---
 
-### **9. Scan an image and get diagnosis and treatment results**
+### **11. Scan an image and get diagnosis and treatment results**
 
 - **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
 - **Auth Required:** Yes
@@ -757,6 +890,7 @@ Fetch a master list of all registered users (Farmers and Agro-Dealers) with thei
         "business_name": "Torp Inc",
         "cac_registration_number": "crinis",
         "state": "Georgia",
+        "lga": "My LGA",
         "is_verified": false,
         "created_at": "2026-03-22T14:12:32.978+00:00",
         "updated_at": "2026-03-22T14:12:32.978+00:00"

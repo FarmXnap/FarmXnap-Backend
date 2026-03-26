@@ -100,12 +100,18 @@ test.group('AgroDealer Profiles / Store', (group) => {
       assert.notEqual(trxPin, payload.transaction_pin)
 
       await user.load('agroDealerProfile')
-      assert.exists(user!.agroDealerProfile)
+      assert.exists(user.agroDealerProfile)
 
       response.assertBodyContains({
         message: 'You have successfully registered as an agro-dealer.',
         data: {
           user: { id: user!.id, role: UserRolesEnum.AgroDealer },
+          links: {
+            view: {
+              method: 'GET',
+              href: `/api/v1/users/${user.id}/agro_dealer_profiles/${user.agroDealerProfile.id}`,
+            },
+          },
         },
       })
 
