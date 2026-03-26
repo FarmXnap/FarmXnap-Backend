@@ -1,9 +1,10 @@
 import User from '#models/user'
 import { HttpContext } from '@adonisjs/core/http'
 import hash from '@adonisjs/core/services/hash'
-import { rules, schema } from '@adonisjs/validator'
+import { schema } from '@adonisjs/validator'
 import { generateOtp } from '../../helpers/utils.js'
 import router from '@adonisjs/core/services/router'
+import { rules } from '#services/validator_rules'
 
 export default class AuthController {
   /**
@@ -13,7 +14,7 @@ export default class AuthController {
   public async loginRequest({ request, response }: HttpContext) {
     const { phone_number: phoneNumber } = await request.validate({
       schema: schema.create({
-        phone_number: schema.string([rules.trim(), rules.escape(), rules.mobile()]),
+        phone_number: schema.string([rules.trim(), rules.stripTags(), rules.mobile()]),
       }),
       messages: {
         'phone_number.required': 'Phone Number is required.',
@@ -50,7 +51,7 @@ export default class AuthController {
    * `POST /api/v1/auth/login_verify`
    */
   public async loginVerify({ request, response }: HttpContext) {
-    const stringRules = [rules.trim(), rules.escape()]
+    const stringRules = [rules.trim(), rules.stripTags()]
     const { phone_number: phoneNumber, otp: otpCode } = await request.validate({
       schema: schema.create({
         phone_number: schema.string([...stringRules, rules.mobile()]),
@@ -118,7 +119,7 @@ export default class AuthController {
 
 //     const { email, password } = await request.validate({
 //       schema: schema.create({
-//         email: schema.string([rules.trim(), rules.escape(), rules.email()]),
+//         email: schema.string([rules.trim(), rules.stripTags(), rules.email()]),
 //         password: schema.string(),
 //       }),
 //     })

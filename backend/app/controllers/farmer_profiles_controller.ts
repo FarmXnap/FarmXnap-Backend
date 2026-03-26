@@ -1,10 +1,11 @@
 import User, { UserRolesEnum } from '#models/user'
 import type { HttpContext } from '@adonisjs/core/http'
-import { rules, schema } from '@adonisjs/validator'
+import { schema } from '@adonisjs/validator'
 import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import fs from 'node:fs/promises'
 import AiService, { AIDiagnosis } from '#services/ai_service'
+import { rules } from '#services/validator_rules'
 
 export default class FarmerProfilesController {
   /**
@@ -27,7 +28,7 @@ export default class FarmerProfilesController {
       })
     }
 
-    const stringRules = [rules.trim(), rules.escape()]
+    const stringRules = [rules.trim(), rules.stripTags()]
 
     const {
       otp,
