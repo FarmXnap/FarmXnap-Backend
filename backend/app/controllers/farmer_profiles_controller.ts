@@ -5,6 +5,8 @@ import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import fs from 'node:fs/promises'
 import AiService, { AIDiagnosis } from '#services/ai_service'
+import { ModelObject } from '@adonisjs/lucid/types/model'
+import router from '@adonisjs/core/services/router'
 
 export default class FarmerProfilesController {
   /**
@@ -163,6 +165,7 @@ export default class FarmerProfilesController {
     const result = await db.rawQuery(
       `
       SELECT
+        p.id,
         p.name,
         p.active_ingredient,
         p.price,
@@ -216,7 +219,18 @@ export default class FarmerProfilesController {
           disease: aiResult.disease,
           instructions: aiResult.instructions,
         },
-        treatments: result?.rows ?? [],
+        treatments:
+          result?.rows && result.rows.length
+            ? result.rows.map((row: ModelObject /** todo: provide type */) => ({
+                ...row,
+                links: {
+                  create_order: {
+                    method: 'POST',
+                    href: router.makeUrl('api.v1.products.orders.store', [row.id]),
+                  },
+                },
+              }))
+            : [],
       },
     })
   }

@@ -46,6 +46,9 @@ export default class AgroDealerProfilesController {
         state: schema.string(stringRules),
         transaction_pin: schema.string([...stringRules, rules.minLength(4), rules.maxLength(4)]),
         // Bank detail fields are not nullable for this hackathon demo. In future, they can be nullable during signup and another endpoint for updating profile details provided
+        /**
+         * @todo: Verify bank account with InterSwitch API.
+         */
         bank: schema.string(stringRules),
         account_number: schema.string([...stringRules, rules.minLength(4), rules.maxLength(10)]),
       }),
