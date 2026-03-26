@@ -20,7 +20,10 @@ export default class FarmerProfile extends BaseModel {
   declare state: string
 
   @column()
-  declare lga: string | null
+  declare lga: string
+
+  @column()
+  declare address: string
 
   @column()
   declare primary_crop: string

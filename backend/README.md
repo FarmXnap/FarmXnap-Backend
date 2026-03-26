@@ -106,7 +106,8 @@ JSON
   "full_name": "Deborah Okeke",
   "phone_number": "+2348012345678",
   "state": "My State",
-  "lga": "lga", // optional
+  "lga": "lga",
+  "address": "1, Carter Street, Lagos",
   "primary_crop": "Plantain"
 }
 ```
@@ -189,6 +190,7 @@ JSON
   "business_name": "Test Enterprise",
   "business_address": "1, Allen Avenue, Ikeja",
   "state": "My State",
+  "lga": "lga",
   "cac_registration_number": "RC-123456",
   "bank": "First Bank",
   "account_number": "1234567890"

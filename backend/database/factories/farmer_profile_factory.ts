@@ -8,6 +8,7 @@ export const FarmerProfileFactory = factory
       full_name: faker.person.firstName(),
       state: faker.location.state(),
       lga: faker.location.county(),
+      address: faker.location.streetAddress(),
       primary_crop: faker.lorem.word(),
     }
   })

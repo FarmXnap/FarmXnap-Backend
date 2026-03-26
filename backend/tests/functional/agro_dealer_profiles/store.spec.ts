@@ -40,6 +40,7 @@ test.group('AgroDealer Profiles / Store', (group) => {
         business_name: faker.company.name(),
         business_address: faker.location.streetAddress(),
         state: faker.location.state(),
+        lga: faker.location.county(),
         cac_registration_number: faker.lorem.word(),
         bank: faker.company.name(),
         account_number:
@@ -118,6 +119,7 @@ test.group('AgroDealer Profiles / Store', (group) => {
         cac_registration_number: payload.cac_registration_number,
         state: payload.state,
         user_id: user!.id,
+        lga: payload.lga,
       })
     })
     .tags(['agro_dealers', 'create_agro_dealer'])

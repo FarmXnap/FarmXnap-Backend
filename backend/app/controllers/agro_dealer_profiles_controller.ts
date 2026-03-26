@@ -33,6 +33,7 @@ export default class AgroDealerProfilesController {
       business_name: businessName,
       cac_registration_number: cacRegNumber,
       business_address: businessAddress,
+      lga,
       state,
       bank,
       account_number: accountNumber,
@@ -44,6 +45,7 @@ export default class AgroDealerProfilesController {
         cac_registration_number: schema.string(stringRules),
         business_address: schema.string(stringRules),
         state: schema.string(stringRules),
+        lga: schema.string(stringRules),
         transaction_pin: schema.string([...stringRules, rules.minLength(4), rules.maxLength(4)]),
         // Bank detail fields are not nullable for this hackathon demo. In future, they can be nullable during signup and another endpoint for updating profile details provided
         bank: schema.string(stringRules),
@@ -55,6 +57,7 @@ export default class AgroDealerProfilesController {
         'cac_registration_number.required': 'CAC Registration Number is required.',
         'business_address.required': 'Business Address is required.',
         'state.required': 'State is required.',
+        'lga.required': 'LGA is required.',
         'transaction_pin.minLength': 'Transaction Pin must be 4 digits.',
         'transaction_pin.maxLength': 'Transaction Pin must be 4 digits.',
         'bank.required': 'Bank is required.',
@@ -85,6 +88,7 @@ export default class AgroDealerProfilesController {
           business_name: businessName,
           cac_registration_number: cacRegNumber,
           state,
+          lga,
         },
         { client: trx }
       )

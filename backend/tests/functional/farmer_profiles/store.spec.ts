@@ -39,6 +39,7 @@ test.group('Farmer Profiles / Store', (group) => {
         full_name: faker.person.firstName(),
         state: faker.location.state(),
         lga: faker.location.county(),
+        address: faker.location.streetAddress(),
         primary_crop: faker.lorem.word(),
         transaction_pin: condition === 'transaction_pin_not_appropriate_length' ? '123' : '1234',
       }
@@ -102,6 +103,7 @@ test.group('Farmer Profiles / Store', (group) => {
         lga: payload.lga,
         primary_crop: payload.primary_crop,
         user_id: user!.id,
+        address: payload.address,
       })
     })
     .tags(['farmer_profiles', 'create_farmer_profile'])
