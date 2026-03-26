@@ -86,12 +86,18 @@ test.group('Farmer Profiles / Store', (group) => {
       assert.notEqual(trxPin, payload.transaction_pin)
 
       await user.load('farmerProfile')
-      assert.exists(user!.farmerProfile)
+      assert.exists(user.farmerProfile)
 
       response.assertBodyContains({
         message: 'You have successfully registered as a farmer.',
         data: {
           user: { id: user!.id, role: UserRolesEnum.Farmer },
+          links: {
+            view: {
+              method: 'GET',
+              href: `/api/v1/users/${user.id}/farmer_profiles/${user.farmerProfile.id}`,
+            },
+          },
         },
       })
 

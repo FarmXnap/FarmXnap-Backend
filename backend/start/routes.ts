@@ -24,7 +24,8 @@ router
     router
       .resource('users.farmer_profiles', () => import('#controllers/farmer_profiles_controller'))
       .apiOnly()
-      .only(['store'])
+      .only(['store', 'show'])
+      .middleware('show', [middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
 
     // Route for farmer to scan a crop and get treatment results.
     router

@@ -105,6 +105,7 @@ export default class UsersController {
           'business_name',
           'cac_registration_number',
           'state',
+          'lga',
           'is_verified',
           'created_at',
           'updated_at',
