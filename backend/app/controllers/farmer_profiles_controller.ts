@@ -36,6 +36,7 @@ export default class FarmerProfilesController {
       full_name: fullName,
       state,
       lga,
+      address,
       primary_crop: primaryCrop,
       transaction_pin: transactionPin,
     } = await request.validate({
@@ -43,7 +44,8 @@ export default class FarmerProfilesController {
         otp: schema.string(stringRules),
         full_name: schema.string(stringRules),
         state: schema.string(stringRules),
-        lga: schema.string.optional(stringRules),
+        lga: schema.string(stringRules),
+        address: schema.string(stringRules),
         primary_crop: schema.string(stringRules),
         transaction_pin: schema.string([...stringRules, rules.minLength(4), rules.maxLength(4)]),
       }),
@@ -52,6 +54,8 @@ export default class FarmerProfilesController {
 
         'full_name.required': 'Full Name is required.',
         'state.required': 'State is required.',
+        'lga.required': 'LGA is required.',
+        'address.required': 'Address is required.',
         'primary_crop.required': 'Primary Crop is required.',
         'transaction_pin.required': 'Transaction Pin is required.',
         'transaction_pin.minLength': 'Transaction Pin must be 4 digits.',
@@ -77,6 +81,7 @@ export default class FarmerProfilesController {
           full_name: fullName,
           state,
           lga,
+          address,
           primary_crop: primaryCrop,
         },
         { client: trx }

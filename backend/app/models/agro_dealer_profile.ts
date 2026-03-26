@@ -28,6 +28,9 @@ export default class AgroDealerProfile extends BaseModel {
   declare state: string
 
   @column()
+  declare lga: string
+
+  @column()
   declare bank: string
 
   @column()

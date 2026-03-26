@@ -10,6 +10,7 @@ export const AgroDealerProfileFactory = factory
       bank: faker.company.name(),
       business_address: faker.location.streetAddress(),
       state: faker.location.state(),
+      lga: faker.location.county(),
       cac_registration_number: faker.lorem.word(),
       business_name: faker.company.name(),
       is_verified: false,
