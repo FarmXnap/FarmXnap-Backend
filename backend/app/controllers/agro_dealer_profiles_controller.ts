@@ -5,6 +5,7 @@ import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import AgroDealerProfile from '#models/agro_dealer_profile'
 import { rules } from '#services/validator_rules'
+import router from '@adonisjs/core/services/router'
 
 export default class AgroDealerProfilesController {
   /**
@@ -97,6 +98,8 @@ export default class AgroDealerProfilesController {
 
     const token = await User.accessTokens.create(user)
 
+    await user.load('agroDealerProfile')
+
     return response.created({
       message: 'You have successfully registered as an agro-dealer.',
       data: {
@@ -106,6 +109,57 @@ export default class AgroDealerProfilesController {
           id: user.id,
           role: user.role,
         },
+        links: {
+          view: {
+            method: 'GET',
+            href: router.makeUrl('api.v1.users.agro_dealer_profiles.show', [
+              user.id,
+              user.agroDealerProfile.id,
+            ]),
+          },
+        },
+      },
+    })
+  }
+
+  /**
+   * Show an agro-dealer profile.
+   *
+   * `GET /api/v1/users/:user_id/agro_dealer_profiles/:id`
+   */
+  public async show({ response, params, auth }: HttpContext) {
+    const user = auth.user!
+
+    await user.load('agroDealerProfile', (agroDealerProfileQuery) => {
+      agroDealerProfileQuery.select([
+        'id',
+        'user_id',
+        'cac_registration_number',
+        'business_name',
+        'business_address',
+        'state',
+        'lga',
+        'bank',
+        'account_number',
+        'is_verified',
+        'created_at',
+        'updated_at',
+      ])
+    })
+
+    // Match params agains authenticated data. To throw off anyone playing with ids in the url.
+    if (params.user_id !== user.id || params.id !== user.agroDealerProfile?.id) {
+      return response.forbidden({
+        error: 'You are not authorized to view this profile.',
+      })
+    }
+
+    return response.ok({
+      data: {
+        id: user.id,
+        phone_number: user.phone_number,
+        role: user.role,
+        agroDealerProfile: user.agroDealerProfile,
       },
     })
   }
