@@ -838,6 +838,27 @@ Update a product by a verified agro-dealer.
 }
 ```
 
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": [
+    "Product name is required.",
+    "Active Ingredient is required.",
+    "Price is required.",
+    "Stock Quantity is required",
+    "Stock Quantity must be a number.",
+    "Category is required.",
+    "Category is invalid.",
+    "Unit is required."
+  ]
+}
+```
+
+### **Frontend Implementation Note**
+
+> All the required fields must always be provided by the client during update, even if they did not change.
+
 ---
 
 ### **13. Scan an image and get diagnosis and treatment results**
