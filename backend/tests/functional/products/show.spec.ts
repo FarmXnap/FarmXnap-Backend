@@ -3,27 +3,33 @@ import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
-import { ModelObject } from '@adonisjs/lucid/types/model'
+import { cuid } from '@adonisjs/core/helpers'
 
-test.group('Products / List', (group) => {
+test.group('Products / Show', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
 
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('should list products by an agro-dealer: {$self}')
-    .with(['main_assertion', 'not_logged_in', 'not_agrodealer', 'not_verified'] as const)
-    .run(async ({ assert, client, route }, condition) => {
+  test('should show a product by an agro-dealer: {$self}')
+    .with([
+      'main_assertion',
+      'not_logged_in',
+      'not_agrodealer',
+      'not_verified',
+      'product_not_found',
+    ] as const)
+    .run(async ({ client, route }, condition) => {
       const agroDealers = await AgroDealerProfileFactory.merge({
         is_verified: condition !== 'not_verified',
       })
         .with('user', 1, (userQuery) => {
           userQuery.apply('isAgroDealer')
         })
-        .with('products', 10)
+        .with('products', 3)
         .createMany(2)
-      const [agroDealer, anotherAgroDealer] = agroDealers
+      const [agroDealer, _] = agroDealers
 
       const farmer = await FarmerProfileFactory.with('user', 1, (userQuery) => {
         userQuery.apply('isFarmer')
@@ -41,7 +47,15 @@ test.group('Products / List', (group) => {
         tokenValue = token.value!.release()
       }
 
-      const response = await client.get(route('api.v1.products.index')).bearerToken(tokenValue)
+      const targetProduct = agroDealer.products[1]
+
+      const response = await client
+        .get(
+          route('api.v1.products.show', [
+            condition === 'product_not_found' ? cuid() : targetProduct.id,
+          ])
+        )
+        .bearerToken(tokenValue)
 
       if (condition === 'not_logged_in') {
         response.assertStatus(401)
@@ -65,48 +79,37 @@ test.group('Products / List', (group) => {
         })
       }
 
+      if (condition === 'product_not_found') {
+        response.assertStatus(404)
+
+        return response.assertBodyContains({
+          error: 'Product not found.',
+        })
+      }
+
       response.assertStatus(200)
 
-      await Promise.all([agroDealer.load('products'), anotherAgroDealer.load('products')])
-      assert.lengthOf(agroDealer.products, 10)
-
-      const responseData: ModelObject[] = response.body().data
-
-      assert.lengthOf(responseData, agroDealer.products.length)
-
       response.assertBodyContains({
-        data: agroDealer.products.map((product) => ({
-          id: product.id,
-          name: product.name,
-          category: product.category,
-          unit: product.unit,
-          price: product.price,
-          stock_quantity: product.stock_quantity,
-          target_problems: product.target_problems,
+        data: {
+          id: targetProduct.id,
+          name: targetProduct.name,
+          category: targetProduct.category,
+          unit: targetProduct.unit,
+          price: targetProduct.price,
+          stock_quantity: targetProduct.stock_quantity,
+          target_problems: targetProduct.target_problems,
           links: {
             view: {
               method: 'GET',
-              href: `/api/v1/products/${product.id}`,
+              href: `/api/v1/products/${targetProduct.id}`,
             },
             update: {
               method: 'PUT',
-              href: `/api/v1/products/${product.id}`,
+              href: `/api/v1/products/${targetProduct.id}`,
             },
-          },
-        })),
-        links: {
-          create: {
-            method: 'POST',
-            href: `/api/v1/products`,
           },
         },
       })
-
-      const responseDataIds = responseData.map((data) => data.id)
-      // Assert that another dealer's products are not returned
-      for (const product of anotherAgroDealer.products) {
-        assert.notInclude(responseDataIds, product.id)
-      }
     })
-    .tags(['products', 'list_products'])
+    .tags(['products', 'show_product'])
 })
