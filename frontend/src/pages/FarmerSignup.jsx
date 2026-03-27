@@ -73,10 +73,10 @@ export default function FarmerSignup() {
               style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-br)' }}
               onFocus={e => e.currentTarget.style.borderColor='rgba(29,158,117,0.5)'}
               onBlur={e => e.currentTarget.style.borderColor='var(--input-br)'}>
-              <span className="pl-4 pr-2 font-mono text-sm font-semibold text-brand-green flex-shrink-0 select-none">
+              <span className="pl-4 pr-2 font-mono text-sm font-semibold text-brand-green shrink-0 select-none">
                 +234
               </span>
-              <div className="w-px h-5 flex-shrink-0" style={{ background: 'var(--card-br)' }} />
+              <div className="w-px h-5 shrink-0" style={{ background: 'var(--card-br)' }} />
               <input
                 className="flex-1 bg-transparent outline-none px-3 py-3.5 text-sm font-dm"
                 style={{ color: 'var(--tx)' }}
