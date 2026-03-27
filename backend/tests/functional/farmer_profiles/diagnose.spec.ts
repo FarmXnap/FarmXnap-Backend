@@ -233,8 +233,9 @@ test.group('Farmer Profiles / Diagnose', (group) => {
           'business_name',
           'business_address',
           'state',
-          'bank',
-          'account_number',
+          'bank_name',
+          'bank_account_number',
+          'bank_account_name',
           'phone_number',
           'rank',
         ])

@@ -3,12 +3,16 @@ import factory from '@adonisjs/lucid/factories'
 import { randomInt } from 'node:crypto'
 import { UserFactory } from './user_factory.js'
 import { ProductFactory } from './product_factory.js'
+import { BANK_DATA } from '#database/seeds/bank_data'
 
 export const AgroDealerProfileFactory = factory
   .define(AgroDealerProfile, async ({ faker }) => {
+    const bank = faker.helpers.arrayElement(BANK_DATA)
     return {
-      account_number: randomInt(1_000_000_000, 10_000_000_000).toString(),
-      bank: faker.company.name(),
+      bank_account_number: randomInt(1_000_000_000, 10_000_000_000).toString(),
+      bank_code: bank.code,
+      bank_name: bank.name,
+      bank_account_name: null,
       business_address: faker.location.streetAddress(),
       state: faker.location.state(),
       lga: faker.location.county(),
