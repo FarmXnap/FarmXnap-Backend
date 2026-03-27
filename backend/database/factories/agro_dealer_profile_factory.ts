@@ -2,6 +2,7 @@ import AgroDealerProfile from '#models/agro_dealer_profile'
 import factory from '@adonisjs/lucid/factories'
 import { randomInt } from 'node:crypto'
 import { UserFactory } from './user_factory.js'
+import { ProductFactory } from './product_factory.js'
 
 export const AgroDealerProfileFactory = factory
   .define(AgroDealerProfile, async ({ faker }) => {
@@ -18,4 +19,5 @@ export const AgroDealerProfileFactory = factory
   })
   .state('isVerified', (agroDealerProfile) => (agroDealerProfile.is_verified = true))
   .relation('user', () => UserFactory)
+  .relation('products', () => ProductFactory)
   .build()

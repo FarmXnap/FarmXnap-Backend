@@ -91,7 +91,27 @@ test.group('Products / Store', (group) => {
 
       response.assertBodyContains({
         message: 'Product created successfully.',
-        data: { id: agroDealer.products[0].id, name: agroDealer.products[0].name },
+        data: {
+          id: agroDealer.products[0].id,
+          name: agroDealer.products[0].name,
+          active_ingredient: agroDealer.products[0].active_ingredient,
+          category: agroDealer.products[0].category,
+          description: agroDealer.products[0].description,
+          price: agroDealer.products[0].price,
+          stock_quantity: agroDealer.products[0].stock_quantity,
+          target_problems: agroDealer.products[0].target_problems,
+          unit: agroDealer.products[0].unit,
+          links: {
+            view: {
+              method: 'GET',
+              href: `/api/v1/products/${agroDealer.products[0].id}`,
+            },
+            update: {
+              method: 'PUT',
+              href: `/api/v1/products/${agroDealer.products[0].id}`,
+            },
+          },
+        },
       })
 
       assert.containSubset(agroDealer.products[0], {
