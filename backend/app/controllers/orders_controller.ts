@@ -4,8 +4,9 @@ import crypto from 'node:crypto'
 import Order, { OrderStatusEnum } from '#models/order'
 import env from '#start/env'
 import { callbackUrl, nairaISOCode } from '../../helpers/utils.js'
+import logger from '@adonisjs/core/services/logger'
 
-export default class ProductsController {
+export default class OrdersController {
   /**
    * Create a product order by a farmer.
    *
@@ -40,6 +41,8 @@ export default class ProductsController {
       payment_reference: txnRef,
       status: OrderStatusEnum.Pending,
     })
+
+    logger.info({ order: order.serialize() }, '[OrdersController.store] Order initialized.')
 
     return response.created({
       message: 'Order initialized.',
