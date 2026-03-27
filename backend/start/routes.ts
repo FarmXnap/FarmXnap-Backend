@@ -108,18 +108,19 @@ router
       .only(['store', 'index'])
       .middleware('store', [middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
 
-    // router
-    //   .post('payments/callback', [() => import('#controllers/payments_controller'), 'callback'])
-    //   .as('payments.callback')
-    // // .use(middleware.auth())
+    // Callback to redirect to after payment
+    router
+      .post('payments/callback', [() => import('#controllers/payments_controller'), 'callback'])
+      .as('payments.callback')
 
-    // router
-    //   .post('webhooks/interswitch', [
-    //     () => import('#controllers/webhooks_controller'),
-    //     'interswitch',
-    //   ])
-    //   .as('webhooks.interswitch')
-    
+    // Webhook
+    router
+      .post('webhooks/interswitch', [
+        () => import('#controllers/webhooks_controller'),
+        'interswitch',
+      ])
+      .as('webhooks.interswitch')
+
     // Route for admin to list banks
     router.get('banks', [() => import('#controllers/banks_controller'), 'index']).as('banks.index')
   })
