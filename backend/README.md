@@ -181,6 +181,8 @@ JSON
 
 Create a new agro-dealer profile account. The OTP is verified here.
 
+NB: The client is expected to have called the "List Banks" endpoint to populate the bank selection options for the user. The endpoint returns "name", "code" etc.
+
 - **Endpoint:** `POST /users/:user_id/agro_dealer_profiles`
 - **Auth Required:** No
 - **Content-Type:** `application/json`
@@ -198,8 +200,8 @@ JSON
   "state": "My State",
   "lga": "lga",
   "cac_registration_number": "RC-123456",
-  "bank": "First Bank",
-  "account_number": "1234567890"
+  "bank_code": "011", // Supply the code that corresponds to the name the user selects.
+  "bank_account_number": "3083813866"
 }
 ```
 
@@ -270,7 +272,38 @@ JSON
 }
 ```
 
-### **4. Login Request**
+### **4. List Banks**
+
+List banks
+
+- **Endpoint:** `GET /banks`
+- **Auth Required:** No
+- **Content-Type:** `application/json`
+
+**Success Response (200 OK):**
+
+JSON
+
+```json
+{
+  "data": [
+    {
+      "id": 879,
+      "name": "78 Finance Company Ltd",
+      "slug": "78-finance-company-ltd-ng",
+      "code": "40195",
+      "longCode": "110072",
+      "active": true,
+      "country": "Nigeria",
+      "currency": "NGN",
+      "type": "nuban"
+    }
+    // ...
+  ]
+}
+```
+
+### **5 Login Request**
 
 Request an OTP for an existing user to log back in.
 
@@ -325,7 +358,7 @@ JSON
 }
 ```
 
-### **5. Login Verify**
+### **6. Login Verify**
 
 Verify the OTP and receive a fresh session token.
 
@@ -380,7 +413,7 @@ JSON
 }
 ```
 
-### **6. Logout**
+### **7. Logout**
 
 Invalidate the current session token.
 
@@ -415,7 +448,7 @@ JSON
 
 ---
 
-### **7. Show a Farmer Profile**
+### **8. Show a Farmer Profile**
 
 Show a farmer profile.
 
@@ -473,7 +506,7 @@ Show a farmer profile.
 }
 ```
 
-### **8. Show an AgroDealer Profile**
+### **9. Show an AgroDealer Profile**
 
 Show an agro-dealer profile.
 
@@ -498,8 +531,9 @@ Show an agro-dealer profile.
       "business_address": "6070 County Line Road",
       "state": "Anambra",
       "lga": "Nnewi-North",
-      "bank": "Feeney, Bernier and Kshlerin",
-      "account_number": "6415761219",
+      "bank_name": "Feeney, Bernier and Kshlerin",
+      "bank_account_number": "6415761219",
+      "bank_account_name": null,
       "is_verified": true,
       "created_at": "2026-03-26T21:44:31.318+00:00",
       "updated_at": "2026-03-26T21:44:31.318+00:00"
@@ -536,7 +570,7 @@ Show an agro-dealer profile.
 
 ---
 
-### **9. List Products by A Verified Agro-dealer**
+### **10. List Products by A Verified Agro-dealer**
 
 Fetch a list of products by a verified agro-dealer.
 
@@ -603,7 +637,7 @@ Fetch a list of products by a verified agro-dealer.
 }
 ```
 
-### **10. Create a Product by A Verified Agro-dealer**
+### **11. Create a Product by A Verified Agro-dealer**
 
 Create a product.
 
@@ -699,7 +733,7 @@ JSON
 }
 ```
 
-### **11. Show Product by A Verified Agro-dealer**
+### **12. Show Product by A Verified Agro-dealer**
 
 Show a product by a verified agro-dealer.
 
@@ -768,7 +802,7 @@ Show a product by a verified agro-dealer.
 }
 ```
 
-### **12. Update Product by A Verified Agro-dealer**
+### **13. Update Product by A Verified Agro-dealer**
 
 Update a product by a verified agro-dealer.
 
@@ -861,7 +895,7 @@ Update a product by a verified agro-dealer.
 
 ---
 
-### **13. Scan an image and get diagnosis and treatment results**
+### **14. Scan an image and get diagnosis and treatment results**
 
 - **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
 - **Auth Required:** Yes
@@ -898,8 +932,9 @@ Update a product by a verified agro-dealer.
         "business_name": "Bailey - Schmidt",
         "business_address": "3098 Newton Road",
         "state": "Lagos",
-        "bank": "Stokes Group",
-        "account_number": "5239701059",
+        "bank_name": "Stokes Group",
+        "bank_account_number": "5239701059",
+        "bank_account_name": "Bailey - Schmidt", // Ideally, verified agro-dealers will have verified bank accounts.
         "phone_number": "28653272469",
         "rank": 3,
         "links": {
@@ -922,8 +957,9 @@ Update a product by a verified agro-dealer.
         "business_name": "Bailey - Schmidt",
         "business_address": "3098 Newton Road",
         "state": "Lagos",
-        "bank": "Stokes Group",
-        "account_number": "5239701059",
+        "bank_name": "Stokes Group",
+        "bank_account_number": "5239701059",
+        "bank_account_name": "Bailey - Schmidt",
         "phone_number": "28653272469",
         "rank": 0.8121841996908188,
         "links": {

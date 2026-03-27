@@ -6,6 +6,8 @@ import db from '@adonisjs/lucid/services/db'
 import AgroDealerProfile from '#models/agro_dealer_profile'
 import { rules } from '#services/validator_rules'
 import router from '@adonisjs/core/services/router'
+import BanksController from './banks_controller.js'
+import { BANK_DATA } from '#database/seeds/bank_data'
 
 export default class AgroDealerProfilesController {
   /**
@@ -37,8 +39,8 @@ export default class AgroDealerProfilesController {
       business_address: businessAddress,
       lga,
       state,
-      bank,
-      account_number: accountNumber,
+      bank_code: bankCode,
+      bank_account_number: bankAccountNumber,
       transaction_pin: transactionPin,
     } = await request.validate({
       schema: schema.create({
@@ -49,12 +51,12 @@ export default class AgroDealerProfilesController {
         state: schema.string(stringRules),
         lga: schema.string(stringRules),
         transaction_pin: schema.string([...stringRules, rules.minLength(4), rules.maxLength(4)]),
-        // Bank detail fields are not nullable for this hackathon demo. In future, they can be nullable during signup and another endpoint for updating profile details provided
-        /**
-         * @todo: Verify bank account with InterSwitch API.
-         */
-        bank: schema.string(stringRules),
-        account_number: schema.string([...stringRules, rules.minLength(4), rules.maxLength(10)]),
+        bank_code: schema.string(stringRules),
+        bank_account_number: schema.string([
+          ...stringRules,
+          rules.minLength(10),
+          rules.maxLength(10),
+        ]),
       }),
       messages: {
         'otp.required': 'OTP is required.',
@@ -65,10 +67,10 @@ export default class AgroDealerProfilesController {
         'lga.required': 'LGA is required.',
         'transaction_pin.minLength': 'Transaction Pin must be 4 digits.',
         'transaction_pin.maxLength': 'Transaction Pin must be 4 digits.',
-        'bank.required': 'Bank is required.',
-        'account_number.required': 'Account Number is required.',
-        'account_number.minLength': 'Account Number must be 10 digits.',
-        'account_number.maxLength': 'Account Number must be 10 digits.',
+        'bank_code.required': 'Bank Code is required.',
+        'bank_account_number.required': 'Bank Account Number is required.',
+        'bank_account_number.minLength': 'Bank Account Number must be 10 digits.',
+        'bank_account_number.maxLength': 'Bank Account Number must be 10 digits.',
       },
     })
 
@@ -79,6 +81,14 @@ export default class AgroDealerProfilesController {
       return response.badRequest({ error: 'OTP is incorrect.' })
     }
 
+    /// Attempt Interswitch Verification.
+    // Live keys not available so handle gracefully.
+    const verification = await BanksController.verify(bankCode, bankAccountNumber)
+
+    // Get Bank Name from local data as a fallback if InterSwitch didn't return it
+    const localBank = BANK_DATA.find((b) => b.code === bankCode)
+    const finalBankName = verification?.bankName || localBank?.name || 'UNKNOWN BANK'
+
     await db.transaction(async (trx) => {
       await user
         .merge({ role: UserRolesEnum.AgroDealer, transaction_pin: transactionPin })
@@ -87,8 +97,10 @@ export default class AgroDealerProfilesController {
 
       await user.related('agroDealerProfile').create(
         {
-          account_number: accountNumber,
-          bank,
+          bank_code: bankCode,
+          bank_name: finalBankName,
+          bank_account_number: bankAccountNumber,
+          bank_account_name: verification?.accountName || null,
           business_address: businessAddress,
           business_name: businessName,
           cac_registration_number: cacRegNumber,
@@ -142,8 +154,9 @@ export default class AgroDealerProfilesController {
         'business_address',
         'state',
         'lga',
-        'bank',
-        'account_number',
+        'bank_name',
+        'bank_account_number',
+        'bank_account_name',
         'is_verified',
         'created_at',
         'updated_at',

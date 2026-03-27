@@ -233,8 +233,9 @@ export default class FarmerProfilesController {
         adp.business_name,
         adp.business_address,
         adp.state,
-        adp.bank,
-        adp.account_number,
+        adp.bank_name,
+        adp.bank_account_number,
+        adp.bank_account_name,
         u.phone_number,
         -- Ranking: full text search is weighted higher than fuzzy similarity
         (

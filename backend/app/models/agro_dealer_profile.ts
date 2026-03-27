@@ -31,10 +31,16 @@ export default class AgroDealerProfile extends BaseModel {
   declare lga: string
 
   @column()
-  declare bank: string
+  declare bank_name: string
 
   @column()
-  declare account_number: string
+  declare bank_code: string
+
+  @column()
+  declare bank_account_number: string
+
+  @column()
+  declare bank_account_name: string | null
 
   @column()
   declare is_verified: boolean

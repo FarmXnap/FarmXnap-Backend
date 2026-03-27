@@ -4,6 +4,7 @@ import { faker } from '@faker-js/faker'
 import User, { UserRolesEnum } from '#models/user'
 import OTP from '#models/otp'
 import { cuid } from '@adonisjs/core/helpers'
+import { BANK_DATA } from '#database/seeds/bank_data'
 
 test.group('AgroDealer Profiles / Store', (group) => {
   group.each.setup(async () => {
@@ -33,6 +34,8 @@ test.group('AgroDealer Profiles / Store', (group) => {
         user_id: user.id,
       })
 
+      const bank = BANK_DATA[0]
+
       const payload = {
         otp: condition === 'otp_incorrect' ? '000000' : otpCode,
         email: faker.internet.email(),
@@ -42,8 +45,8 @@ test.group('AgroDealer Profiles / Store', (group) => {
         state: faker.location.state(),
         lga: faker.location.county(),
         cac_registration_number: faker.lorem.word(),
-        bank: faker.company.name(),
-        account_number:
+        bank_code: bank.code,
+        bank_account_number:
           condition === 'account_number_not_appropriate_length'
             ? '12345678901'
             : faker.lorem.word({ length: { min: 10, max: 10 } }),
@@ -70,7 +73,7 @@ test.group('AgroDealer Profiles / Store', (group) => {
         response.assertStatus(422)
 
         return response.assertBodyContains({
-          errors: ['Account Number must be 10 digits.'],
+          errors: ['Bank Account Number must be 10 digits.'],
         })
       }
 
@@ -120,8 +123,10 @@ test.group('AgroDealer Profiles / Store', (group) => {
       assert.containSubset(user!.agroDealerProfile, {
         business_name: payload.business_name,
         business_address: payload.business_address,
-        account_number: payload.account_number,
-        bank: payload.bank,
+        bank_account_number: payload.bank_account_number,
+        bank_code: payload.bank_code,
+        bank_name: bank.name,
+        bank_account_name: null,
         cac_registration_number: payload.cac_registration_number,
         state: payload.state,
         user_id: user!.id,
@@ -129,4 +134,5 @@ test.group('AgroDealer Profiles / Store', (group) => {
       })
     })
     .tags(['agro_dealers', 'create_agro_dealer'])
+    .timeout(30000)
 })

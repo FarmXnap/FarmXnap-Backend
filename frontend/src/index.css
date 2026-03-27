@@ -319,7 +319,14 @@
 
   /* --- Sheet --- */
   .sheet-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0.8); max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; justify-content: flex-end; }
-  .sheet-panel { border-radius: 28px 28px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; background: var(--bg-nav); border: 1px solid var(--card-br); border-bottom: none; transition: background 0.25s ease; }
+  .sheet-panel { border-radius: 28px 28px 0 0; max-height: 90vh; background: var(--bg-nav); border: 1px solid var(--card-br); border-bottom: none; transition: background 0.25s ease; display: flex; flex-direction: column; overflow: hidden; }
+  /* Short confirm sheets that don't use sheet-header/body/footer */
+  .sheet-panel > .sheet-handle { margin: 16px auto 0; width: 40px; height: 4px; border-radius: 99px; background: var(--card-br); flex-shrink: 0; }
+  .sheet-panel > :not(.sheet-header):not(.sheet-body):not(.sheet-footer):not(.sheet-handle) { padding-left: 20px; padding-right: 20px; }
+  .sheet-panel.text-center { padding: 20px; }
+  .sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px; }
+  .sheet-footer { flex-shrink: 0; padding: 12px 20px calc(env(safe-area-inset-bottom, 0px) + 12px); border-top: 1px solid var(--card-br); background: var(--bg-nav); }
+  .sheet-header { flex-shrink: 0; padding: 16px 20px 12px; }
   .sheet-handle { width: 40px; height: 4px; border-radius: 100px; background: var(--card-br); margin: 0 auto 20px; }
 
   /* --- Theme toggle pill --- */
@@ -336,6 +343,7 @@
    ANIMATIONS
 ======================== */
 @keyframes slide-up  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp   { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade-in   { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
 @keyframes scan-sweep { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
@@ -365,7 +373,7 @@
 .landing-root { height: 100dvh; min-height: 100dvh; width: 100%; max-width: 430px; margin: 0 auto; background: var(--bg); display: flex; flex-direction: column; overflow: hidden; position: relative; font-family: var(--font-dm); transition: background 0.25s ease; }
 .landing-root::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 1; opacity: 0.6; }
 .landing-body { flex: 1; min-height: 0; overflow: hidden; position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: space-evenly; padding: 0 0 4px; }
-.landing-topbar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 36px) 20px 16px; }
+.landing-topbar { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 16px) 20px 12px; }
 .landing-logo { font-family: var(--font-syne); font-weight: 800; font-size: 20px; color: var(--tx); letter-spacing: -0.5px; }
 .landing-logo span { color: #1D9E75; }
 .landing-live-badge { display: flex; align-items: center; gap: 6px; background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.25); border-radius: 100px; padding: 5px 10px; font-size: 11px; color: #1D9E75; font-weight: 500; }

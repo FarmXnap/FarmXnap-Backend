@@ -10,13 +10,14 @@ import {
   Package, Truck, ShieldCheck, Moon, Sun,
 } from 'lucide-react'
 import { useAuthStore, useThemeStore, useToastStore } from '../store'
-import { logoutUser } from '../services/api'
+import { logoutUser, TIMERS } from '../services/api'
 import {
-  getFarmerHistory, getFarmerProfile, getFarmTips,
+  getFarmerHistory, getFarmTips,
   updateFarmerProfile, getFarmerActiveOrders, farmerConfirmDelivery,
+  adminGetAllUsers,
 } from '../services/api'
 
-const CROPS  = ['Cassava', 'Maize', 'Tomato', 'Yam', 'Rice', 'Pepper']
+const CROPS  = ['Cassava', 'Maize', 'Tomato', 'Yam', 'Rice', 'Other']
 const STATES = ['Rivers', 'Lagos', 'Kano', 'Oyo', 'Kaduna', 'Enugu', 'Delta', 'Anambra', 'Other']
 
 const TABS = [
@@ -63,17 +64,17 @@ const ScanRow = ({ scan, onClick }) => {
 
 // ── Edit Profile Sheet ──────────────────────────────────────────────────────
 function EditSheet({ profile, user, onClose, onSave }) {
-  // Seed from profile first, fall back to auth store user
   const src = { ...user, ...profile }
   const [form, setForm] = useState({
-    name:       src.name       || src.full_name  || '',
-    phone:      src.phone      || src.phone_number|| '',
-    state:      src.state      || '',
-    lga:        src.lga        || '',
-    address:    src.address    || '',
-    crop:       src.crop       || src.primary_crop|| 'Cassava',
-    farm_size:  src.farm_size  || '',
-    experience: src.experience || '',
+    name:        src.name        || src.full_name   || '',
+    phone:       src.phone       || src.phone_number|| '',
+    state:       src.state       || '',
+    lga:         src.lga         || '',
+    address:     src.address     || '',
+    crop:        src.crop        || src.primary_crop|| 'Cassava',
+    customCrop:  '',
+    farm_size:   src.farm_size   || '',
+    experience:  src.experience  || '',
   })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -83,9 +84,8 @@ function EditSheet({ profile, user, onClose, onSave }) {
     setSaving(true)
     try {
       const payload = { ...form }
-      if (form.crop === 'Other' && form.customCrop?.trim()) {
-        payload.crop = form.customCrop.trim()
-      }
+      if (form.crop === 'Other') payload.crop = form.customCrop.trim() || 'Other'
+      delete payload.customCrop
       const res = await updateFarmerProfile(payload)
       onSave(res.user)
     } finally { setSaving(false) }
@@ -94,75 +94,109 @@ function EditSheet({ profile, user, onClose, onSave }) {
   return (
     <div className="sheet-backdrop">
       <div className="sheet-panel">
-        <div className="sheet-handle" />
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-syne font-bold text-lg text-(--tx)">Edit profile</h3>
-          <button onClick={onClose} className="nav-close"><X size={15} /></button>
-        </div>
-        <div className="space-y-3 overflow-y-auto" style={{ maxHeight: '60vh' }}>
-          <div>
-            <span className="field-label">Full name</span>
-            <input className="field-input" placeholder="Emeka Okonkwo"
-              value={form.name} onChange={e => set('name', e.target.value)} />
-          </div>
-          <div>
-            <span className="field-label">Phone</span>
-            <input className="field-input" type="tel" value={form.phone}
-              onChange={e => set('phone', e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="field-label">State</span>
-              <select className="field-select" value={form.state}
-                onChange={e => { set('state', e.target.value); set('lga', '') }}>
-                <option value="">Select state</option>
-                {NIGERIA_STATES.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <span className="field-label">LGA</span>
-              <select className="field-select" value={form.lga}
-                onChange={e => set('lga', e.target.value)}
-                disabled={!form.state}>
-                <option value="">{form.state ? 'Select LGA' : '— pick state'}</option>
-                {lgas.map(l => <option key={l}>{l}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <span className="field-label">Delivery address</span>
-            <input className="field-input" placeholder="House no, street name, area"
-              value={form.address} onChange={e => set('address', e.target.value)} />
-          </div>
-          <div>
-            <span className="field-label">Primary crop</span>
-            <div className="grid grid-cols-3 gap-2 mt-1">
-              {CROPS.map(c => (
-                <button key={c} className={`crop-btn ${form.crop === c ? 'on' : ''}`}
-                  onClick={() => set('crop', c)}>{c}</button>
-              ))}
-            </div>
-            {form.crop === 'Other' && (
-              <input className="field-input mt-2" placeholder="e.g. Groundnut"
-                value={form.customCrop || ''} onChange={e => set('customCrop', e.target.value)} autoFocus />
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="field-label">Farm size</span>
-              <input className="field-input" placeholder="e.g. 2 hectares"
-                value={form.farm_size} onChange={e => set('farm_size', e.target.value)} />
-            </div>
-            <div>
-              <span className="field-label">Experience</span>
-              <input className="field-input" placeholder="e.g. 5 years"
-                value={form.experience} onChange={e => set('experience', e.target.value)} />
-            </div>
+
+        {/* Header */}
+        <div className="sheet-header">
+          <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--card-br)' }} />
+          <div className="flex items-center justify-between">
+            <h3 className="font-syne font-bold text-lg text-(--tx)">Edit profile</h3>
+            <button onClick={onClose} className="nav-close"><X size={15} /></button>
           </div>
         </div>
-        <button className="btn-main mt-5" onClick={handleSave} disabled={saving}>
-          {saving ? <><span className="spinner" /> Saving…</> : <><Check size={15} /> Save changes</>}
-        </button>
+
+        {/* Scrollable body */}
+        <div className="sheet-body pb-4">
+          <div className="flex flex-col gap-3">
+
+            <div>
+              <span className="field-label">Full name</span>
+              <input className="field-input" placeholder="Emeka Okonkwo"
+                value={form.name} onChange={e => set('name', e.target.value)} />
+            </div>
+
+            <div>
+              <span className="field-label">Phone</span>
+              <input className="field-input" type="tel" value={form.phone}
+                onChange={e => set('phone', e.target.value)} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="field-label">State</span>
+                <select className="field-select" value={form.state}
+                  onChange={e => { set('state', e.target.value); set('lga', '') }}>
+                  <option value="">Select state</option>
+                  {NIGERIA_STATES.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className="field-label">LGA</span>
+                <select className="field-select" value={form.lga}
+                  onChange={e => set('lga', e.target.value)} disabled={!form.state}>
+                  <option value="">{form.state ? 'Select LGA' : '— pick state'}</option>
+                  {lgas.map(l => <option key={l}>{l}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <span className="field-label">Delivery address</span>
+              <input className="field-input" placeholder="House no, street name, area"
+                value={form.address} onChange={e => set('address', e.target.value)} />
+            </div>
+
+            {/* Primary crop with Other option */}
+            <div>
+              <span className="field-label">Primary crop</span>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                {CROPS.map(c => (
+                  <button key={c} className={`crop-btn ${form.crop === c ? 'on' : ''}`}
+                    onClick={() => set('crop', c)}>
+                    {c === 'Other' ? '🌱 Other' : c}
+                  </button>
+                ))}
+              </div>
+              {form.crop === 'Other' && (
+                <div className="mt-2 rounded-2xl overflow-hidden"
+                  style={{ background: 'var(--input-bg)', border: '1.5px solid rgba(29,158,117,0.4)' }}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="text-lg flex-shrink-0">🌱</span>
+                    <input
+                      className="flex-1 bg-transparent outline-none text-sm text-(--tx) font-dm"
+                      placeholder="Type your crop name…"
+                      value={form.customCrop}
+                      autoFocus
+                      onChange={e => set('customCrop', e.target.value)}
+                      style={{ WebkitUserSelect: 'text', userSelect: 'text' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="field-label">Farm size</span>
+                <input className="field-input" placeholder="e.g. 2 hectares"
+                  value={form.farm_size} onChange={e => set('farm_size', e.target.value)} />
+              </div>
+              <div>
+                <span className="field-label">Experience</span>
+                <input className="field-input" placeholder="e.g. 5 years"
+                  value={form.experience} onChange={e => set('experience', e.target.value)} />
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Sticky footer */}
+        <div className="sheet-footer">
+          <button className="btn-main w-full" onClick={handleSave} disabled={saving}>
+            {saving ? <><span className="spinner" /> Saving…</> : <><Check size={15} /> Save changes</>}
+          </button>
+        </div>
+
       </div>
     </div>
   )
@@ -191,11 +225,64 @@ export default function FarmerDashboard() {
   const [orderFilter,    setOrderFilter]    = useState('all')
 
   useEffect(() => {
-    Promise.all([getFarmerHistory(), getFarmerProfile(), getFarmTips(), getFarmerActiveOrders()])
-      .then(([h, p, t, o]) => {
-        setHistory(h); setProfile(p); setTips(t); setActiveOrders(o); setLoading(false)
+    if (!user?.id) return
+
+    // Fetch real profile from API using user id — no fallbacks
+    adminGetAllUsers().then(({ raw }) => {
+      const rawUser = raw?.find(u => u.id === user.id)
+      const p = rawUser?.farmerProfile
+      if (p) {
+        const realProfile = {
+          id:                p.id,
+          farmer_profile_id: p.id,
+          name:              p.full_name        || '',
+          full_name:         p.full_name        || '',
+          phone:             rawUser.phone_number || user.phone || '',
+          state:             p.state            || '',
+          lga:               p.lga              || '',
+          address:           p.address          || '',
+          crop:              p.primary_crop     || '',
+          primary_crop:      p.primary_crop     || '',
+          farm_size:         p.farm_size        || '',
+          experience:        p.experience       || '',
+          member_since:      p.created_at
+            ? new Date(p.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+            : user.member_since || new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+          total_scans:       0,
+          treatments_bought: 0,
+          money_saved:       0,
+        }
+        setProfile(realProfile)
+        // Sync farmer_profile_id back to auth store so diagnosis works
+        updateUser({ farmer_profile_id: p.id, name: p.full_name, full_name: p.full_name,
+          phone: rawUser.phone_number, state: p.state, lga: p.lga,
+          address: p.address, crop: p.primary_crop, primary_crop: p.primary_crop })
+      }
+    }).catch(() => {
+      // API down — still show whatever is in auth store
+      setProfile({
+        id:                user.id || '',
+        farmer_profile_id: user.farmer_profile_id || '',
+        name:              user.name      || user.full_name    || '',
+        full_name:         user.full_name || user.name         || '',
+        phone:             user.phone     || user.phone_number || '',
+        state:             user.state     || '',
+        lga:               user.lga       || '',
+        address:           user.address   || '',
+        crop:              user.crop      || user.primary_crop || '',
+        primary_crop:      user.primary_crop || user.crop     || '',
+        farm_size:         user.farm_size   || '',
+        experience:        user.experience  || '',
+        member_since:      user.member_since || new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+        total_scans: 0, treatments_bought: 0, money_saved: 0,
       })
-  }, [])
+    })
+
+    // Load history, tips, orders in parallel
+    Promise.all([getFarmerHistory(), getFarmTips(), getFarmerActiveOrders()])
+      .then(([h, t, o]) => { setHistory(h); setTips(t); setActiveOrders(o) })
+      .finally(() => setLoading(false))
+  }, [user?.id])
 
   // Auto-switch to orders tab if redirected
   useEffect(() => {
@@ -224,7 +311,7 @@ export default function FarmerDashboard() {
     pending: history.filter(h => h.status === 'pending').length,
   }
   const score = stats.scans > 0 ? Math.round((stats.treated / stats.scans) * 100) : null
-  const name  = profile?.name || user?.name || 'Farmer'
+  const name  = profile?.name || profile?.full_name || user?.name || user?.full_name || 'Farmer'
   const filteredTips = cropFilter === 'All' ? tips : tips.filter(t => t.crop === cropFilter || t.crop === 'All crops')
 
   // All orders from history (has order attached) + active orders
@@ -504,7 +591,7 @@ export default function FarmerDashboard() {
                     )}
                     {(order.status === 'pending' || order.status === 'paid') && (
                       <p className="text-center text-[11px] text-(--tx-dim) mt-3">
-                        Tap to view tracking · auto-refund if dealer doesn't ship in 48hrs
+                        Tap to view tracking · auto-refund if dealer doesn't ship in {TIMERS.LABEL_DISPATCH}
                       </p>
                     )}
                   </div>
@@ -570,7 +657,7 @@ export default function FarmerDashboard() {
             <div>
               <p className="text-sm font-semibold text-(--tx) mb-0.5">Escrow protects every payment</p>
               <p className="text-xs text-(--tx-sub) leading-relaxed">
-                Funds are held by Interswitch and only released to the dealer after you confirm delivery. Auto-refund if no delivery in 48 hours.
+                Funds are held by Interswitch and only released to the dealer after you confirm delivery. Auto-refund if no delivery in {TIMERS.LABEL_DISPATCH}.
               </p>
             </div>
           </div>
@@ -764,12 +851,16 @@ export default function FarmerDashboard() {
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-extrabold text-lg text-brand-green"
                       style={{ background: 'rgba(29,158,117,0.12)', border: '2px solid rgba(29,158,117,0.25)' }}>
-                      {profile.name?.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                      {(profile.name || user?.name || '?').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-syne font-bold text-base text-(--tx) leading-tight">{profile.name}</h3>
-                      <p className="text-(--tx-sub) text-xs mt-0.5">Farmer · {profile.crop}</p>
-                      <p className="text-(--tx-sub) text-xs">Since {profile.member_since}</p>
+                      <h3 className="font-syne font-bold text-base text-(--tx) leading-tight">
+                        {profile.name || user?.name || user?.full_name || 'Farmer'}
+                      </h3>
+                      <p className="text-(--tx-sub) text-xs mt-0.5">
+                        Farmer · {profile.crop || user?.crop || user?.primary_crop || 'No crop set'}
+                      </p>
+                      <p className="text-(--tx-sub) text-xs">Since {profile.member_since || user?.member_since}</p>
                       <div className="flex items-center gap-1 mt-1.5">
                         {[1,2,3,4,5].map(i => (
                           <Star key={i} size={10} className={i <= 4 ? 'text-brand-amber fill-brand-amber' : 'text-(--tx-dim)'} />
@@ -787,9 +878,9 @@ export default function FarmerDashboard() {
 
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { label: 'Scans',   val: profile.total_scans,       color: 'text-(--tx)'        },
-                    { label: 'Treated', val: profile.treatments_bought, color: 'text-brand-green'  },
-                    { label: 'Saved',   val: `₦${(profile.money_saved/1000).toFixed(0)}k`, color: 'text-brand-amber' },
+                    { label: 'Scans',   val: history.length,                                            color: 'text-(--tx)'       },
+                    { label: 'Treated', val: history.filter(h => h.status === 'treated').length,        color: 'text-brand-green'  },
+                    { label: 'Orders',  val: activeOrders.length + history.filter(h => h.order).length, color: 'text-brand-amber'  },
                   ].map(({ label, val, color }) => (
                     <div key={label} className="stat-card text-center">
                       <p className={`font-syne font-extrabold text-xl ${color}`}>{val}</p>
@@ -802,11 +893,13 @@ export default function FarmerDashboard() {
                   <p className="text-(--tx-dim) text-[10px] uppercase tracking-widest mb-3">Farming details</p>
                   <div className="flex flex-col gap-3">
                     {[
-                      { icon: Sprout, label: 'Primary crop', val: profile.crop },
-                      { icon: MapPin, label: 'Location',     val: profile.lga ? `${profile.lga}, ${profile.state}` : profile.state },
-                      { icon: Leaf,   label: 'Farm size',    val: profile.farm_size || 'Not set' },
-                      { icon: Clock,  label: 'Experience',   val: profile.experience || 'Not set' },
-                      { icon: Phone,  label: 'Phone',        val: profile.phone },
+                      { icon: Sprout, label: 'Primary crop', val: profile.crop     || user?.crop || user?.primary_crop || '—' },
+                      { icon: MapPin, label: 'Location',     val: (profile.lga || user?.lga)
+                          ? `${profile.lga || user?.lga}, ${profile.state || user?.state}`
+                          : (profile.state || user?.state || '—') },
+                      { icon: Leaf,   label: 'Farm size',    val: profile.farm_size  || user?.farm_size  || 'Not set' },
+                      { icon: Clock,  label: 'Experience',   val: profile.experience || user?.experience || 'Not set' },
+                      { icon: Phone,  label: 'Phone',        val: profile.phone      || user?.phone      || user?.phone_number || '—' },
                     ].map(({ icon: Icon, label, val }) => (
                       <div key={label} className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-(--card-bg)">

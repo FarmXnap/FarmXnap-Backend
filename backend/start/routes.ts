@@ -101,6 +101,9 @@ router
     //     'interswitch',
     //   ])
     //   .as('webhooks.interswitch')
+    
+    // Route for admin to list banks
+    router.get('banks', [() => import('#controllers/banks_controller'), 'index']).as('banks.index')
   })
   .prefix('api/v1')
   .as('api.v1')

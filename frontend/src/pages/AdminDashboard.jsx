@@ -1,3 +1,4 @@
+import { TIMERS } from '../services/api'
 import { useState, useEffect, useRef } from 'react'
 import AppLogo from '../component/AppLogo'
 import { useToastStore, useThemeStore } from '../store'
@@ -95,7 +96,7 @@ function DonutChart({ data }) {
   })
   return (
     <div className="flex items-center gap-5">
-      <svg width="128" height="128" viewBox="0 0 128 128" className="shrink-0">
+      <svg width="128" height="128" viewBox="0 0 128 128" className="flex-shrink-0">
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--card-br)" strokeWidth={sw} />
         {segs.map((s, i) => (
           <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw}
@@ -108,7 +109,7 @@ function DonutChart({ data }) {
       <div className="flex flex-col gap-1.5 flex-1 min-w-0">
         {data.map((d, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: CC[i] }} />
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CC[i] }} />
             <span className="text-(--tx-sub) text-xs flex-1 truncate">{d.disease}</span>
             <span className="text-(--tx) text-xs font-mono font-bold">{d.percent}%</span>
           </div>
@@ -441,7 +442,7 @@ export default function AdminDashboard() {
             opacity: d.status === 'suspended' ? 0.85 : 1,
           }}>
           {/* Avatar */}
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-syne font-bold text-sm"
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-bold text-sm"
             style={{ background: s.bg, border: `1.5px solid ${s.br}`, color: s.color }}>
             {d.business_name.slice(0,2).toUpperCase()}
           </div>
@@ -451,7 +452,7 @@ export default function AdminDashboard() {
             <p className="text-(--tx-sub) text-xs truncate">{d.phone} · {d.state}</p>
           </div>
           {/* Badge + chevron */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
               style={{ background: s.bg, color: s.color, border: `1px solid ${s.br}` }}>
               {s.label}
@@ -538,11 +539,11 @@ export default function AdminDashboard() {
             style={{ background:'var(--bg-nav)', border:'1px solid var(--card-br)', borderBottom:'none', maxHeight:'88vh' }}>
 
             {/* Handle + header */}
-            <div className="px-5 pt-4 pb-3 shrink-0">
+            <div className="px-5 pt-4 pb-3 flex-shrink-0">
               <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background:'var(--card-br)' }} />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base shrink-0"
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base flex-shrink-0"
                     style={
                       drawerDealer.status === 'pending'   ? { background:'rgba(239,159,39,0.12)', border:'1.5px solid rgba(239,159,39,0.25)', color:'#EF9F27' } :
                       drawerDealer.status === 'suspended' ? { background:'rgba(239,68,68,0.12)',  border:'1.5px solid rgba(239,68,68,0.25)',  color:'#f87171' } :
@@ -696,7 +697,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-2">
                   <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
                     style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.15)' }}>
-                    <Ban size={14} className="text-red-400 shrink-0" />
+                    <Ban size={14} className="text-red-400 flex-shrink-0" />
                     <div>
                       <p className="text-xs font-semibold text-red-400">Account suspended</p>
                       <p className="text-[11px] text-(--tx-dim)">This dealer cannot receive orders or log in</p>
@@ -770,14 +771,14 @@ export default function AdminDashboard() {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Interswitch escrow flow</p>
           {[
             { step:'1', label:'Farmer pays',         desc:'Interswitch holds funds in escrow — not accessible by dealer', dot:'#1D9E75' },
-            { step:'2', label:'Dealer dispatches',   desc:'Dealer ships and marks order sent. 72hr farmer confirm window starts', dot:'#EF9F27' },
+            { step:'2', label:'Dealer dispatches',   desc:`Dealer ships and marks order sent. ${TIMERS.LABEL_CONFIRM} farmer confirm window starts`, dot:'#EF9F27' },
             { step:'3', label:'Farmer confirms',     desc:'Farmer verifies receipt with PIN. Backend signals Interswitch', dot:'#1D9E75' },
             { step:'4', label:'Interswitch releases',desc:'Net amount (minus 4% fee) transferred to dealer bank account', dot:'#1D9E75' },
-            { step:'⏱', label:'48hr auto-refund',    desc:'Dealer no-show → Interswitch returns full amount to farmer', dot:'#3B82F6' },
+            { step:'⏱', label:`${TIMERS.LABEL_DISPATCH} auto-refund`, desc:'Dealer no-show → Interswitch returns full amount to farmer', dot:'#3B82F6' },
           ].map(({ step, label, desc, dot }, i, arr) => (
             <div key={step} className="flex gap-3">
               <div className="flex flex-col items-center">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center font-syne font-bold text-xs text-(--tx) shrink-0"
+                <div className="w-7 h-7 rounded-full flex items-center justify-center font-syne font-bold text-xs text-(--tx) flex-shrink-0"
                   style={{ background: `${dot}25`, border: `1.5px solid ${dot}60` }}>
                   {step}
                 </div>
@@ -849,7 +850,7 @@ export default function AdminDashboard() {
                       {isDealerRelease && d.dealer_proof && (
                         <div className="rounded-xl p-3 mb-3 flex items-center gap-3"
                           style={{ background:'rgba(239,159,39,0.06)', border:'1px solid rgba(239,159,39,0.2)' }}>
-                          <span className="text-xl shrink-0">📎</span>
+                          <span className="text-xl flex-shrink-0">📎</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-[10px] text-brand-amber uppercase tracking-wide mb-0.5">Delivery proof</p>
                             <p className="text-xs text-(--tx) truncate font-mono">{d.dealer_proof}</p>
@@ -879,8 +880,8 @@ export default function AdminDashboard() {
                       {/* Auto-release notice */}
                       {isDealerRelease && d.status === 'pending_farmer_response' && (
                         <div className="info-banner amber mb-3">
-                          <Clock size={12} className="text-brand-amber shrink-0" />
-                          <p className="text-xs text-(--tx-sub)">Payment auto-releases to dealer if farmer doesn't respond in time</p>
+                          <Clock size={12} className="text-brand-amber flex-shrink-0" />
+                          <p className="text-xs text-(--tx-sub)">Payment auto-releases to dealer if farmer doesn't respond in {TIMERS.LABEL_RELEASE}</p>
                         </div>
                       )}
 
@@ -938,7 +939,7 @@ export default function AdminDashboard() {
                           <p className="text-xs font-semibold text-(--tx) truncate">{d.farmer} → {d.dealer}</p>
                           <p className="text-xs text-(--tx-dim)">₦{d.amount?.toLocaleString()}</p>
                         </div>
-                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold shrink-0 ${d.status === 'resolved_refund' ? 'text-blue-400' : 'text-brand-green'}`}
+                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold flex-shrink-0 ${d.status === 'resolved_refund' ? 'text-blue-400' : 'text-brand-green'}`}
                           style={{ background: d.status === 'resolved_refund' ? 'rgba(59,130,246,0.1)' : 'rgba(29,158,117,0.1)' }}>
                           {d.status === 'resolved_refund' ? '↩ Refunded' : '✓ Released'}
                         </span>
@@ -977,7 +978,7 @@ export default function AdminDashboard() {
                       <p className="text-xs text-(--tx-sub) truncate">{order.product}</p>
                       <p className="text-xs text-(--tx-dim)">{order.dealer} · {order.ref}</p>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right flex-shrink-0">
                       <p className="font-syne font-extrabold text-brand-green text-base">₦{order.amount.toLocaleString()}</p>
                       <p className="text-[10px] text-(--tx-dim)">Fee: ₦{order.platform_fee}</p>
                     </div>
@@ -1160,7 +1161,7 @@ export default function AdminDashboard() {
             ].map(({ icon, step, desc, color }, i, arr) => (
               <div key={step} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0"
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
                     style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}>{icon}</div>
                   {i < arr.length - 1 && <div className="w-px flex-1 my-1" style={{ background:'var(--card-br)' }} />}
                 </div>
@@ -1187,7 +1188,7 @@ export default function AdminDashboard() {
               { key: 'refunded', label: `Refunded (${refunded.length})` },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setFilter(key)}
-                className="px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all"
+                className="px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all"
                 style={{
                   background: filter === key ? '#1D9E75' : 'var(--card-bg)',
                   color: filter === key ? '#fff' : 'var(--tx-sub)',
@@ -1232,7 +1233,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-(--tx-sub)">{o.farmer} → {o.dealer}</p>
                         <p className="text-[10px] text-(--tx-dim) mt-0.5">{o.paid_at}</p>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="text-right flex-shrink-0">
                         <p className="font-syne font-bold text-base text-(--tx)">₦{o.amount.toLocaleString()}</p>
                         {o.escrow_status === 'released' && (
                           <>
@@ -1270,7 +1271,7 @@ export default function AdminDashboard() {
                     <p className="text-xs font-semibold text-(--tx) truncate">{d.product || d.order_ref}</p>
                     <p className="text-[11px] text-(--tx-dim)">{d.farmer} · {d.raised_at}</p>
                   </div>
-                  <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold shrink-0"
+                  <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold flex-shrink-0"
                     style={{
                       background: d.status === 'resolved_refund' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)',
                       color: d.status === 'resolved_refund' ? '#3b82f6' : '#10b981',
@@ -1327,7 +1328,7 @@ export default function AdminDashboard() {
                     className="w-full text-left flex items-center gap-3 px-4 py-3.5 transition-all active:scale-[0.98]"
                     style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)', borderRadius:16 }}>
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-syne font-bold text-sm"
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-bold text-sm"
                       style={{ background:'rgba(29,158,117,0.12)', border:'1.5px solid rgba(29,158,117,0.25)', color:'#1D9E75' }}>
                       {f.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}
                     </div>
@@ -1337,7 +1338,7 @@ export default function AdminDashboard() {
                       <p className="text-(--tx-sub) text-xs truncate">{f.phone} · {f.state}</p>
                     </div>
                     {/* Badge + chevron */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${BADGE[f.status] || BADGE.active}`}>
                         {f.status}
                       </span>
@@ -1358,11 +1359,11 @@ export default function AdminDashboard() {
               style={{ background:'var(--bg-nav)', border:'1px solid var(--card-br)', borderBottom:'none', maxHeight:'88vh' }}>
 
               {/* Handle + header */}
-              <div className="px-5 pt-4 pb-3 shrink-0">
+              <div className="px-5 pt-4 pb-3 flex-shrink-0">
                 <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background:'var(--card-br)' }} />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base shrink-0"
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base flex-shrink-0"
                       style={{ background:'rgba(29,158,117,0.12)', border:'1.5px solid rgba(29,158,117,0.25)', color:'#1D9E75' }}>
                       {drawerFarmer.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}
                     </div>
@@ -1438,7 +1439,7 @@ export default function AdminDashboard() {
                   <div className="flex flex-col gap-2">
                     <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
                       style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.15)' }}>
-                      <Ban size={14} className="text-red-400 shrink-0" />
+                      <Ban size={14} className="text-red-400 flex-shrink-0" />
                       <div>
                         <p className="text-xs font-semibold text-red-400">Account suspended</p>
                         <p className="text-[11px] text-(--tx-dim)">This farmer cannot access FarmXnap</p>
@@ -1491,7 +1492,7 @@ export default function AdminDashboard() {
                     <p className="text-(--tx) text-sm font-semibold">{s.farmer}</p>
                     <p className="text-(--tx-sub) text-xs">{s.crop} · {s.state}</p>
                   </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
                     s.treated ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                               : 'bg-red-500/15 text-red-400 border border-red-500/20'
                   }`}>
@@ -1504,10 +1505,10 @@ export default function AdminDashboard() {
                     <div className={`h-1 rounded-full ${s.confidence>=90?'bg-brand-green':s.confidence>=75?'bg-brand-amber':'bg-red-400'}`}
                       style={{ width:`${s.confidence}%` }} />
                   </div>
-                  <span className={`text-xs font-mono font-bold shrink-0 ${s.confidence>=90?'text-brand-green':s.confidence>=75?'text-brand-amber':'text-red-400'}`}>
+                  <span className={`text-xs font-mono font-bold flex-shrink-0 ${s.confidence>=90?'text-brand-green':s.confidence>=75?'text-brand-amber':'text-red-400'}`}>
                     {s.confidence}%
                   </span>
-                  <p className="text-(--tx-dim) text-xs shrink-0">{s.date}</p>
+                  <p className="text-(--tx-dim) text-xs flex-shrink-0">{s.date}</p>
                 </div>
               </Card>
             ))
@@ -1526,7 +1527,7 @@ export default function AdminDashboard() {
       <div style={{ position:'fixed', bottom:-80, right:-80, width:300, height:300, background:'radial-gradient(circle, rgba(29,158,117,0.06) 0%, transparent 70%)', pointerEvents:'none', zIndex:0, borderRadius:'50%' }} />
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 shrink-0 h-full"
+      <aside className="hidden lg:flex flex-col w-56 flex-shrink-0 h-full"
         style={{ background:'var(--bg-nav)', borderRight:'1px solid var(--card-br)' }}>
         {/* Logo */}
         <div className="px-5 pt-6 pb-5" style={{ borderBottom:'1px solid var(--card-br)' }}>
@@ -1562,16 +1563,16 @@ export default function AdminDashboard() {
           })}
         </nav>
         {/* Admin badge */}
-        <div className="px-4 pb-6 pt-3 shrink-0" style={{ borderTop:'1px solid rgba(29,158,117,0.1)' }}>
+        <div className="px-4 pb-6 pt-3 flex-shrink-0" style={{ borderTop:'1px solid rgba(29,158,117,0.1)' }}>
           <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
             style={{ background:'rgba(29,158,117,0.08)', border:'1px solid rgba(29,158,117,0.15)' }}>
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ background:'rgba(29,158,117,0.2)' }}>
               <Shield size={12} className="text-brand-green" />
             </div>
             <div>
               <p className="text-xs font-semibold text-white">Super Admin</p>
-              <p className="text-[10px] text-(--tx-dim)">hack-one-milli</p>
+              <p className="text-[10px] text-(--tx-dim)">Logout</p>
             </div>
           </div>
         </div>
@@ -1617,10 +1618,10 @@ export default function AdminDashboard() {
               })}
             </nav>
             {/* Admin badge — same as desktop */}
-            <div className="px-4 pb-6 pt-3 shrink-0" style={{ borderTop:'1px solid var(--card-br)' }}>
+            <div className="px-4 pb-6 pt-3 flex-shrink-0" style={{ borderTop:'1px solid var(--card-br)' }}>
               <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
                 style={{ background:'rgba(29,158,117,0.08)', border:'1px solid rgba(29,158,117,0.15)' }}>
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background:'rgba(29,158,117,0.2)' }}>
                   <Shield size={12} className="text-brand-green" />
                 </div>
@@ -1638,14 +1639,24 @@ export default function AdminDashboard() {
       {/* Main content */}
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
         {/* Top bar */}
-        <header className="shrink-0 flex items-center justify-between px-5 pb-3.5"
+        <header className="flex-shrink-0 flex items-center justify-between px-5 pb-3.5"
           style={{ background:'var(--bg-nav)', borderBottom:'1px solid var(--card-br)', backdropFilter:'blur(12px)', paddingTop:'calc(env(safe-area-inset-top, 0px) + 14px)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setDrawerOpen(true)} className="lg:hidden w-8 h-8 rounded-xl flex items-center justify-center text-(--tx-sub)"
               style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
               <Menu size={16} />
             </button>
+            <div className="lg:hidden">
               <p className="text-(--tx-dim) text-[10px]">FarmXnap Admin</p>
+            </div>
+            <div className="hidden lg:block">
+              <p className="text-(--tx-dim) text-[10px]">FarmXnap Admin</p>
+            </div>
+            {nav === 'approvals' && pendingDealers.length > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {pendingDealers.length}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded-xl font-semibold"
@@ -1657,7 +1668,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* Bottom nav (mobile) */}
-        <div className="lg:hidden shrink-0 order-last"
+        <div className="lg:hidden flex-shrink-0 order-last"
           style={{ background:'var(--bg-nav)', borderTop:'1px solid var(--card-br)', paddingBottom:'calc(env(safe-area-inset-bottom,0px) + 4px)' }}>
           <div className="flex items-center">
             {NAV.map(({ key, label, icon: Icon }) => {
@@ -1711,7 +1722,7 @@ export default function AdminDashboard() {
             {apiError && (
               <div className="flex items-start gap-3 px-4 py-3 rounded-2xl mb-5"
                 style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.25)' }}>
-                <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                <AlertCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-red-400 mb-0.5">API Error</p>
                   <p className="text-xs text-(--tx-sub) break-words">{apiError}</p>
@@ -1723,7 +1734,7 @@ export default function AdminDashboard() {
                       .then(({ farmers: f, dealers: d }) => { setFarmers(f); setDealers(d) })
                       .catch(e => setApiError(e.message))
                   }}
-                  className="text-xs text-brand-amber underline shrink-0">
+                  className="text-xs text-brand-amber underline flex-shrink-0">
                   Retry
                 </button>
               </div>
