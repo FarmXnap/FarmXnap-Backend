@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLogo from '../component/AppLogo'
 import PinSheet from '../component/PinSheet'
@@ -6,14 +6,16 @@ import {
   LogOut, Package, TrendingUp, Plus, Pencil, Trash2,
   LayoutDashboard, ClipboardList, AlertTriangle, X, Check, Truck,
   UserCircle, Star, ShieldCheck, Phone, Mail, MapPin, Building2,
-  Wallet, ChevronRight, Clock, MessageSquare, Navigation, Leaf, Moon, Sun,
+  Wallet, ChevronRight, Clock, MessageSquare, Navigation, Leaf, Moon, Sun, Upload,
 } from 'lucide-react'
-import { logoutUser, requestEscrowRelease } from '../services/api'
+import { logoutUser, requestEscrowRelease, TIMERS } from '../services/api'
+import { NIGERIA_STATES, getLgasByState } from '../data/nigeriaApi'
 import { useAuthStore, useToastStore, useThemeStore } from '../store'
 import {
   getDealerOrders, getDealerStats, getDealerProducts,
   addProduct, updateProduct, deleteProduct, updateOrderStatus,
   getDealerProfile, updateDealerProfile,
+  fetchDealerProfile,
 } from '../services/api'
 
 const CATEGORIES = ['Fungicide', 'Insecticide', 'Herbicide', 'Fertilizer', 'Other']
@@ -57,6 +59,7 @@ function ProductSheet({ product, onClose, onSave }) {
     unit:               product?.unit              || '1 kg',
     disease_target:     product?.target_problems   || product?.disease_target || '',
     active_ingredient:  product?.active_ingredient || '',
+    description:        product?.description       || '',
   })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
@@ -64,8 +67,9 @@ function ProductSheet({ product, onClose, onSave }) {
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim())                                   e.name  = 'Required'
-    if (!form.price || isNaN(form.price) || +form.price <= 0) e.price = 'Enter valid price'
+    if (!form.name.trim())                                        e.name  = 'Required'
+    if (!form.active_ingredient.trim())                           e.active_ingredient = 'Required'
+    if (!form.price || isNaN(form.price) || +form.price <= 0)    e.price = 'Enter valid price'
     if (form.stock === '' || isNaN(form.stock) || +form.stock < 0) e.stock = 'Enter valid qty'
     setErrors(e); return !Object.keys(e).length
   }
@@ -83,60 +87,116 @@ function ProductSheet({ product, onClose, onSave }) {
   return (
     <div className="sheet-backdrop">
       <div className="sheet-panel">
-        <div className="sheet-handle" />
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-syne font-bold text-lg text-(--tx)">{isEdit ? 'Edit product' : 'Add product'}</h3>
-          <button onClick={onClose} className="nav-close"><X size={15} /></button>
-        </div>
-        <div className="flex flex-col gap-3">
-          <div>
-            <span className="field-label">Product name *</span>
-            <input className={`field-input ${errors.name ? 'border-red-500/50' : ''}`}
-              placeholder="e.g. Mancozeb 80WP" value={form.name} onChange={e => set('name', e.target.value)} />
-            {errors.name && <p className="field-error">{errors.name}</p>}
-          </div>
-          <div>
-            <span className="field-label">Active ingredient *</span>
-            <input className="field-input" placeholder="e.g. Mancozeb 80%"
-              value={form.active_ingredient} onChange={e => set('active_ingredient', e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="field-label">Category</span>
-              <select className="field-select" value={form.category} onChange={e => set('category', e.target.value)}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <span className="field-label">Unit</span>
-              <select className="field-select" value={form.unit} onChange={e => set('unit', e.target.value)}>
-                {UNITS.map(u => <option key={u}>{u}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="field-label">Price (₦) *</span>
-              <input className={`field-input ${errors.price ? 'border-red-500/50' : ''}`} type="number" placeholder="4200"
-                value={form.price} onChange={e => set('price', e.target.value)} />
-              {errors.price && <p className="field-error">{errors.price}</p>}
-            </div>
-            <div>
-              <span className="field-label">Stock qty *</span>
-              <input className={`field-input ${errors.stock ? 'border-red-500/50' : ''}`} type="number" placeholder="20"
-                value={form.stock} onChange={e => set('stock', e.target.value)} />
-              {errors.stock && <p className="field-error">{errors.stock}</p>}
-            </div>
-          </div>
-          <div>
-            <span className="field-label">Target disease / pest</span>
-            <input className="field-input" placeholder="e.g. Blight, Rust"
-              value={form.disease_target} onChange={e => set('disease_target', e.target.value)} />
+
+        {/* Header — fixed */}
+        <div className="sheet-header">
+          <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background:'var(--card-br)' }} />
+          <div className="flex items-center justify-between">
+            <h3 className="font-syne font-bold text-lg text-(--tx)">{isEdit ? 'Edit product' : 'Add product'}</h3>
+            <button onClick={onClose} className="nav-close"><X size={15} /></button>
           </div>
         </div>
-        <button className="btn-main mt-5" onClick={handleSave} disabled={saving}>
-          {saving ? <><span className="spinner" /> Saving…</> : <><Check size={15} /> {isEdit ? 'Save changes' : 'Add product'}</>}
-        </button>
+
+        {/* Scrollable body */}
+        <div className="sheet-body pb-4">
+
+          {/* Tip notice */}
+          <div className="rounded-2xl px-4 py-3 mb-4"
+            style={{ background: 'rgba(239,159,39,0.08)', border: '1.5px solid rgba(239,159,39,0.25)' }}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-base">💡</span>
+              <p className="text-xs font-syne font-bold text-brand-amber">Fill carefully — farmers find you through this</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {[
+                { label: 'Active ingredient', tip: 'How AI matches your product to a diagnosed disease — use exact chemical name e.g. "Mancozeb"' },
+                { label: 'Target disease',    tip: 'Comma-separate every disease it treats — more = more farmers find you' },
+                { label: 'Description',       tip: 'Include dosage, mixing instructions — builds farmer trust' },
+              ].map(({ label, tip }) => (
+                <div key={label} className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 bg-brand-amber" />
+                  <p className="text-[11px] text-(--tx-sub) leading-relaxed">
+                    <span className="font-semibold text-(--tx)">{label}:</span> {tip}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {/* Product name */}
+            <div>
+              <span className="field-label">Product name *</span>
+              <input className={`field-input ${errors.name ? 'border-red-500/50' : ''}`}
+                placeholder="e.g. Mancozeb 80WP" value={form.name} onChange={e => set('name', e.target.value)} />
+              {errors.name && <p className="field-error">{errors.name}</p>}
+            </div>
+
+            {/* Active ingredient */}
+            <div>
+              <span className="field-label">Active ingredient *</span>
+              <input className={`field-input ${errors.active_ingredient ? 'border-red-500/50' : ''}`}
+                placeholder="e.g. Mancozeb 80%" value={form.active_ingredient}
+                onChange={e => set('active_ingredient', e.target.value)} />
+              {errors.active_ingredient && <p className="field-error">{errors.active_ingredient}</p>}
+            </div>
+
+            {/* Category + Unit */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="field-label">Category</span>
+                <select className="field-select" value={form.category} onChange={e => set('category', e.target.value)}>
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className="field-label">Unit</span>
+                <select className="field-select" value={form.unit} onChange={e => set('unit', e.target.value)}>
+                  {UNITS.map(u => <option key={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Price + Stock */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="field-label">Price (₦) *</span>
+                <input className={`field-input ${errors.price ? 'border-red-500/50' : ''}`} type="number" placeholder="4200"
+                  value={form.price} onChange={e => set('price', e.target.value)} />
+                {errors.price && <p className="field-error">{errors.price}</p>}
+              </div>
+              <div>
+                <span className="field-label">Stock qty *</span>
+                <input className={`field-input ${errors.stock ? 'border-red-500/50' : ''}`} type="number" placeholder="20"
+                  value={form.stock} onChange={e => set('stock', e.target.value)} />
+                {errors.stock && <p className="field-error">{errors.stock}</p>}
+              </div>
+            </div>
+
+            {/* Target disease */}
+            <div>
+              <span className="field-label">Target disease / pest</span>
+              <input className="field-input" placeholder="e.g. Early blight, Downy mildew"
+                value={form.disease_target} onChange={e => set('disease_target', e.target.value)} />
+            </div>
+
+            {/* Description */}
+            <div>
+              <span className="field-label">Description (optional)</span>
+              <textarea className="field-input resize-none" rows={4}
+                placeholder="Describe how this product works, dosage and how to apply it…"
+                value={form.description} onChange={e => set('description', e.target.value)}
+                style={{ WebkitUserSelect: 'text', userSelect: 'text' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Sticky footer button */}
+        <div className="sheet-footer">
+          <button className="btn-main amber w-full" onClick={handleSave} disabled={saving}>
+            {saving ? <><span className="spinner" /> Saving…</> : <><Check size={15} /> {isEdit ? 'Save changes' : 'Add product'}</>}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -171,13 +231,17 @@ function DeleteSheet({ product, onClose, onConfirm }) {
 // ── Edit Profile Sheet ───────────────────────────────────────────────────────
 function ProfileSheet({ profile, onClose, onSave }) {
   const [form, setForm] = useState({
-    business_name: profile?.business_name || '', owner_name: profile?.owner_name || '',
-    email: profile?.email || '', phone: profile?.phone || '',
-    address: profile?.address || '', state: profile?.state || '', lga: profile?.lga || '',
-    bank: profile?.bank || '', account_number: profile?.account_number || '',
+    business_name:    profile?.business_name    || '',
+    business_address: profile?.business_address || profile?.address || '',
+    phone:            profile?.phone            || '',
+    state:            profile?.state            || '',
+    lga:              profile?.lga              || '',
+    bank:             profile?.bank             || '',
+    account_number:   profile?.account_number   || '',
   })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const lgas = form.state ? getLgasByState(form.state) : []
 
   const handleSave = async () => {
     setSaving(true)
@@ -188,44 +252,88 @@ function ProfileSheet({ profile, onClose, onSave }) {
   return (
     <div className="sheet-backdrop">
       <div className="sheet-panel">
-        <div className="sheet-handle" />
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-syne font-bold text-lg text-(--tx)">Edit profile</h3>
-          <button onClick={onClose} className="nav-close"><X size={15} /></button>
+
+        {/* Header */}
+        <div className="sheet-header">
+          <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background:'var(--card-br)' }} />
+          <div className="flex items-center justify-between">
+            <h3 className="font-syne font-bold text-lg text-(--tx)">Edit profile</h3>
+            <button onClick={onClose} className="nav-close"><X size={15} /></button>
+          </div>
         </div>
-        <div className="flex flex-col gap-3">
-          <div><span className="field-label">Business name</span><input className="field-input" value={form.business_name} onChange={e => set('business_name', e.target.value)} /></div>
-          <div><span className="field-label">Owner name</span><input className="field-input" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><span className="field-label">Phone</span><input className="field-input" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
-            <div><span className="field-label">Email</span><input className="field-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} /></div>
-          </div>
-          <div><span className="field-label">Address</span><input className="field-input" value={form.address} onChange={e => set('address', e.target.value)} /></div>
-          <div className="grid grid-cols-2 gap-3">
+
+        {/* Scrollable body */}
+        <div className="sheet-body pb-4">
+          <div className="flex flex-col gap-3">
+
+            {/* Business info */}
             <div>
-              <span className="field-label">State</span>
-              <select className="field-select" value={form.state} onChange={e => set('state', e.target.value)}>
-                <option value="">Select</option>
-                {STATES.map(s => <option key={s}>{s}</option>)}
-              </select>
+              <span className="field-label">Business name</span>
+              <input className="field-input" value={form.business_name}
+                onChange={e => set('business_name', e.target.value)} />
             </div>
-            <div><span className="field-label">LGA</span><input className="field-input" placeholder="LGA" value={form.lga} onChange={e => set('lga', e.target.value)} /></div>
-          </div>
-          <p className="text-(--tx-dim) text-[10px] uppercase tracking-widest pt-1">Payout details</p>
-          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <span className="field-label">Business address</span>
+              <input className="field-input" placeholder="e.g. 12 Agricultural Rd, Port Harcourt"
+                value={form.business_address} onChange={e => set('business_address', e.target.value)} />
+            </div>
+            <div>
+              <span className="field-label">Phone</span>
+              <input className="field-input" type="tel" value={form.phone}
+                onChange={e => set('phone', e.target.value)} />
+            </div>
+
+            {/* State + LGA */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="field-label">State</span>
+                <select className="field-select" value={form.state}
+                  onChange={e => { set('state', e.target.value); set('lga', '') }}>
+                  <option value="">Select state</option>
+                  {NIGERIA_STATES.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className="field-label">LGA</span>
+                <select className="field-select" value={form.lga} onChange={e => set('lga', e.target.value)}
+                  disabled={!form.state}>
+                  <option value="">{form.state ? 'Select LGA' : '— pick state first'}</option>
+                  {lgas.map(l => <option key={l}>{l}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Payout divider */}
+            <div className="flex items-center gap-3 pt-1">
+              <div className="flex-1 h-px" style={{ background:'var(--card-br)' }} />
+              <p className="text-(--tx-dim) text-[10px] uppercase tracking-widest flex-shrink-0">Payout details</p>
+              <div className="flex-1 h-px" style={{ background:'var(--card-br)' }} />
+            </div>
+
+            {/* Bank */}
             <div>
               <span className="field-label">Bank</span>
               <select className="field-select" value={form.bank} onChange={e => set('bank', e.target.value)}>
-                <option value="">Select</option>
+                <option value="">Select bank</option>
                 {BANKS.map(b => <option key={b}>{b}</option>)}
               </select>
             </div>
-            <div><span className="field-label">Account no.</span><input className="field-input" maxLength={10} value={form.account_number} onChange={e => set('account_number', e.target.value)} /></div>
+
+            {/* Account number */}
+            <div>
+              <span className="field-label">Account number</span>
+              <input className="field-input font-mono" type="tel" maxLength={10} placeholder="10-digit account number"
+                value={form.account_number} onChange={e => set('account_number', e.target.value.replace(/\D/g,'').slice(0,10))} />
+            </div>
           </div>
         </div>
-        <button className="btn-main amber mt-5" onClick={handleSave} disabled={saving}>
-          {saving ? <><span className="spinner" /> Saving…</> : <><Check size={15} /> Save changes</>}
-        </button>
+
+        {/* Sticky footer */}
+        <div className="sheet-footer">
+          <button className="btn-main amber w-full" onClick={handleSave} disabled={saving}>
+            {saving ? <><span className="spinner" /> Saving…</> : <><Check size={15} /> Save changes</>}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -235,6 +343,7 @@ function ProfileSheet({ profile, onClose, onSave }) {
 export default function DealerDashboard() {
   const navigate = useNavigate()
   const { user, logout, updateUser } = useAuthStore()
+  const releaseFileRef = useRef(null)
   const showGlobalToast = useToastStore(s => s.show)
   const { theme, setTheme } = useThemeStore()
   const [tab,         setTab]         = useState('overview')
@@ -248,14 +357,69 @@ export default function DealerDashboard() {
   const [selectedOrder,  setSelectedOrder]  = useState(null)
   const [showNotifs,     setShowNotifs]     = useState(false)
   const [showSignOut,    setShowSignOut]    = useState(false)
-  const [releaseSheet,   setReleaseSheet]   = useState(null) // order object
-  const [releaseNote,    setReleaseNote]    = useState('')
+  const [releaseSheet,      setReleaseSheet]      = useState(null)  // order object
+  const [releaseReason,     setReleaseReason]     = useState('')
+  const [releaseNote,       setReleaseNote]       = useState('')
+  const [releaseProofFile,  setReleaseProofFile]  = useState(null)
+  const [releaseProofPrev,  setReleaseProofPrev]  = useState(null)
+  const [releaseStep,       setReleaseStep]       = useState('reason') // 'reason' | 'details'
   const [releaseSubmitting, setReleaseSubmitting] = useState(false)
-  const [releaseSuccess, setReleaseSuccess] = useState(false)
+  const [releaseSuccess,    setReleaseSuccess]    = useState(false)
 
   useEffect(() => {
-    Promise.all([getDealerStats(), getDealerOrders(), getDealerProducts(), getDealerProfile()])
-      .then(([s,o,p,pr]) => { setStats(s); setOrders(o); setProducts(p); setProfile(pr); setLoading(false) })
+    // Build profile immediately from auth store (populated at login/signup)
+    const authProfile = {
+      id:                      user?.id                  || '',
+      dealer_profile_id:       user?.dealer_profile_id   || user?.id || '',
+      business_name:           user?.business_name       || '',
+      business_address:        user?.business_address    || '',
+      phone:                   user?.phone               || user?.phone_number || '',
+      state:                   user?.state               || '',
+      lga:                     user?.lga                 || '',
+      cac_number:              user?.cac_registration_number || user?.cac_number || '',
+      cac_registration_number: user?.cac_registration_number || '',
+      bank:                    user?.bank                || '',
+      account_number:          user?.account_number      || '',
+      account_name:            user?.business_name       || '',
+      is_verified:             user?.is_verified         || false,
+      approved:                user?.is_verified         || false,
+      verified:                user?.is_verified         || false,
+      member_since:            user?.member_since        || new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+      rating:                  user?.rating              || 0,
+      total_sales:             user?.total_sales         || 0,
+    }
+    setProfile(authProfile)
+
+    // Load orders (mock) and real products in parallel
+    Promise.all([getDealerOrders(), getDealerProducts()])
+      .then(([o, p]) => { setOrders(o); setProducts(p) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+
+    // If we have real profile ID, fetch fresh data from API
+    const userId    = user?.id
+    const profileId = user?.dealer_profile_id
+    if (userId && profileId && profileId !== userId) {
+      fetchDealerProfile(userId, profileId).then(realProfile => {
+        if (realProfile) {
+          setProfile(prev => ({
+            ...prev,
+            business_name:           realProfile.business_name           || prev?.business_name,
+            business_address:        realProfile.business_address        || prev?.business_address,
+            state:                   realProfile.state                   || prev?.state,
+            lga:                     realProfile.lga                     || prev?.lga,
+            bank:                    realProfile.bank                    || prev?.bank,
+            account_number:          realProfile.account_number          || prev?.account_number,
+            cac_number:              realProfile.cac_registration_number || prev?.cac_number,
+            cac_registration_number: realProfile.cac_registration_number || prev?.cac_registration_number,
+            phone:                   realProfile.phone                   || prev?.phone,
+            is_verified:             realProfile.is_verified,
+            approved:                realProfile.is_verified,
+            dealer_profile_id:       realProfile.id                     || prev?.dealer_profile_id,
+          }))
+        }
+      }).catch(() => {})
+    }
   }, [])
 
 
@@ -287,16 +451,24 @@ export default function DealerDashboard() {
   }
 
   // Countdown timer for dispatched orders
+  // TIMERS.FARMER_CONFIRM_MS controls the window — 2 min in demo, 72hrs live
   const getDeliveryCountdown = (dispatchedAt) => {
     if (!dispatchedAt) return null
-    // Parse date — assume dispatched 5 days ago in mock
-    const deadline = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days from now in mock
+    // Parse dispatch time — if string (mock), use TIMERS window from now
+    let dispatchTime = new Date(dispatchedAt)
+    if (isNaN(dispatchTime.getTime())) dispatchTime = new Date()
+    const deadline = new Date(dispatchTime.getTime() + TIMERS.FARMER_CONFIRM_MS)
     const diff = deadline - Date.now()
-    if (diff <= 0) return { expired: true, label: 'Expired' }
-    const days  = Math.floor(diff / (1000 * 60 * 60 * 24))
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    if (days > 0) return { expired: false, label: `${days}d ${hours}h left`, urgent: days < 1 }
-    return { expired: false, label: `${hours}h left`, urgent: true }
+    if (diff <= 0) return { expired: true, label: 'Expired', urgent: true }
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const mins  = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    const secs  = Math.floor((diff % (1000 * 60)) / 1000)
+    if (hours > 24) {
+      const days = Math.floor(hours / 24)
+      return { expired: false, label: `${days}d ${hours % 24}h left`, urgent: false }
+    }
+    if (hours > 0) return { expired: false, label: `${hours}h ${mins}m left`, urgent: hours < 2 }
+    return { expired: false, label: `${mins}m ${secs}s left`, urgent: true }
   }
 
   const filtered   = orderFilter === 'all' ? orders : orders.filter(o => o.status === orderFilter)
@@ -407,12 +579,19 @@ export default function DealerDashboard() {
       {tab === 'overview' && (
         <TAB>
           <div className="grid grid-cols-2 gap-3 mb-4">
-            {[
-              { label: 'Orders today',    val: stats?.orders_today,  color: 'text-brand-amber', emoji: '📦' },
-              { label: 'Revenue today',   val: stats ? `₦${stats.revenue_today.toLocaleString()}` : '—', color: 'text-brand-amber', emoji: '💰' },
-              { label: 'Products listed', val: products.length,      color: 'text-(--tx)',        emoji: '🏪' },
-              { label: 'New leads',       val: stats?.new_leads,     color: 'text-brand-amber',  emoji: '👥' },
-            ].map(({ label, val, color, emoji }) => (
+            {(() => {
+              // Compute stats from real orders
+              const todayStr = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+              const ordersToday = orders.filter(o => o.date === todayStr || o.paid_at?.startsWith(todayStr)).length
+              const revenueToday = orders.filter(o => o.date === todayStr || o.paid_at?.startsWith(todayStr)).reduce((s,o) => s + (o.amount || 0), 0)
+              const pendingCount = orders.filter(o => o.status === 'pending').length
+              return [
+                { label: 'Orders today',    val: ordersToday || stats?.orders_today || 0,  color: 'text-brand-amber', emoji: '📦' },
+                { label: 'Revenue today',   val: revenueToday > 0 ? `₦${revenueToday.toLocaleString()}` : stats ? `₦${stats.revenue_today.toLocaleString()}` : '₦0', color: 'text-brand-amber', emoji: '💰' },
+                { label: 'Products listed', val: products.length,  color: 'text-(--tx)', emoji: '🏪' },
+                { label: 'Pending orders',  val: pendingCount,     color: 'text-brand-amber', emoji: '⏳' },
+              ]
+            })().map(({ label, val, color, emoji }) => (
               <div key={label} className="stat-card">
                 <span className="text-xl mb-2 block">{emoji}</span>
                 {loading ? <div className="h-6 w-16 shimmer mb-1" />
@@ -820,7 +999,7 @@ export default function DealerDashboard() {
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { label: 'Orders',   val: profile.total_sales,  color: 'text-(--tx)'        },
+                    { label: 'Orders',   val: orders.length || profile.total_sales || 0, color: 'text-(--tx)'        },
                     { label: 'Products', val: products.length,      color: 'text-brand-green'  },
                     { label: 'Revenue',  val: stats ? `₦${(stats.revenue_today/1000).toFixed(0)}k` : '—', color: 'text-brand-amber font-bold' },
                   ].map(({ label, val, color }) => (
@@ -937,275 +1116,430 @@ export default function DealerDashboard() {
         ))}
       </div>
 
-      {/* ── Order detail sheet ── */}
       {selectedOrder && (
         <div className="sheet-backdrop" onClick={e => e.target === e.currentTarget && setSelectedOrder(null)}>
           <div className="sheet-panel">
-            <div className="sheet-handle" />
 
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 mb-5">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className={ORDER_STATUS[selectedOrder.status]?.cls}>
-                    {ORDER_STATUS[selectedOrder.status]?.label}
-                  </span>
-                  {selectedOrder.escrow_status === 'held' && (
-                    <span className="badge amber text-[10px]">🔒 Escrow held</span>
-                  )}
-                  {selectedOrder.escrow_status === 'released' && (
-                    <span className="badge green text-[10px]">✓ Escrow released</span>
-                  )}
-                </div>
-                <h3 className="font-syne font-extrabold text-lg text-(--tx) leading-tight">{selectedOrder.product}</h3>
-                <p className="text-(--tx-dim) text-xs font-mono mt-0.5">{selectedOrder.ref}</p>
-              </div>
-              <button onClick={() => setSelectedOrder(null)} className="nav-close flex-shrink-0">
-                <X size={15} />
-              </button>
-            </div>
-
-            {/* Farmer contact */}
-            <div className="glass-card mb-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Farmer details</p>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-syne font-bold text-sm text-brand-green"
-                  style={{ background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.2)' }}>
-                  {selectedOrder.farmer.split(' ').map(n => n[0]).join('').slice(0,2)}
-                </div>
-                <div>
-                  <p className="font-syne font-bold text-sm text-(--tx)">{selectedOrder.farmer}</p>
-                  <p className="text-(--tx-sub) text-xs">{selectedOrder.farmer_state}</p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2.5">
-                {[
-                  { icon: Phone,      label: 'Phone',    val: selectedOrder.farmer_phone,    href: `tel:${selectedOrder.farmer_phone}` },
-                  { icon: MapPin,     label: 'Location', val: selectedOrder.farmer_location, href: null },
-                  { icon: Leaf,       label: 'Crop',     val: `${selectedOrder.crop} · ${selectedOrder.disease}`, href: null },
-                ].map(({ icon: Icon, label, val, href }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0">
-                      <Icon size={12} className="text-(--tx-sub)" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-(--tx-dim) text-[10px]">{label}</p>
-                      {href
-                        ? <a href={href} className="text-brand-amber text-sm font-medium">{val}</a>
-                        : <p className="text-(--tx) text-sm truncate">{val}</p>
-                      }
-                    </div>
-                    {href && (
-                      <a href={href}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: 'rgba(239,159,39,0.1)', border: '1px solid rgba(239,159,39,0.2)' }}>
-                        <Phone size={13} className="text-brand-amber" />
-                      </a>
+            {/* Fixed header */}
+            <div className="sheet-header">
+              <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background:'var(--card-br)' }} />
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={ORDER_STATUS[selectedOrder.status]?.cls}>
+                      {ORDER_STATUS[selectedOrder.status]?.label}
+                    </span>
+                    {selectedOrder.escrow_status === 'held' && (
+                      <span className="badge amber text-[10px]">🔒 Escrow held</span>
+                    )}
+                    {selectedOrder.escrow_status === 'released' && (
+                      <span className="badge green text-[10px]">✓ Escrow released</span>
                     )}
                   </div>
-                ))}
-                {selectedOrder.notes && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <MessageSquare size={12} className="text-(--tx-sub)" />
+                  <h3 className="font-syne font-extrabold text-lg text-(--tx) leading-tight">{selectedOrder.product}</h3>
+                  <p className="text-(--tx-dim) text-xs font-mono mt-0.5">{selectedOrder.ref}</p>
+                </div>
+                <button onClick={() => setSelectedOrder(null)} className="nav-close flex-shrink-0">
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="sheet-body pb-4">
+              {/* Farmer contact */}
+              <div className="glass-card mb-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Farmer details</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-syne font-bold text-sm text-brand-green"
+                    style={{ background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.2)' }}>
+                    {selectedOrder.farmer.split(' ').map(n => n[0]).join('').slice(0,2)}
+                  </div>
+                  <div>
+                    <p className="font-syne font-bold text-sm text-(--tx)">{selectedOrder.farmer}</p>
+                    <p className="text-(--tx-sub) text-xs">{selectedOrder.farmer_state}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {[
+                    { icon: Phone,  label: 'Phone',    val: selectedOrder.farmer_phone,    href: `tel:${selectedOrder.farmer_phone}` },
+                    { icon: MapPin, label: 'Location', val: selectedOrder.farmer_location, href: null },
+                    { icon: Leaf,   label: 'Crop',     val: `${selectedOrder.crop} · ${selectedOrder.disease}`, href: null },
+                  ].map(({ icon: Icon, label, val, href }) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0">
+                        <Icon size={12} className="text-(--tx-sub)" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-(--tx-dim) text-[10px]">{label}</p>
+                        {href
+                          ? <a href={href} className="text-brand-amber text-sm font-medium">{val}</a>
+                          : <p className="text-(--tx) text-sm truncate">{val}</p>
+                        }
+                      </div>
+                      {href && (
+                        <a href={href}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'rgba(239,159,39,0.1)', border: '1px solid rgba(239,159,39,0.2)' }}>
+                          <Phone size={13} className="text-brand-amber" />
+                        </a>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-(--tx-dim) text-[10px]">Delivery note</p>
-                      <p className="text-(--tx-sub) text-sm italic">{selectedOrder.notes}</p>
+                  ))}
+                  {selectedOrder.notes && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <MessageSquare size={12} className="text-(--tx-sub)" />
+                      </div>
+                      <div>
+                        <p className="text-(--tx-dim) text-[10px]">Delivery note</p>
+                        <p className="text-(--tx-sub) text-sm italic">{selectedOrder.notes}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order breakdown */}
+              <div className="glass-card mb-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Order breakdown</p>
+                {[
+                  { label: selectedOrder.product, val: `₦${(selectedOrder.unit_price || selectedOrder.amount).toLocaleString()}` },
+                  { label: 'Delivery fee',         val: `₦${(selectedOrder.delivery_fee || 0).toLocaleString()}` },
+                  { label: 'Platform fee (4%)',    val: `₦${(selectedOrder.platform_fee || 0).toLocaleString()}` },
+                ].map(({ label, val }) => (
+                  <div key={label} className="flex justify-between mb-2">
+                    <span className="text-xs text-(--tx-sub)">{label}</span>
+                    <span className="text-xs text-(--tx)">{val}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-2.5 border-t border-(--card-br)">
+                  <span className="font-syne font-bold text-sm text-(--tx)">Farmer paid</span>
+                  <span className="font-syne font-extrabold text-base text-brand-green">₦{selectedOrder.amount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between mt-1.5">
+                  <span className="text-xs text-(--tx-dim)">Your payout (after fee)</span>
+                  <span className="text-xs font-semibold text-brand-amber">
+                    ₦{(selectedOrder.amount - (selectedOrder.platform_fee || 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="glass-card">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Timeline</p>
+                {[
+                  { label: 'Order placed', val: selectedOrder.date,         done: true },
+                  { label: 'Payment made', val: selectedOrder.paid_at,      done: !!selectedOrder.paid_at },
+                  { label: 'Dispatched',   val: selectedOrder.dispatched_at || (selectedOrder.status === 'pending' ? 'Pending' : null), done: selectedOrder.status !== 'pending' },
+                  { label: 'Delivered',    val: selectedOrder.delivered_at  || (selectedOrder.status === 'delivered' ? 'Confirmed' : 'Awaiting'), done: selectedOrder.status === 'delivered' },
+                ].filter(t => t.val).map(({ label, val, done }) => (
+                  <div key={label} className="flex justify-between mb-2 last:mb-0">
+                    <span className="text-xs text-(--tx-sub) flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${done ? 'bg-brand-green' : 'bg-(--card-br)'}`} />
+                      {label}
+                    </span>
+                    <span className={`text-xs font-medium ${done ? 'text-(--tx)' : 'text-(--tx-dim)'}`}>{val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sticky CTA footer */}
+            <div className="sheet-footer">
+              {selectedOrder.status === 'pending' && (
+                <button className="btn-main amber w-full" onClick={() => handleDeliver(selectedOrder.id)}>
+                  <Truck size={15} /> Mark as dispatched
+                </button>
+              )}
+              {selectedOrder.status === 'dispatched' && (() => {
+                const countdown = getDeliveryCountdown(selectedOrder.dispatched_at)
+                return (
+                  <div className="flex flex-col gap-2">
+                    <div className="rounded-2xl p-3 flex items-center gap-3"
+                      style={{ background: countdown?.urgent ? 'rgba(239,68,68,0.08)' : 'rgba(239,159,39,0.08)', border: `1px solid ${countdown?.urgent ? 'rgba(239,68,68,0.2)' : 'rgba(239,159,39,0.2)'}` }}>
+                      <span className="text-xl flex-shrink-0">⏱</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-(--tx)">Farmer confirmation window</p>
+                        <p className={`text-xs mt-0.5 ${countdown?.urgent ? 'text-red-400' : 'text-brand-amber'}`}>
+                          {countdown?.expired ? 'Time expired — you can request release' : `${countdown?.label} to confirm delivery`}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedOrder.release_requested ? (
+                      <div className="info-banner amber">
+                        <span className="flex-shrink-0">📋</span>
+                        <p className="text-xs text-(--tx-sub)">Release request submitted — under admin review</p>
+                      </div>
+                    ) : countdown?.expired ? (
+                      <button className="btn-main amber w-full"
+                        onClick={() => { setSelectedOrder(null); setReleaseReason(''); setReleaseNote(''); setReleaseProofFile(null); setReleaseProofPrev(null); setReleaseStep('reason'); setReleaseSheet(selectedOrder) }}>
+                        📤 Request payment release
+                      </button>
+                    ) : (
+                      <div className="info-banner amber">
+                        <span className="flex-shrink-0">🔒</span>
+                        <p className="text-xs text-(--tx-sub)">Payment held in escrow. Farmer confirms on delivery.</p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+              {selectedOrder.status === 'delivered' && (
+                <div className="info-banner green">
+                  <Check size={14} className="text-brand-green flex-shrink-0" />
+                  <p className="text-xs text-(--tx-sub)">Order completed — payment sent to your bank via Interswitch</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* ── Dealer Release Request Sheet — 2-step ── */}
+      {releaseSheet && !releaseSuccess && (() => {
+        const RELEASE_REASONS = [
+          { key: 'delivered_no_response', emoji: '🔇', label: 'I delivered — farmer not responding',        desc: 'Delivered but farmer has not confirmed receipt' },
+          { key: 'delivered_confirmed',   emoji: '✅', label: 'Farmer verbally confirmed delivery',         desc: 'Farmer said they received it but escrow not released' },
+          { key: 'waybill_proof',         emoji: '📋', label: 'I have dispatch / delivery proof',           desc: 'Waybill, receipt or delivery confirmation available' },
+          { key: 'partial_dispute',       emoji: '📉', label: 'Partial delivery — farmer wants full refund', desc: 'I delivered what was in stock, farmer wants all back' },
+          { key: 'other',                 emoji: '❓', label: 'Other reason',                               desc: 'Explain in the details' },
+        ]
+        const handleReleaseProof = (e) => {
+          const file = e.target.files[0]; if (!file) return
+          setReleaseProofFile(file)
+          const reader = new FileReader()
+          reader.onload = () => setReleaseProofPrev(reader.result)
+          reader.readAsDataURL(file)
+        }
+        const canSubmit = releaseReason && releaseNote.trim() && !releaseSubmitting
+        return (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto"
+            style={{ background: 'rgba(0,0,0,0.85)', animation: 'fadeIn 0.2s ease' }}
+            onClick={e => e.target === e.currentTarget && setReleaseSheet(null)}>
+            <input ref={releaseFileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleReleaseProof} />
+            <div className="sheet-panel" style={{ maxHeight: '93vh' }}>
+
+              {/* Header */}
+              <div className="sheet-header">
+                <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--card-br)' }} />
+                <div className="flex items-center justify-between">
+                  <div>
+                    {releaseStep === 'details' && (
+                      <button onClick={() => setReleaseStep('reason')}
+                        className="text-xs text-(--tx-sub) mb-1 flex items-center gap-1 bg-transparent border-none cursor-pointer">
+                        ← Back
+                      </button>
+                    )}
+                    <h3 className="font-syne font-bold text-lg text-(--tx)">
+                      {releaseStep === 'reason' ? 'Request payment release' : 'Delivery details'}
+                    </h3>
+                    <p className="text-xs text-(--tx-sub) mt-0.5">
+                      {releaseStep === 'reason'
+                        ? 'Select the reason that best describes your situation'
+                        : 'Admin will review this if farmer disputes'}
+                    </p>
+                  </div>
+                  <button onClick={() => setReleaseSheet(null)} className="nav-close"><X size={15} /></button>
+                </div>
+
+                {/* Step indicator */}
+                <div className="flex items-center gap-2 mt-3">
+                  {['Select reason', 'Add details'].map((label, i) => (
+                    <div key={label} className="flex items-center gap-2 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
+                          style={{
+                            background: (i === 0 && releaseStep === 'reason') || (i === 1 && releaseStep === 'details')
+                              ? '#EF9F27' : 'var(--card-br)',
+                            color: (i === 0 && releaseStep === 'reason') || (i === 1 && releaseStep === 'details') ? 'white' : 'var(--tx-dim)',
+                          }}>
+                          {i + 1}
+                        </div>
+                        <span className="text-[10px] font-medium text-(--tx-dim)">{label}</span>
+                      </div>
+                      {i < 1 && <div className="flex-1 h-px mx-1" style={{ background: 'var(--card-br)' }} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="sheet-body pb-4">
+
+                {/* STEP 1 — Reason */}
+                {releaseStep === 'reason' && (
+                  <div className="flex flex-col gap-3">
+
+                    {/* Order summary pill */}
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                      style={{ background: 'rgba(239,159,39,0.07)', border: '1px solid rgba(239,159,39,0.2)' }}>
+                      <span className="text-xl flex-shrink-0">🛒</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-syne font-bold text-(--tx) truncate">{releaseSheet.product}</p>
+                        <p className="text-xs text-(--tx-sub)">{releaseSheet.farmer} · ₦{releaseSheet.amount?.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {/* Reasons */}
+                    <div className="flex flex-col gap-2">
+                      {RELEASE_REASONS.map(r => (
+                        <button key={r.key}
+                          className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all active:scale-[0.98]"
+                          style={{
+                            background: releaseReason === r.key ? 'rgba(239,159,39,0.08)' : 'var(--card-bg)',
+                            border: releaseReason === r.key ? '1.5px solid rgba(239,159,39,0.4)' : '1px solid var(--card-br)',
+                          }}
+                          onClick={() => setReleaseReason(r.key)}>
+                          <span className="text-xl flex-shrink-0">{r.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-semibold leading-tight ${releaseReason === r.key ? 'text-(--tx)' : 'text-(--tx-sub)'}`}>{r.label}</p>
+                            <p className="text-[11px] text-(--tx-dim) mt-0.5">{r.desc}</p>
+                          </div>
+                          <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                            style={{
+                              background: releaseReason === r.key ? '#EF9F27' : 'transparent',
+                              border: releaseReason === r.key ? 'none' : '2px solid var(--tx-dim)',
+                            }}>
+                            {releaseReason === r.key && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Order breakdown */}
-            <div className="glass-card mb-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Order breakdown</p>
-              {[
-                { label: selectedOrder.product, val: `₦${(selectedOrder.unit_price || selectedOrder.amount).toLocaleString()}` },
-                { label: 'Delivery fee',         val: `₦${(selectedOrder.delivery_fee || 0).toLocaleString()}` },
-                { label: 'Platform fee (4%)',    val: `₦${(selectedOrder.platform_fee || 0).toLocaleString()}` },
-              ].map(({ label, val }) => (
-                <div key={label} className="flex justify-between mb-2">
-                  <span className="text-xs text-(--tx-sub)">{label}</span>
-                  <span className="text-xs text-(--tx)">{val}</span>
-                </div>
-              ))}
-              <div className="flex justify-between pt-2.5 border-t border-(--card-br)">
-                <span className="font-syne font-bold text-sm text-(--tx)">Farmer paid</span>
-                <span className="font-syne font-extrabold text-base text-brand-green">₦{selectedOrder.amount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between mt-1.5">
-                <span className="text-xs text-(--tx-dim)">Your payout (after fee)</span>
-                <span className="text-xs font-semibold text-brand-amber">
-                  ₦{(selectedOrder.amount - (selectedOrder.platform_fee || 0)).toLocaleString()}
-                </span>
-              </div>
-            </div>
+                {/* STEP 2 — Details + Proof */}
+                {releaseStep === 'details' && (
+                  <div className="flex flex-col gap-4">
 
-            {/* Timeline */}
-            <div className="glass-card mb-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Timeline</p>
-              {[
-                { label: 'Order placed',  val: selectedOrder.date,         done: true  },
-                { label: 'Payment made',  val: selectedOrder.paid_at,      done: !!selectedOrder.paid_at  },
-                { label: 'Dispatched',    val: selectedOrder.dispatched_at || (selectedOrder.status === 'pending' ? 'Pending' : null), done: selectedOrder.status !== 'pending' },
-                { label: 'Delivered',     val: selectedOrder.delivered_at  || (selectedOrder.status === 'delivered' ? 'Confirmed' : 'Awaiting'), done: selectedOrder.status === 'delivered' },
-              ].filter(t => t.val).map(({ label, val, done }) => (
-                <div key={label} className="flex justify-between mb-2 last:mb-0">
-                  <span className="text-xs text-(--tx-sub) flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${done ? 'bg-brand-green' : 'bg-(--card-br)'}`} />
-                    {label}
-                  </span>
-                  <span className={`text-xs font-medium ${done ? 'text-(--tx)' : 'text-(--tx-dim)'}`}>{val}</span>
-                </div>
-              ))}
-            </div>
+                    {/* Selected reason pill */}
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                      style={{ background: 'rgba(239,159,39,0.08)', border: '1px solid rgba(239,159,39,0.2)' }}>
+                      <span className="text-base">{RELEASE_REASONS.find(r => r.key === releaseReason)?.emoji}</span>
+                      <p className="text-xs font-semibold text-brand-amber">{RELEASE_REASONS.find(r => r.key === releaseReason)?.label}</p>
+                    </div>
 
-            {/* CTA */}
-            {selectedOrder.status === 'pending' && (
-              <button className="btn-main amber"
-                onClick={() => { handleDeliver(selectedOrder.id) }}>
-                <Truck size={15} /> Mark as dispatched
-              </button>
-            )}
+                    {/* Delivery description */}
+                    <div>
+                      <p className="field-label">Describe the delivery <span className="text-(--tx-dim)">(required)</span></p>
+                      <textarea
+                        className="field-input resize-none mt-1" rows={4}
+                        placeholder="When did you deliver? Who received it? What happened exactly? Be specific — this goes to admin if disputed."
+                        value={releaseNote}
+                        onChange={e => setReleaseNote(e.target.value)}
+                        style={{ WebkitUserSelect: 'text', userSelect: 'text' }}
+                      />
+                    </div>
 
-            {selectedOrder.status === 'dispatched' && (() => {
-              const countdown = getDeliveryCountdown(selectedOrder.dispatched_at)
-              return (
-                <div className="flex flex-col gap-2">
-                  {/* Timer card */}
-                  <div className="rounded-2xl p-3 flex items-center gap-3"
-                    style={{ background: countdown?.urgent ? 'rgba(239,68,68,0.08)' : 'rgba(239,159,39,0.08)', border: `1px solid ${countdown?.urgent ? 'rgba(239,68,68,0.2)' : 'rgba(239,159,39,0.2)'}` }}>
-                    <span className="text-xl flex-shrink-0">⏱</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-(--tx)">Farmer confirmation window</p>
-                      <p className={`text-xs mt-0.5 ${countdown?.urgent ? 'text-red-400' : 'text-brand-amber'}`}>
-                        {countdown?.expired ? 'Time expired — you can request release' : `${countdown?.label} to confirm delivery`}
+                    {/* Proof upload */}
+                    <div>
+                      <p className="field-label mb-0.5">
+                        Upload proof <span className="text-(--tx-dim)">(strongly recommended)</span>
                       </p>
+                      <p className="text-[11px] text-(--tx-dim) mb-2">
+                        Waybill, delivery photo, signed receipt, or screenshot of farmer confirming delivery
+                      </p>
+                      {releaseProofPrev ? (
+                        <div className="relative rounded-2xl overflow-hidden" style={{ border: '1px solid var(--card-br)' }}>
+                          <img src={releaseProofPrev} alt="Proof" className="w-full h-28 object-cover" />
+                          <button className="absolute top-2 right-2 w-8 h-8 rounded-xl flex items-center justify-center"
+                            style={{ background: 'rgba(0,0,0,0.65)' }}
+                            onClick={() => { setReleaseProofFile(null); setReleaseProofPrev(null) }}>
+                            <X size={13} className="text-white" />
+                          </button>
+                          <div className="px-3 py-2 flex items-center gap-2">
+                            <Check size={12} className="text-brand-amber" />
+                            <p className="text-xs text-brand-amber font-medium truncate">{releaseProofFile?.name}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <button className="w-full flex items-center gap-3 py-4 px-4 rounded-2xl transition-all active:scale-[0.98]"
+                          style={{ background: 'rgba(239,159,39,0.05)', border: '1.5px dashed rgba(239,159,39,0.3)' }}
+                          onClick={() => releaseFileRef.current?.click()}>
+                          <Upload size={18} className="text-brand-amber flex-shrink-0" />
+                          <div className="text-left">
+                            <p className="text-brand-amber text-sm font-semibold">Tap to attach proof</p>
+                            <p className="text-(--tx-dim) text-xs">Photo, PDF, waybill · Max 10MB</p>
+                          </div>
+                        </button>
+                      )}
                     </div>
+
+                    {/* What happens next */}
+                    <div className="rounded-2xl px-4 py-3"
+                      style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: '#818cf8' }}>What happens next</p>
+                      <div className="flex flex-col gap-1.5">
+                        {[
+                          `Farmer is notified and has ${TIMERS.LABEL_RELEASE} to confirm or dispute`,
+                          'If farmer confirms → payment released to your bank immediately',
+                          'If farmer disputes → both sides go to admin for final judgment',
+                          'If farmer ignores → admin reviews and decides — no auto-release',
+                        ].map(s => (
+                          <div key={s} className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#818cf8' }} />
+                            <p className="text-[11px] text-(--tx-sub) leading-relaxed">{s}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
-                  {/* Release request button */}
-                  {selectedOrder.release_requested ? (
-                    <div className="info-banner amber">
-                      <span className="flex-shrink-0">📋</span>
-                      <p className="text-xs text-(--tx-sub)">Release request submitted — under admin review</p>
-                    </div>
-                  ) : countdown?.expired ? (
-                    <button className="btn-main amber"
-                      onClick={() => { setSelectedOrder(null); setReleaseSheet(selectedOrder) }}>
-                      📤 Request payment release
-                    </button>
-                  ) : (
-                    <div className="info-banner amber">
-                      <span className="flex-shrink-0">🔒</span>
-                      <p className="text-xs text-(--tx-sub)">Payment held in escrow. Farmer will confirm once they receive delivery.</p>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
-
-            {selectedOrder.status === 'delivered' && (
-              <div className="info-banner green">
-                <Check size={14} className="text-brand-green flex-shrink-0" />
-                <p className="text-xs text-(--tx-sub)">Order completed — payment sent to your bank account via Interswitch</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Release Request Sheet ── */}
-      {releaseSheet && !releaseSuccess && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto"
-          style={{ background: 'rgba(0,0,0,0.75)' }}
-          onClick={e => e.target === e.currentTarget && setReleaseSheet(null)}>
-          <div className="rounded-t-3xl overflow-hidden" style={{ background: 'var(--bg-nav)', border: '1px solid var(--card-br)', borderBottom: 'none' }}>
-            <div className="px-5 pt-4 pb-5">
-              <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--card-br)' }} />
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-syne font-bold text-base text-(--tx)">Request payment release</h3>
-                <button onClick={() => setReleaseSheet(null)} className="nav-close"><X size={15} /></button>
+                )}
               </div>
 
-              {/* Order summary */}
-              <div className="rounded-2xl p-3 mb-4" style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
-                <p className="text-(--tx) text-sm font-semibold truncate">{releaseSheet.product}</p>
-                <p className="text-(--tx-sub) text-xs">{releaseSheet.farmer} · ₦{releaseSheet.amount?.toLocaleString()}</p>
+              {/* Footer */}
+              <div className="sheet-footer">
+                {releaseStep === 'reason' ? (
+                  <button className="btn-main amber w-full"
+                    disabled={!releaseReason}
+                    onClick={() => setReleaseStep('details')}>
+                    Continue →
+                  </button>
+                ) : (
+                  <button className="btn-main amber w-full"
+                    disabled={!canSubmit}
+                    onClick={async () => {
+                      setReleaseSubmitting(true)
+                      await requestEscrowRelease(releaseSheet.id, {
+                        reason: releaseReason,
+                        note: releaseNote,
+                        proof_filename: releaseProofFile?.name || null,
+                      })
+                      setOrders(prev => prev.map(o => o.id === releaseSheet.id ? { ...o, release_requested: true } : o))
+                      setReleaseSubmitting(false)
+                      setReleaseSuccess(true)
+                    }}>
+                    {releaseSubmitting ? <><span className="spinner" /> Submitting…</> : <><Upload size={14} /> Submit release request</>}
+                  </button>
+                )}
               </div>
 
-              <p className="text-[10px] uppercase tracking-widest text-(--tx-dim) mb-2">How it works</p>
-              <div className="flex flex-col gap-2 mb-4">
-                {[
-                  '1. Farmer gets notified and has 48hrs to confirm or dispute',
-                  '2. If farmer confirms → payment released to your bank',
-                  '3. If farmer disputes → admin reviews and decides',
-                  '4. If farmer ignores → auto-released to you after 48hrs',
-                ].map(s => (
-                  <div key={s} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand-amber mt-1.5 flex-shrink-0" />
-                    <p className="text-(--tx-sub) text-xs leading-relaxed">{s}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Proof note */}
-              <div className="mb-4">
-                <span className="field-label">Delivery note (optional)</span>
-                <textarea
-                  className="field-input resize-none"
-                  rows={3}
-                  placeholder="e.g. Delivered on Mar 22 at 2pm. Farmer signed the receipt."
-                  value={releaseNote}
-                  onChange={e => setReleaseNote(e.target.value)}
-                  style={{ WebkitUserSelect: 'text', userSelect: 'text' }}
-                />
-                <p className="field-hint">Describe delivery details to support your request</p>
-              </div>
-
-              {/* Proof upload mock */}
-              <div className="rounded-2xl p-3 mb-5 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-all"
-                style={{ background: 'rgba(239,159,39,0.05)', border: '1.5px dashed rgba(239,159,39,0.3)' }}>
-                <span className="text-xl">📎</span>
-                <div>
-                  <p className="text-brand-amber text-sm font-semibold">Attach proof (optional)</p>
-                  <p className="text-(--tx-dim) text-xs">Photo, waybill or delivery receipt</p>
-                </div>
-              </div>
-
-              <button className="btn-main amber w-full" disabled={releaseSubmitting}
-                onClick={async () => {
-                  setReleaseSubmitting(true)
-                  await requestEscrowRelease(releaseSheet.id, { note: releaseNote, proof_filename: 'proof.jpg' })
-                  setOrders(prev => prev.map(o => o.id === releaseSheet.id ? { ...o, release_requested: true } : o))
-                  setReleaseSubmitting(false)
-                  setReleaseSuccess(true)
-                  setReleaseNote('')
-                }}>
-                {releaseSubmitting ? <><span className="spinner" /> Submitting…</> : '📤 Submit release request'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Release Request Success ── */}
       {releaseSheet && releaseSuccess && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-[430px] mx-auto"
-          style={{ background: 'rgba(0,0,0,0.75)' }}>
-          <div className="rounded-t-3xl overflow-hidden text-center px-5 pt-6 pb-8"
-            style={{ background: 'var(--bg-nav)', border: '1px solid var(--card-br)', borderBottom: 'none' }}>
+          style={{ background: 'rgba(0,0,0,0.85)' }}>
+          <div className="rounded-t-[32px] text-center px-5 pt-6 pb-8"
+            style={{ background: 'var(--bg-nav)', borderTop: '1px solid var(--card-br)' }}>
             <div className="w-10 h-1 rounded-full mx-auto mb-6" style={{ background: 'var(--card-br)' }} />
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
               style={{ background: 'rgba(239,159,39,0.12)', border: '2px solid rgba(239,159,39,0.3)' }}>
               <span className="text-3xl">📋</span>
             </div>
-            <h3 className="font-syne font-bold text-lg text-(--tx) mb-2">Request submitted!</h3>
-            <p className="text-(--tx-sub) text-sm leading-relaxed mb-6">
-              The farmer has been notified. They have <span className="text-brand-amber font-semibold">48 hours</span> to confirm or dispute. If no response, payment is auto-released to your bank.
+            <h3 className="font-syne font-bold text-xl text-(--tx) mb-2">Request submitted!</h3>
+            <p className="text-(--tx-sub) text-sm leading-relaxed mb-2">
+              Farmer has been notified and has <span className="text-brand-amber font-semibold">{TIMERS.LABEL_RELEASE}</span> to confirm or dispute.
             </p>
-            <button className="btn-main amber" onClick={() => { setReleaseSheet(null); setReleaseSuccess(false) }}>
+            <p className="text-xs text-(--tx-dim) leading-relaxed mb-6">
+              If they dispute, admin reviews both sides and makes the final decision. No money moves without a judgment.
+            </p>
+            <button className="btn-main amber w-full" onClick={() => { setReleaseSheet(null); setReleaseSuccess(false) }}>
               Done
             </button>
           </div>

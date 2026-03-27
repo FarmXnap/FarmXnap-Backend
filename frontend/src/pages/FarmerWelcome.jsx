@@ -9,7 +9,7 @@ export default function FarmerWelcome() {
   const location  = useLocation()
   const setAuth    = useAuthStore(s => s.setAuth)
   const showToast  = useToastStore(s => s.show)
-  const { name, crop, state: farmerState, lga, authResult } = location.state || {}
+  const { name, crop, state: farmerState, lga, address, authResult } = location.state || {}
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
@@ -19,11 +19,15 @@ export default function FarmerWelcome() {
       ...authResult.user,
       name,
       crop,
-      state:         farmerState,
+      state:             farmerState,
       lga,
-      full_name:     name,
-      primary_crop:  crop,
-      member_since:  new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+      address,
+      full_name:         name,
+      primary_crop:      crop,
+      // farmer_profile_id extracted from HATEOAS links.view.href during registration
+      // Do NOT fall back to user.id — profile id and user id are different
+      farmer_profile_id: authResult.user.farmer_profile_id || null,
+      member_since:      new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
     }
     setAuth(fullUser, authResult.token, authResult.role)
     showToast(authResult.message || 'Account created successfully!', 'success')
@@ -101,7 +105,7 @@ export default function FarmerWelcome() {
           ].map(({ icon: Icon, color, bg, br, title, desc }) => (
             <div key={title} className="flex items-center gap-4 px-4 py-3.5 rounded-2xl"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: bg, border: `1.5px solid ${br}` }}>
                 <Icon size={18} style={{ color }} />
               </div>
@@ -109,7 +113,7 @@ export default function FarmerWelcome() {
                 <p className="text-sm font-semibold text-(--tx) leading-tight">{title}</p>
                 <p className="text-xs text-(--tx-sub) mt-0.5 leading-snug">{desc}</p>
               </div>
-              <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color, opacity: 0.6 }} />
+              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color, opacity: 0.6 }} />
             </div>
           ))}
         </div>
@@ -119,7 +123,7 @@ export default function FarmerWelcome() {
       </div>
 
       {/* Fixed bottom — progress + footer */}
-      <div className="relative z-10 px-6 pb-8 pt-4 shrink-0"
+      <div className="relative z-10 px-6 pb-8 pt-4 flex-shrink-0"
         style={{ borderTop: '1px solid var(--card-br)', background: 'var(--bg)' }}>
 
         {/* Progress bar */}

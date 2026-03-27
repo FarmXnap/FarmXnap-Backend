@@ -6,17 +6,20 @@ import { Camera, Upload, X, ChevronDown } from 'lucide-react'
 import { useScanStore } from '../store'
 import { diagnoseCrop } from '../services/api'
 
-const CROPS = ['Cassava', 'Maize', 'Tomato', 'Yam', 'Rice', 'Pepper']
-const EMOJI = { Cassava: '🌿', Maize: '🌽', Tomato: '🍅', Yam: '🥔', Rice: '🌾', Pepper: '🌶️' }
+const CROPS = ['Cassava', 'Maize', 'Tomato', 'Yam', 'Rice', 'Other']
+const EMOJI = { Cassava: '🌿', Maize: '🌽', Tomato: '🍅', Yam: '🥔', Rice: '🌾', Other: '🌱' }
 
 export default function Scan() {
   const navigate  = useNavigate()
   const webcamRef = useRef(null)
   const fileRef   = useRef(null)
   const { setCapturedImage, cropType, setCropType, setDiagnosis, setLoading, loading } = useScanStore()
+  const [capturedFile, setCapturedFile] = useState(null)
   const [preview,     setPreview]     = useState(null)
   const [cameraError, setCameraError] = useState(false)
   const [showCrops,   setShowCrops]   = useState(false)
+  const [customCrop,  setCustomCrop]  = useState('')
+  const [diagError,   setDiagError]   = useState('')
 
   const capture = useCallback(() => {
     const img = webcamRef.current?.getScreenshot()
@@ -26,18 +29,28 @@ export default function Scan() {
   const handleFile = (e) => {
     const file = e.target.files[0]; if (!file) return
     const reader = new FileReader()
-    reader.onload = () => { setPreview(reader.result); setCapturedImage(reader.result) }
+    reader.onload = () => {
+      setPreview(reader.result)
+      setCapturedImage(reader.result)
+      // Also store the raw File for real API upload
+      setCapturedFile(file)
+    }
     reader.readAsDataURL(file)
   }
 
   const handleDiagnose = async () => {
     if (!preview) return
+    setDiagError('')
     setLoading(true)
     try {
-      const res = await diagnoseCrop(preview, cropType)
-      setDiagnosis(res); navigate('/results')
-    } catch { alert('Diagnosis failed. Please try again.') }
-    finally { setLoading(false) }
+      const activeCrop  = cropType === 'Other' ? (customCrop.trim() || 'Other') : cropType
+      const imageToSend = capturedFile || preview
+      const res = await diagnoseCrop(imageToSend, activeCrop)
+      setDiagnosis(res)
+      navigate('/results')
+    } catch (e) {
+      setDiagError(e.message || 'Diagnosis failed. Please try again.')
+    } finally { setLoading(false) }
   }
 
   return (
@@ -61,19 +74,48 @@ export default function Scan() {
           style={{ background: 'var(--input-bg)', border: '1px solid var(--input-br)' }}
         >
           <span className="text-lg">{EMOJI[cropType]}</span>
-          <span className="flex-1 text-left text-(--tx) font-medium font-dm">{cropType}</span>
+          <span className="flex-1 text-left text-(--tx) font-medium font-dm">
+            {cropType === 'Other' && customCrop.trim() ? customCrop.trim() : cropType}
+          </span>
           <ChevronDown size={14} className="text-(--tx-sub)" />
         </button>
 
         {showCrops && (
-          <div className="grid grid-cols-3 gap-2 mt-2 anim-1">
-            {CROPS.map(c => (
-              <button key={c}
-                className={`crop-btn ${cropType === c ? 'on' : ''}`}
-                onClick={() => { setCropType(c); setShowCrops(false) }}>
-                {EMOJI[c]} {c}
-              </button>
-            ))}
+          <div className="mt-2 anim-1">
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {CROPS.map(c => (
+                <button key={c}
+                  className={`crop-btn ${cropType === c ? 'on' : ''}`}
+                  onClick={() => { setCropType(c); if (c !== 'Other') setShowCrops(false) }}>
+                  {EMOJI[c]} {c}
+                </button>
+              ))}
+            </div>
+            {/* Custom crop input — shown when Other is selected */}
+            {cropType === 'Other' && (
+              <div className="rounded-2xl overflow-hidden anim-1"
+                style={{ background: 'var(--input-bg)', border: '1.5px solid rgba(29,158,117,0.4)' }}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-lg flex-shrink-0">🌱</span>
+                  <input
+                    className="flex-1 bg-transparent outline-none text-sm text-(--tx) font-dm placeholder-[var(--tx-dim)]"
+                    placeholder="Type your crop name…"
+                    value={customCrop}
+                    autoFocus
+                    onChange={e => setCustomCrop(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && customCrop.trim()) setShowCrops(false) }}
+                    style={{ WebkitUserSelect: 'text', userSelect: 'text' }}
+                  />
+                  {customCrop.trim() && (
+                    <button
+                      className="flex-shrink-0 text-xs font-syne font-bold px-3 py-1.5 rounded-xl text-white bg-brand-green active:scale-95 transition-all"
+                      onClick={() => setShowCrops(false)}>
+                      Done
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -85,7 +127,7 @@ export default function Scan() {
             <>
               <img src={preview} alt="Captured" className="w-full h-full object-cover" />
               <button
-                onClick={() => setPreview(null)}
+                onClick={() => { setPreview(null); setCapturedFile(null) }}
                 className="absolute top-3 right-3 w-8 h-8 rounded-xl flex items-center justify-center text-(--tx)"
                 style={{ background: 'rgba(0,0,0,0.6)' }}
               >
@@ -137,6 +179,11 @@ export default function Scan() {
 
       {/* Actions */}
       <div className="page-cta">
+        {diagError && (
+          <div className="err-banner mb-3 anim-1">
+            <span>⚠</span> {diagError}
+          </div>
+        )}
         {preview ? (
           <button className="btn-main" onClick={handleDiagnose} disabled={loading}>
             {loading
