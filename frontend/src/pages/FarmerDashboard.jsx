@@ -7,9 +7,9 @@ import {
   Camera, Leaf, LogOut, CheckCircle, AlertCircle, Clock,
   Home, Activity, ClipboardList, Lightbulb, UserCircle, ChevronRight,
   TrendingUp, Sprout, MapPin, Phone, Pencil, Check, X, Star,
-  Package, Truck, ShieldCheck, Moon, Sun,
+  Package, Truck, ShieldCheck, Moon, Sun, Wallet, Shield, Plus,
 } from 'lucide-react'
-import { useAuthStore, useThemeStore, useToastStore } from '../store'
+import { useAuthStore, useThemeStore, useToastStore, useWalletStore } from '../store'
 import { logoutUser, TIMERS } from '../services/api'
 import {
   getFarmerHistory, getFarmTips,
@@ -23,6 +23,7 @@ const STATES = ['Rivers', 'Lagos', 'Kano', 'Oyo', 'Kaduna', 'Enugu', 'Delta', 'A
 const TABS = [
   { key: 'home',    icon: Home,          label: 'Home'    },
   { key: 'orders',  icon: ClipboardList, label: 'Orders'  },
+  { key: 'wallet',  icon: Wallet,        label: 'Wallet'  },
   { key: 'tips',    icon: Lightbulb,     label: 'Tips'    },
   { key: 'profile', icon: UserCircle,    label: 'Profile' },
 ]
@@ -48,14 +49,14 @@ const ScanRow = ({ scan, onClick }) => {
   return (
     <button className="glass-card flex items-center gap-3 mb-2 w-full text-left active:scale-[0.985] transition-all"
       onClick={onClick}>
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${treated ? 'bg-brand-green/10' : 'bg-red-500/10'}`}>
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${treated ? 'bg-brand-green/10' : 'bg-red-500/10'}`}>
         <Leaf size={14} className={treated ? 'text-brand-green' : 'text-red-400'} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-(--tx) text-sm font-medium truncate">{scan.disease}</p>
         <p className="text-(--tx-sub) text-xs">{scan.crop} · {scan.date}</p>
       </div>
-      <span className={`badge flex-shrink-0 ${treated ? 'green' : 'red'}`}>
+      <span className={`badge shrink-0 ${treated ? 'green' : 'red'}`}>
         {treated ? 'Treated' : 'Untreated'}
       </span>
     </button>
@@ -160,7 +161,7 @@ function EditSheet({ profile, user, onClose, onSave }) {
                 <div className="mt-2 rounded-2xl overflow-hidden"
                   style={{ background: 'var(--input-bg)', border: '1.5px solid rgba(29,158,117,0.4)' }}>
                   <div className="flex items-center gap-3 px-4 py-3">
-                    <span className="text-lg flex-shrink-0">🌱</span>
+                    <span className="text-lg shrink-0">🌱</span>
                     <input
                       className="flex-1 bg-transparent outline-none text-sm text-(--tx) font-dm"
                       placeholder="Type your crop name…"
@@ -209,6 +210,7 @@ export default function FarmerDashboard() {
   const { user, logout, updateUser } = useAuthStore()
   const { theme, setTheme }           = useThemeStore()
   const showGlobalToast                = useToastStore(s => s.show)
+  const { balance: walletBalance }     = useWalletStore()
 
   const [tab,            setTab]            = useState('home')
   const [history,        setHistory]        = useState([])
@@ -361,21 +363,21 @@ export default function FarmerDashboard() {
                       className="w-full flex items-start gap-3 px-4 py-3.5 text-left transition-all active:bg-(--card-bg)"
                       style={{ borderBottom: '1px solid var(--card-br)' }}
                       onClick={() => { setShowNotifs(false); navigate('/order-tracking', { state: { order } }) }}>
-                      <div className="w-8 h-8 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center shrink-0 mt-0.5">
                         <Truck size={13} className="text-brand-amber" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-(--tx) mb-0.5 truncate">{order.product}</p>
                         <p className="text-xs text-(--tx-sub)">Dispatched by {order.dealer} — confirm delivery to release payment</p>
                       </div>
-                      <ChevronRight size={13} className="text-(--tx-dim) flex-shrink-0 mt-1" />
+                      <ChevronRight size={13} className="text-(--tx-dim) shrink-0 mt-1" />
                     </button>
                   ))}
                   {stats.pending > 0 && (
                     <button
                       className="w-full flex items-start gap-3 px-4 py-3.5 text-left transition-all active:bg-(--card-bg)"
                       onClick={() => { setShowNotifs(false); navigate('/history') }}>
-                      <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center shrink-0 mt-0.5">
                         <AlertCircle size={13} className="text-red-400" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -384,7 +386,7 @@ export default function FarmerDashboard() {
                         </p>
                         <p className="text-xs text-(--tx-sub)">Buy treatment to protect your harvest</p>
                       </div>
-                      <ChevronRight size={13} className="text-(--tx-dim) flex-shrink-0 mt-1" />
+                      <ChevronRight size={13} className="text-(--tx-dim) shrink-0 mt-1" />
                     </button>
                   )}
                 </>
@@ -402,7 +404,7 @@ export default function FarmerDashboard() {
             {/* Avatar */}
             <button
               onClick={() => setTab('profile')}
-              className="w-11 h-11 rounded-full flex items-center justify-center font-syne font-extrabold text-base text-brand-green flex-shrink-0 active:scale-90 transition-all"
+              className="w-11 h-11 rounded-full flex items-center justify-center font-syne font-extrabold text-base text-brand-green shrink-0 active:scale-90 transition-all"
               style={{ background: 'rgba(29,158,117,0.15)', border: '2px solid rgba(29,158,117,0.3)' }}>
               {name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
             </button>
@@ -418,7 +420,7 @@ export default function FarmerDashboard() {
             {/* Bell */}
             <button
               onClick={() => setShowNotifs(v => !v)}
-              className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
+              className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 shrink-0"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-(--tx-sub)">
@@ -472,14 +474,14 @@ export default function FarmerDashboard() {
           {/* Untreated alert */}
           {!loading && stats.pending > 0 && (
             <div className="info-banner red mb-4">
-              <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle size={15} className="text-red-400 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-red-400 text-xs font-medium">
                   {stats.pending} crop{stats.pending > 1 ? 's' : ''} still untreated
                 </p>
                 <p className="text-red-400/60 text-[11px]">Act quickly to prevent further spread</p>
               </div>
-              <button onClick={() => navigate('/history')} className="text-red-400 text-xs underline flex-shrink-0">
+              <button onClick={() => navigate('/history')} className="text-red-400 text-xs underline shrink-0">
                 View
               </button>
             </div>
@@ -522,7 +524,7 @@ export default function FarmerDashboard() {
                     <button className="w-full text-left active:opacity-70 transition-opacity"
                       onClick={() => navigate('/order-tracking', { state: { order } })}>
                       <div className="flex items-start gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center shrink-0">
                           <Package size={16} className="text-brand-amber" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -531,16 +533,16 @@ export default function FarmerDashboard() {
                         </div>
                         {/* Status badge per actual state */}
                         {order.status === 'pending' && (
-                          <span className="badge amber flex-shrink-0 text-[10px]">⏳ Awaiting dispatch</span>
+                          <span className="badge amber shrink-0 text-[10px]">⏳ Awaiting dispatch</span>
                         )}
                         {order.status === 'paid' && (
-                          <span className="badge amber flex-shrink-0 text-[10px]">🔒 Paid</span>
+                          <span className="badge amber shrink-0 text-[10px]">🔒 Paid</span>
                         )}
                         {order.status === 'dispatched' && (
-                          <span className="badge amber flex-shrink-0 text-[10px]"><Truck size={9} /> On its way</span>
+                          <span className="badge amber shrink-0 text-[10px]"><Truck size={9} /> On its way</span>
                         )}
                         {order.status === 'disputed' && (
-                          <span className="badge red flex-shrink-0 text-[10px]">⚠ Disputed</span>
+                          <span className="badge red shrink-0 text-[10px]">⚠ Disputed</span>
                         )}
                       </div>
 
@@ -556,7 +558,7 @@ export default function FarmerDashboard() {
                                order.status === 'paid'    ? 'Waiting for dealer to dispatch' :
                                order.status === 'dispatched' ? 'Confirm receipt to release payment to dealer' :
                                order.status === 'disputed'   ? 'Funds frozen — admin review in progress' :
-                               'Held by Interswitch'}
+                               'Held by FarmXnap Escrow'}
                             </p>
                           </div>
                         </div>
@@ -605,9 +607,9 @@ export default function FarmerDashboard() {
             <SH title="Quick actions" />
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: 'Scan crop', emoji: '🔬', action: () => navigate('/scan'),    tint: 'bg-brand-green/10' },
-                { label: 'History',   emoji: '📋', action: () => navigate('/history'), tint: 'bg-(--card-bg)'   },
-                { label: 'Farm tips', emoji: '💡', action: () => setTab('tips'),       tint: 'bg-brand-amber/10' },
+                { label: 'Scan crop', emoji: '🔬', action: () => navigate('/scan'),        tint: 'bg-brand-green/10' },
+                { label: 'History',   emoji: '📋', action: () => navigate('/history'),     tint: 'bg-(--card-bg)'   },
+                { label: 'Wallet',    emoji: '💰', action: () => setTab('wallet'),          tint: 'bg-brand-amber/10' },
               ].map(({ label, emoji, action, tint }) => (
                 <button key={label} onClick={action}
                   className={`${tint} rounded-2xl p-3 flex flex-col items-center gap-2 border border-(--card-br) active:scale-95 transition-all`}>
@@ -653,11 +655,11 @@ export default function FarmerDashboard() {
 
           {/* Escrow explainer */}
           <div className="info-banner green mb-5 anim-1">
-            <ShieldCheck size={15} className="text-brand-green flex-shrink-0 mt-0.5" />
+            <ShieldCheck size={15} className="text-brand-green shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-(--tx) mb-0.5">Escrow protects every payment</p>
               <p className="text-xs text-(--tx-sub) leading-relaxed">
-                Funds are held by Interswitch and only released to the dealer after you confirm delivery. Auto-refund if no delivery in {TIMERS.LABEL_DISPATCH}.
+                Funds are held in FarmXnap Escrow and only released to the dealer after you confirm delivery. Admin decides if no delivery within {TIMERS.LABEL_DISPATCH}.
               </p>
             </div>
           </div>
@@ -702,7 +704,7 @@ export default function FarmerDashboard() {
                       onClick={() => isPending && navigate('/order-tracking', { state: { order } })}>
                     {/* Top */}
                     <div className="flex items-start gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                         isPending ? 'bg-brand-amber/10 border border-brand-amber/20'
                                   : 'bg-brand-green/10 border border-brand-green/20'
                       }`}>
@@ -712,7 +714,7 @@ export default function FarmerDashboard() {
                         <p className="font-syne font-bold text-sm text-(--tx) truncate">{order.product}</p>
                         <p className="text-xs text-(--tx-sub)">{order.crop} · {order.disease}</p>
                       </div>
-                      <span className={`badge flex-shrink-0 text-[10px] ${cfg.badge}`}>
+                      <span className={`badge shrink-0 text-[10px] ${cfg.badge}`}>
                         <Icon size={9} /> {cfg.label}
                       </span>
                     </div>
@@ -772,6 +774,66 @@ export default function FarmerDashboard() {
         </TAB>
       )}
 
+      {/* ══ WALLET ══ */}
+      {tab === 'wallet' && (
+        <TAB>
+          <div className="mb-4">
+            <h2 className="font-syne font-extrabold text-xl text-(--tx)">My Wallet</h2>
+            <p className="text-(--tx-sub) text-xs mt-1">Manage funds, top up or withdraw</p>
+          </div>
+
+          {/* Balance card — uses CSS vars, consistent across all themes */}
+          <div className="glass-card mb-4" style={{ border: '1px solid var(--card-br)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-(--tx-dim) mb-1">Available balance</p>
+            <p className="font-syne font-black text-4xl text-(--tx) mb-1 leading-none">
+              ₦{walletBalance.toLocaleString()}
+            </p>
+            <div className="flex items-center gap-1.5 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-green" style={{ animation: 'pulse-dot 1.8s ease-in-out infinite' }} />
+              <p className="text-[11px] text-(--tx-sub)">Secured by FarmXnap escrow</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="btn-main py-3 text-sm" onClick={() => navigate('/wallet')}>
+                <Wallet size={15} /> Manage wallet
+              </button>
+              <button className="btn-main amber py-3 text-sm" onClick={() => navigate('/wallet')}>
+                <Plus size={15} /> Add funds
+              </button>
+            </div>
+          </div>
+
+          {/* Recent transactions preview */}
+          <div className="glass-card">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-syne font-bold text-sm text-(--tx)">Recent transactions</p>
+              <button className="text-xs text-brand-green font-semibold" onClick={() => navigate('/wallet')}>View all</button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {[
+                { icon: '💳', label: 'Wallet top-up',     amt: '+₦20,000', color: '#1D9E75', date: '10 Mar' },
+                { icon: '🌿', label: 'Treatment purchase', amt: '-₦4,872',  color: '#ef4444', date: '12 Mar' },
+                { icon: '↩️', label: 'Refund received',   amt: '+₦3,828',  color: '#818cf8', date: '16 Mar' },
+              ].map(({ icon, label, amt, color, date }) => (
+                <div key={label} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
+                  style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+                  <span className="text-lg shrink-0">{icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-(--tx) truncate">{label}</p>
+                    <p className="text-[10px] text-(--tx-dim)">{date}</p>
+                  </div>
+                  <p className="text-sm font-syne font-bold shrink-0" style={{ color }}>{amt}</p>
+                </div>
+              ))}
+            </div>
+            <button className="w-full mt-3 py-3 rounded-2xl text-sm font-semibold text-brand-green transition-all active:scale-95"
+              style={{ background: 'rgba(29,158,117,0.06)', border: '1px solid rgba(29,158,117,0.15)' }}
+              onClick={() => navigate('/wallet')}>
+              Open full wallet →
+            </button>
+          </div>
+        </TAB>
+      )}
+
       {/* ══ TIPS ══ */}
       {tab === 'tips' && (
         <TAB>
@@ -783,7 +845,7 @@ export default function FarmerDashboard() {
           <div className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-1 mb-4">
             {['All', ...CROPS].map(c => (
               <button key={c} onClick={() => setCropFilter(c)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all border ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all border ${
                   cropFilter === c
                     ? 'bg-brand-green text-white border-transparent'
                     : 'text-(--tx-sub) border-(--card-br) bg-(--card-bg)'
@@ -807,7 +869,7 @@ export default function FarmerDashboard() {
                 : filteredTips.map(tip => (
                   <div key={tip.id} className="glass-card">
                     <div className="flex items-start gap-3 mb-2">
-                      <div className="w-9 h-9 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center shrink-0">
                         <Lightbulb size={15} className="text-brand-amber" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -825,13 +887,13 @@ export default function FarmerDashboard() {
           </div>
 
           <div className="info-banner green">
-            <span className="text-lg flex-shrink-0">🌱</span>
+            <span className="text-lg shrink-0">🌱</span>
             <div className="flex-1 min-w-0">
               <p className="text-brand-green text-xs font-medium">See something unusual?</p>
               <p className="text-brand-green/60 text-xs">Get instant AI diagnosis</p>
             </div>
             <button onClick={() => navigate('/scan')}
-              className="bg-brand-green text-white text-xs font-syne font-bold px-3 py-2 rounded-xl active:scale-95 transition-all flex-shrink-0">
+              className="bg-brand-green text-white text-xs font-syne font-bold px-3 py-2 rounded-xl active:scale-95 transition-all shrink-0">
               Scan now
             </button>
           </div>
@@ -849,7 +911,7 @@ export default function FarmerDashboard() {
               <div className="flex flex-col gap-3">
                 <div className="glass-card">
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-extrabold text-lg text-brand-green"
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 font-syne font-extrabold text-lg text-brand-green"
                       style={{ background: 'rgba(29,158,117,0.12)', border: '2px solid rgba(29,158,117,0.25)' }}>
                       {(profile.name || user?.name || '?').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                     </div>
@@ -902,7 +964,7 @@ export default function FarmerDashboard() {
                       { icon: Phone,  label: 'Phone',        val: profile.phone      || user?.phone      || user?.phone_number || '—' },
                     ].map(({ icon: Icon, label, val }) => (
                       <div key={label} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-(--card-bg)">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-(--card-bg)">
                           <Icon size={13} className="text-(--tx-sub)" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -981,33 +1043,33 @@ export default function FarmerDashboard() {
       {/* ── Sign-out confirm sheet ── */}
       {showSignOut && (
         <div className="sheet-backdrop" onClick={() => setShowSignOut(false)}>
-          <div className="sheet-panel" onClick={e => e.stopPropagation()}>
-            <div className="sheet-handle" />
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/15 flex items-center justify-center mx-auto mb-4">
-                <LogOut size={22} className="text-red-400" />
+          <div className="sheet-panel" onClick={e => e.stopPropagation()} style={{ maxHeight: 'auto' }}>
+            <div className="sheet-header">
+              <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'var(--card-br)' }} />
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'rgba(239,68,68,0.1)', border: '1.5px solid rgba(239,68,68,0.2)' }}>
+                  <LogOut size={24} className="text-red-400" />
+                </div>
+                <div>
+                  <p className="font-syne font-extrabold text-xl text-(--tx) mb-1">Sign out?</p>
+                  <p className="text-(--tx-sub) text-sm leading-relaxed max-w-[260px]">
+                    You'll need to verify your phone number to sign back in.
+                  </p>
+                </div>
               </div>
-              <p className="font-syne font-bold text-lg text-(--tx) mb-2">Sign out?</p>
-              <p className="text-(--tx-sub) text-sm leading-relaxed">
-                You'll need to verify your phone number again to sign back in.
-              </p>
             </div>
-            <div className="flex flex-col gap-2">
-              <button
-                className="btn-main danger"
+            <div className="sheet-footer flex flex-col gap-2">
+              <button className="btn-main danger w-full"
                 onClick={async () => {
-                  // Logout locally first — instant UX
                   setShowSignOut(false)
                   logout()
                   navigate('/', { replace: true })
-                  // Then invalidate token on server in background
                   logoutUser().catch(() => {})
                 }}>
                 <LogOut size={15} /> Yes, sign me out
               </button>
-              <button
-                className="btn-main ghost"
-                onClick={() => setShowSignOut(false)}>
+              <button className="btn-main ghost w-full" onClick={() => setShowSignOut(false)}>
                 Cancel
               </button>
             </div>

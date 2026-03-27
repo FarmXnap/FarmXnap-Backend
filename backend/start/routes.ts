@@ -36,6 +36,24 @@ router
       .as('farmer_profiles.diagnose')
       .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
 
+    // Route for farmer to get crop scan history
+    router
+      .get('farmer_profiles/:farmer_profile_id/crop_scans', [
+        () => import('#controllers/farmer_profiles_controller'),
+        'cropScans',
+      ])
+      .as('farmer_profiles.crop_scans')
+      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
+
+    // Route for farmer to get treatment for a crop scan
+    router
+      .get('farmer_profiles/:farmer_profile_id/crop_scans/:id/treatments', [
+        () => import('#controllers/farmer_profiles_controller'),
+        'getTreatments',
+      ])
+      .as('farmer_profiles.crop_scans.treatments')
+      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
+
     // Resourceful routes for `agro_dealer_profiles`.
     router
       .resource(

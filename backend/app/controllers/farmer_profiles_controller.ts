@@ -8,6 +8,8 @@ import AiService, { AIDiagnosis } from '#services/ai_service'
 import { ModelObject } from '@adonisjs/lucid/types/model'
 import { rules } from '#services/validator_rules'
 import router from '@adonisjs/core/services/router'
+import CropScan from '#models/crop_scan'
+import { ProductCategory } from '#models/product'
 
 export default class FarmerProfilesController {
   /**
@@ -159,7 +161,9 @@ export default class FarmerProfilesController {
    *
    * `POST /api/v1/farmer_profiles/:farmer_profile_id/diagnose`
    */
-  public async diagnose({ request, response }: HttpContext) {
+  public async diagnose({ request, response, auth }: HttpContext) {
+    const user = auth.user!
+
     const maxSize = '10mb'
     const supportedExtNames = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']
 
@@ -199,6 +203,18 @@ export default class FarmerProfilesController {
       return response.badRequest({ error: aiResult.instructions })
     }
 
+    await user.load('farmerProfile')
+
+    await CropScan.create({
+      farmer_profile_id: user.farmerProfile!.id,
+      crop: aiResult.crop,
+      disease: aiResult.disease === 'HEALTHY' ? null : aiResult.disease,
+      instructions: aiResult.instructions,
+      search_term: aiResult.search_term,
+      active_ingredient: aiResult.active_ingredient,
+      category: aiResult.category as ProductCategory,
+    })
+
     if (aiResult.disease === 'HEALTHY') {
       return response.ok({
         data: {
@@ -210,6 +226,50 @@ export default class FarmerProfilesController {
       })
     }
 
+    const result = await this.#searchTreatment(aiResult)
+
+    return response.ok({
+      data: {
+        diagnosis: {
+          crop: aiResult.crop,
+          disease: aiResult.disease,
+          instructions: aiResult.instructions,
+        },
+        treatments: result?.rows ?? [],
+      },
+    })
+  }
+
+  /**
+   * GET /api/v1/farmer_profiles/:farmer_profile_id/crop_scans
+   */
+  public async cropScans({ response, auth }: HttpContext) {
+    const user = auth.user!
+    await user.load('farmerProfile')
+
+    const scans = await CropScan.query()
+      .where('farmer_profile_id', user.farmerProfile!.id)
+      .orderBy('created_at', 'desc')
+
+    return response.ok({ data: scans })
+  }
+
+  /**
+   * GET /api/v1/farmer_profiles/:farmer_profile_id/crop_scans/:id/treatments
+   */
+  public async getTreatments({ params, response }: HttpContext) {
+    const scan = await CropScan.findOrFail(params.id)
+
+    if (!scan.search_term && !scan.active_ingredient) {
+      return response.ok({ data: [] }) // Healthy crops don't need treatments
+    }
+
+    const result = await this.#searchTreatment(scan)
+
+    return response.ok({ data: result?.rows ?? [] })
+  }
+
+  async #searchTreatment(aiDiagnosis: AIDiagnosis | CropScan) {
     const vectorSearch = `to_tsvector('english', p.name || ' ' || COALESCE(p.description, '') || ' ' || p.target_problems)`
     const querySearch = `websearch_to_tsquery('english', :searchTerm)`
     // plainto_tsquery
@@ -262,33 +322,13 @@ export default class FarmerProfilesController {
       ORDER BY rank desc
       `,
       {
-        category: aiResult.category,
-        searchTerm: aiResult.search_term,
-        activeIngredient: aiResult.active_ingredient,
-        activeIngredientWildcard: `%${aiResult.active_ingredient}%`,
+        category: aiDiagnosis.category,
+        searchTerm: aiDiagnosis.search_term,
+        activeIngredient: aiDiagnosis.active_ingredient,
+        activeIngredientWildcard: `%${aiDiagnosis.active_ingredient}%`,
       }
     )
 
-    return response.ok({
-      data: {
-        diagnosis: {
-          crop: aiResult.crop,
-          disease: aiResult.disease,
-          instructions: aiResult.instructions,
-        },
-        treatments:
-          result?.rows && result.rows.length
-            ? result.rows.map((row: ModelObject /** todo: provide type */) => ({
-                ...row,
-                links: {
-                  create_order: {
-                    method: 'POST',
-                    href: router.makeUrl('api.v1.products.orders.store', [row.id]),
-                  },
-                },
-              }))
-            : [],
-      },
-    })
+    return result
   }
 }

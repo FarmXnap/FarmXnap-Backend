@@ -10,7 +10,7 @@ import { useOrderStore, useToastStore } from '../store'
 import { confirmDelivery, fileAppeal, TIMERS } from '../services/api'
 
 const STEPS = [
-  { key: 'paid',       icon: '🔒', label: 'Payment in escrow', desc: 'Funds held securely by Interswitch', color: '#1D9E75' },
+  { key: 'paid',       icon: '🔒', label: 'Payment in escrow', desc: 'Funds held securely in FarmXnap Escrow', color: '#1D9E75' },
   { key: 'confirmed',  icon: '📦', label: 'Dealer notified',    desc: 'Dealer is preparing your order',    color: '#1D9E75' },
   { key: 'dispatched', icon: '🚚', label: 'Order dispatched',   desc: 'Treatment is on its way to you',    color: '#EF9F27' },
   { key: 'delivered',  icon: '✅', label: 'Confirm receipt',    desc: 'Releases payment from escrow to dealer', color: '#1D9E75' },
@@ -220,12 +220,12 @@ function FarmerAppealSheet({ order, total, onSubmit, onClose, isAutoTriggered = 
                     border: category === cat.key ? '1.5px solid rgba(239,68,68,0.4)' : '1px solid var(--card-br)',
                   }}
                   onClick={() => setCategory(cat.key)}>
-                  <span className="text-xl flex-shrink-0">{cat.emoji}</span>
+                  <span className="text-xl shrink-0">{cat.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-semibold leading-tight ${category === cat.key ? 'text-(--tx)' : 'text-(--tx-sub)'}`}>{cat.label}</p>
                     <p className="text-[11px] text-(--tx-dim) mt-0.5 leading-snug">{cat.desc}</p>
                   </div>
-                  <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                  <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all"
                     style={{
                       background: category === cat.key ? '#ef4444' : 'transparent',
                       border: category === cat.key ? 'none' : '2px solid var(--tx-dim)',
@@ -269,7 +269,7 @@ function FarmerAppealSheet({ order, total, onSubmit, onClose, isAutoTriggered = 
                           border: orderCondition === opt.key ? '1.5px solid rgba(239,159,39,0.35)' : '1px solid var(--card-br)',
                         }}
                         onClick={() => setOrderCondition(opt.key)}>
-                        <div className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                        <div className="w-4 h-4 rounded-full shrink-0 flex items-center justify-center transition-all"
                           style={{
                             background: orderCondition === opt.key ? '#EF9F27' : 'transparent',
                             border: orderCondition === opt.key ? 'none' : '2px solid var(--tx-dim)',
@@ -336,7 +336,7 @@ function FarmerAppealSheet({ order, total, onSubmit, onClose, isAutoTriggered = 
                     'Full order history and timestamps',
                   ].map(item => (
                     <div key={item} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background:'#818cf8' }} />
+                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background:'#818cf8' }} />
                       <p className="text-[11px] text-(--tx-sub)">{item}</p>
                     </div>
                   ))}
@@ -495,12 +495,12 @@ export default function OrderTracking() {
         <div>
           <p className="text-brand-green text-[11px] font-bold uppercase tracking-[0.2em] mb-2">Escrow released</p>
           <p className="font-syne font-extrabold text-2xl text-(--tx) mb-3">Delivery confirmed!</p>
-          <p className="text-sm text-(--tx-sub) max-w-[260px] leading-relaxed">
-            Interswitch released <span className="text-(--tx) font-semibold">₦{dealerNet.toLocaleString()}</span> to{' '}
+          <p className="text-sm text-(--tx-sub) max-w-65 leading-relaxed">
+            FarmXnap Escrow released <span className="text-(--tx) font-semibold">₦{dealerNet.toLocaleString()}</span> to{' '}
             <span className="text-(--tx) font-semibold">{order.dealer?.name}</span>
           </p>
         </div>
-        <div className="w-full max-w-[300px] glass-card">
+        <div className="w-full max-w-75 glass-card">
           {[
             { label:'Total paid',         val:`₦${total.toLocaleString()}`,       color:'text-(--tx)'     },
             { label:'Released to dealer', val:`₦${dealerNet.toLocaleString()}`,   color:'text-brand-green'},
@@ -512,7 +512,7 @@ export default function OrderTracking() {
             </div>
           ))}
         </div>
-        <div className="flex flex-col gap-2 w-full max-w-[300px]">
+        <div className="flex flex-col gap-2 w-full max-w-75">
           <button className="btn-main" onClick={() => { clearOrder(); navigate('/dashboard') }}>
             <Home size={16} /> Back to dashboard
           </button>
@@ -550,7 +550,7 @@ export default function OrderTracking() {
           border: `1px solid ${appealDone ? 'rgba(239,159,39,0.25)' : step === 'dispatched' ? 'rgba(239,159,39,0.25)' : 'rgba(29,158,117,0.25)'}`,
         }}>
           <div className="flex items-start gap-3">
-            <span className="text-xl flex-shrink-0">{appealDone ? '⚖️' : step === 'dispatched' ? '🚚' : '🔒'}</span>
+            <span className="text-xl shrink-0">{appealDone ? '⚖️' : step === 'dispatched' ? '🚚' : '🔒'}</span>
             <div className="flex-1">
               <p className="font-syne font-bold text-sm text-(--tx) mb-1">
                 {appealDone ? 'Dispute under admin review' : step === 'dispatched' ? 'Order is on its way' : 'Escrow active — funds locked'}
@@ -560,14 +560,14 @@ export default function OrderTracking() {
                   ? 'Admin will review both sides and make the final decision. Your money is frozen.'
                   : step === 'dispatched'
                     ? `Confirm receipt to release ₦${dealerNet.toLocaleString()} to ${order.dealer?.name}`
-                    : `₦${total.toLocaleString()} held safely by Interswitch`}
+                    : `₦${total.toLocaleString()} held safely by FarmXnap Escrow`}
               </p>
             </div>
           </div>
         </div>
 
         <div className="glass-card flex items-center gap-3 mb-4 anim-2">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-green/10 border border-brand-green/20">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-brand-green/10 border border-brand-green/20">
             <span className="font-syne font-extrabold text-sm text-brand-green">
               {order.dealer?.name?.slice(0,2).toUpperCase()}
             </span>
@@ -667,7 +667,7 @@ export default function OrderTracking() {
         {appealDone && (
           <div className="rounded-2xl px-4 py-4 mb-4 anim-1 flex items-start gap-3"
             style={{ background:'rgba(99,102,241,0.07)', border:'1.5px solid rgba(99,102,241,0.2)' }}>
-            <Gavel size={18} style={{ color:'#818cf8' }} className="flex-shrink-0 mt-0.5" />
+            <Gavel size={18} style={{ color:'#818cf8' }} className="shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-syne font-bold text-(--tx) mb-1">Dispute submitted</p>
               <p className="text-xs text-(--tx-sub) leading-relaxed">
@@ -677,7 +677,7 @@ export default function OrderTracking() {
           </div>
         )}
 
-        <div className="h-2" />
+        <div className="h-28" />
       </div>
 
       {/* CTA */}
@@ -685,7 +685,7 @@ export default function OrderTracking() {
         {appealDone ? (
           <div className="w-full px-4 py-3 rounded-2xl flex items-center gap-3"
             style={{ background:'rgba(99,102,241,0.08)', border:'1px solid rgba(99,102,241,0.2)' }}>
-            <Gavel size={16} style={{ color:'#818cf8' }} className="flex-shrink-0" />
+            <Gavel size={16} style={{ color:'#818cf8' }} className="shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-syne font-bold text-(--tx)">Awaiting admin judgment</p>
               <p className="text-xs text-(--tx-sub)">Escrow frozen — nothing moves without admin decision</p>
@@ -731,7 +731,7 @@ export default function OrderTracking() {
           <div className="px-5 pt-5 pb-2">
             <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background:'var(--card-br)' }} />
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
                 style={{ background:'rgba(239,159,39,0.12)', border:'1.5px solid rgba(239,159,39,0.25)' }}>
                 <span className="text-2xl">📢</span>
               </div>
@@ -800,7 +800,7 @@ export default function OrderTracking() {
               ].map(({ icon, title, desc }) => (
                 <div key={title} className="flex items-start gap-3 px-4 py-3 rounded-2xl"
                   style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
-                  <span className="text-lg flex-shrink-0">{icon}</span>
+                  <span className="text-lg shrink-0">{icon}</span>
                   <div>
                     <p className="text-sm font-semibold text-(--tx) leading-tight">{title}</p>
                     <p className="text-[11px] text-(--tx-dim) mt-0.5">{desc}</p>
