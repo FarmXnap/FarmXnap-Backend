@@ -920,6 +920,7 @@ Update a product by a verified agro-dealer.
     },
     "treatments": [
       {
+        "id": "lcap3onpjxz47st1u857e6p1",
         "name": "Azoxystrobin",
         "active_ingredient": "Azoxystrobin",
         "price": "75190.60",
@@ -935,9 +936,16 @@ Update a product by a verified agro-dealer.
         "bank_account_number": "5239701059",
         "bank_account_name": "Bailey - Schmidt", // Ideally, verified agro-dealers will have verified bank accounts.
         "phone_number": "28653272469",
-        "rank": 3
+        "rank": 3,
+        "links": {
+          "create_order": {
+            "method": "POST",
+            "href": "/api/v1/products/lcap3onpjxz47st1u857e6p1/orders"
+          }
+        }
       },
       {
+        "id": "lbap3onpjxz49st1u857e6p1",
         "name": "Mancozeb 80WP",
         "active_ingredient": "Mancozeb 80WP",
         "price": "74574.84",
@@ -953,7 +961,13 @@ Update a product by a verified agro-dealer.
         "bank_account_number": "5239701059",
         "bank_account_name": "Bailey - Schmidt",
         "phone_number": "28653272469",
-        "rank": 0.8121841996908188
+        "rank": 0.8121841996908188,
+        "links": {
+          "create_order": {
+            "method": "POST",
+            "href": "/api/v1/products/lbap3onpjxz49st1u857e6p1/orders"
+          }
+        }
       }
     ]
   }

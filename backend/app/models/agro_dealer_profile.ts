@@ -4,6 +4,7 @@ import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import { cuid } from '@adonisjs/core/helpers'
 import Product from './product.js'
+import Order from './order.js'
 
 export default class AgroDealerProfile extends BaseModel {
   public static selfAssignPrimaryKey = true
@@ -55,6 +56,9 @@ export default class AgroDealerProfile extends BaseModel {
 
   @hasMany(() => Product, { foreignKey: 'agro_dealer_profile_id' })
   declare products: HasMany<typeof Product>
+
+  @hasMany(() => Order, { foreignKey: 'agro_dealer_profile_id' })
+  declare orders: HasMany<typeof Order>
 
   @beforeCreate()
   public static assignCuid(agro_dealer_profile: AgroDealerProfile) {

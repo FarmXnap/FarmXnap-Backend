@@ -5,6 +5,7 @@ import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import fs from 'node:fs/promises'
 import AiService, { AIDiagnosis } from '#services/ai_service'
+import { ModelObject } from '@adonisjs/lucid/types/model'
 import { rules } from '#services/validator_rules'
 import router from '@adonisjs/core/services/router'
 import CropScan from '#models/crop_scan'
@@ -280,6 +281,7 @@ export default class FarmerProfilesController {
     const result = await db.rawQuery(
       `
       SELECT
+        p.id,
         p.name,
         p.active_ingredient,
         p.price,

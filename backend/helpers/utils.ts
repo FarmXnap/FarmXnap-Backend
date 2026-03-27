@@ -5,6 +5,15 @@ export function generateOtp() {
   return randomInt(/**6 digits**/ 100_000, 1_000_000).toString()
 }
 
+export const nairaISOCode = '566'
+
+const appUrl =
+  env.get('NODE_ENV') === 'production'
+    ? 'https://farmxnap.onrender.com'
+    : `http://localhost:${env.get('PORT')}`
+
+export const callbackUrl = `${appUrl}/api/v1/payments/callback`
+
 export const interswitchBankListAndVerificationBaseUrl =
   env.get('NODE_ENV') === 'production'
     ? `https://api.interswitchng.com/marketplace-routing`

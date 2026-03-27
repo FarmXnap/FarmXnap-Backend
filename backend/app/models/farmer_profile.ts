@@ -1,8 +1,9 @@
 import { DateTime } from 'luxon'
-import { BaseModel, beforeCreate, belongsTo, column } from '@adonisjs/lucid/orm'
-import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import { BaseModel, beforeCreate, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import { cuid } from '@adonisjs/core/helpers'
+import Order from './order.js'
 
 export default class FarmerProfile extends BaseModel {
   public static selfAssignPrimaryKey = true
@@ -36,6 +37,9 @@ export default class FarmerProfile extends BaseModel {
 
   @belongsTo(() => User, { foreignKey: 'user_id' })
   declare user: BelongsTo<typeof User>
+
+  @hasMany(() => Order, { foreignKey: 'farmer_profile_id' })
+  declare orders: HasMany<typeof Order>
 
   @beforeCreate()
   public static assignCuid(farmer_profile: FarmerProfile) {

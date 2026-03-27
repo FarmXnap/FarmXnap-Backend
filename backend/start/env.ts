@@ -43,6 +43,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   S3_BUCKET: Env.schema.string(),
   S3_ENDPOINT: Env.schema.string(),
   GEMINI_API_KEY: Env.schema.string(),
-
+  INTERSWITCH_MERCHANT_CODE: Env.schema.string(),
+  INTERSWITCH_PAY_ITEM_ID: Env.schema.string(),
   INTERSWITCH_TOKEN: Env.schema.string(),
 })

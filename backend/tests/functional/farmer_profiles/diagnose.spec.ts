@@ -222,6 +222,7 @@ test.group('Farmer Profiles / Diagnose', (group) => {
 
       for (const data of treatments) {
         assert.properties(data, [
+          'id',
           'name',
           'active_ingredient',
           'price',
@@ -238,6 +239,7 @@ test.group('Farmer Profiles / Diagnose', (group) => {
           'bank_account_name',
           'phone_number',
           'rank',
+          'links',
         ])
 
         // Assert that the products from the unverified dealer were not returned
@@ -247,6 +249,14 @@ test.group('Farmer Profiles / Diagnose', (group) => {
         // Assert that the product in "Fertilizer" category was not returned
         assert.equal(data.category, 'Fungicide')
         assert.notEqual(data.category, 'Fertilizer')
+
+        // Assert the links
+        assert.containSubset(data.links, {
+          create_order: {
+            method: 'POST',
+            href: `/api/v1/products/${data.id}/orders`,
+          },
+        })
       }
 
       // Assert that the highest match "Azoxystrobin" is returned first
