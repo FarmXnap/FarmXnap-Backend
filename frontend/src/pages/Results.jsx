@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLogo from '../component/AppLogo'
 import { ShieldCheck, CheckCircle, ChevronRight, Phone, MapPin, Package, Leaf, Star } from 'lucide-react'
@@ -16,10 +16,14 @@ export default function Results() {
   const navigate  = useNavigate()
   const { diagnosis, capturedImage, cropType } = useScanStore()
   const setCart = useCartStore(s => s.setCart)
-  const [selected, setSelected] = useState(null) // treatment id
+  const [selected, setSelected] = useState(null)
   const [showAll,  setShowAll]  = useState(false)
 
-  if (!diagnosis) { navigate('/scan'); return null }
+  useEffect(() => {
+    if (!diagnosis) navigate('/scan')
+  }, [diagnosis])
+
+  if (!diagnosis) return null
 
   const {
     healthy       = false,
@@ -138,7 +142,7 @@ export default function Results() {
               </p>
               <h2 className="font-syne font-extrabold text-xl text-(--tx) leading-snug">{disease}</h2>
             </div>
-            <div className="text-right flex-shrink-0">
+            <div className="text-right shrink-0">
               <p className="font-syne font-extrabold text-2xl" style={{ color: sevColor }}>{confidence}%</p>
               <p className="text-[10px] text-(--tx-sub)">confidence</p>
             </div>
@@ -154,7 +158,7 @@ export default function Results() {
             <div className="flex flex-col gap-1.5">
               {symptoms.map((s, i) => (
                 <div key={i} className="flex items-start gap-2">
-                  <CheckCircle size={12} className="text-brand-green flex-shrink-0 mt-0.5" />
+                  <CheckCircle size={12} className="text-brand-green shrink-0 mt-0.5" />
                   <p className="text-xs text-(--tx-sub) leading-snug">{s}</p>
                 </div>
               ))}
@@ -166,7 +170,7 @@ export default function Results() {
         {remedy && (
           <div className="rounded-2xl px-4 py-3.5 mb-4 anim-2 flex items-start gap-3"
             style={{ background: 'rgba(29,158,117,0.07)', border: '1px solid rgba(29,158,117,0.2)' }}>
-            <span className="text-xl flex-shrink-0">💊</span>
+            <span className="text-xl shrink-0">💊</span>
             <div>
               <p className="text-sm font-syne font-bold text-(--tx) mb-1">How to treat it</p>
               <p className="text-xs text-(--tx-sub) leading-relaxed">{remedy}</p>
@@ -229,7 +233,7 @@ export default function Results() {
                         )}
                         {t.unit && <p className="text-[11px] text-(--tx-dim)">{t.category} · {t.unit}</p>}
                       </div>
-                      <div className="text-right flex-shrink-0">
+                      <div className="text-right shrink-0">
                         <p className="font-syne font-extrabold text-lg text-brand-green">₦{t.price.toLocaleString()}</p>
                         {t.unit && <p className="text-[10px] text-(--tx-dim)">per {t.unit}</p>}
                       </div>
@@ -237,14 +241,14 @@ export default function Results() {
 
                     {/* Dealer info */}
                     <div className="flex items-center gap-2 pt-2.5" style={{ borderTop: '1px solid var(--card-br)' }}>
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 font-syne font-bold text-[10px]"
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 font-syne font-bold text-[10px]"
                         style={{ background: 'rgba(29,158,117,0.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
                         {(t.dealer_name || 'D').slice(0,2).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-xs font-semibold text-(--tx) truncate">{t.dealer_name}</p>
-                          <ShieldCheck size={10} className="text-brand-green flex-shrink-0" />
+                          <ShieldCheck size={10} className="text-brand-green shrink-0" />
                         </div>
                         <p className="text-[10px] text-(--tx-dim) truncate">
                           {t.dealer_state && `${t.dealer_state} · `}
@@ -252,12 +256,12 @@ export default function Results() {
                         </p>
                       </div>
                       {t.rating && (
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <div className="flex items-center gap-0.5 shrink-0">
                           <Star size={9} className="fill-brand-amber text-brand-amber" />
                           <span className="text-[10px] text-(--tx-sub)">{t.rating}</span>
                         </div>
                       )}
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${isSel ? 'bg-brand-green' : ''}`}
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${isSel ? 'bg-brand-green' : ''}`}
                         style={{ border: isSel ? 'none' : '1.5px solid var(--card-br)' }}>
                         {isSel && <div className="w-2 h-2 rounded-full bg-white" />}
                       </div>
@@ -276,7 +280,7 @@ export default function Results() {
                         )}
                         {t.dealer_address && (
                           <div className="flex items-start gap-1.5">
-                            <MapPin size={11} className="text-(--tx-dim) flex-shrink-0 mt-0.5" />
+                            <MapPin size={11} className="text-(--tx-dim) shrink-0 mt-0.5" />
                             <p className="text-xs text-(--tx-sub)">{t.dealer_address}</p>
                           </div>
                         )}

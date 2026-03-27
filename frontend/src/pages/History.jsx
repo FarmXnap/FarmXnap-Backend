@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AppLogo from '../component/AppLogo'
 import {
   Leaf, CheckCircle, AlertCircle, X, ChevronRight,
-  Phone, Package, ShieldCheck, Clock,
+  Phone, Package, ShieldCheck, Clock, Truck,
 } from 'lucide-react'
 import { getFarmerHistory } from '../services/api'
 import { useCartStore, useScanStore } from '../store'
@@ -13,140 +13,189 @@ const FILTERS = ['All', 'Treated', 'Untreated']
 // ── Scan detail bottom sheet ──────────────────────────────────────────────────
 function ScanDetailSheet({ scan, onClose, onBuyTreatment }) {
   if (!scan) return null
-  const treated = scan.status === 'treated'
-  const confColor = scan.confidence >= 85 ? 'red' : scan.confidence >= 70 ? 'amber' : 'green'
+  const treated      = scan.status === 'treated'
+  const isDispatched = scan.order?.status === 'dispatched'
+  const confColor    = scan.confidence >= 85 ? '#ef4444' : scan.confidence >= 70 ? '#EF9F27' : '#1D9E75'
+  const escrowStatus = scan.order?.escrow_status
 
   return (
     <div className="sheet-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="sheet-panel" style={{ maxHeight: '88vh' }}>
-        <div className="sheet-handle" />
+      <div className="sheet-panel" style={{ maxHeight: '92vh' }}>
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className={`badge ${treated ? 'green' : 'red'}`}>
-                {treated ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
-                {treated ? 'Treated' : 'Untreated'}
-              </span>
-              <span className="text-(--tx-sub) text-xs">{scan.crop} · {scan.date}</span>
-            </div>
-            <h3 className="font-syne font-extrabold text-lg text-(--tx) leading-tight">{scan.disease}</h3>
-          </div>
-          <button onClick={onClose} className="nav-close flex-shrink-0"><X size={15} /></button>
-        </div>
-
-        {/* Confidence */}
-        <div className="glass-card mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-(--tx-sub) font-medium">AI confidence score</p>
-            <p className={`font-syne font-extrabold text-lg ${
-              confColor === 'red' ? 'text-red-400' : confColor === 'amber' ? 'text-brand-amber' : 'text-brand-green'
-            }`}>{scan.confidence}%</p>
-          </div>
-          <div className="conf-track">
-            <div className={`conf-fill ${confColor}`} style={{ width: `${scan.confidence}%` }} />
-          </div>
-        </div>
-
-        {/* Symptoms */}
-        <div className="glass-card mb-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-sub) mb-3">Symptoms detected</p>
-          <div className="flex flex-col gap-2">
-            {scan.symptoms?.map((s, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-green/60 flex-shrink-0 mt-1.5" />
-                <p className="text-sm text-(--tx-sub) leading-snug">{s}</p>
+        <div className="sheet-header">
+          <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: 'var(--card-br)' }} />
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className={`badge ${treated ? 'green' : isDispatched ? 'amber' : 'red'}`}>
+                  {treated
+                    ? <><CheckCircle size={9} /> Treated</>
+                    : isDispatched
+                      ? <><Truck size={9} /> Dispatched</>
+                      : <><AlertCircle size={9} /> Untreated</>
+                  }
+                </span>
+                <span className="text-(--tx-dim) text-xs">{scan.crop} · {scan.date}</span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Remedy */}
-        <div className="info-banner green mb-4">
-          <span className="text-lg flex-shrink-0">💊</span>
-          <div>
-            <p className="text-sm font-semibold text-(--tx) mb-1">Recommended treatment</p>
-            <p className="text-xs text-(--tx-sub) leading-relaxed">{scan.remedy}</p>
-          </div>
-        </div>
-
-        {/* ── TREATED: show order details ── */}
-        {treated && scan.order && (
-          <div className="glass-card mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck size={14} className="text-brand-green" />
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-sub)">Order details</p>
+              <h3 className="font-syne font-extrabold text-xl text-(--tx) leading-tight">{scan.disease}</h3>
             </div>
-            {[
-              { label: 'Product',     val: scan.treatment_product?.name },
-              { label: 'Dealer',      val: scan.order.dealer },
-              { label: 'Order ref',   val: scan.order.ref },
-              { label: 'Amount paid', val: `₦${scan.order.amount.toLocaleString()}` },
-              { label: 'Ordered',     val: scan.order.date_ordered },
-              { label: 'Delivered',   val: scan.order.date_delivered || '—' },
-            ].map(({ label, val }) => (
-              <div key={label} className="flex items-center justify-between py-2 border-b border-(--card-br) last:border-0">
-                <span className="text-xs text-(--tx-sub)">{label}</span>
-                <span className="text-sm text-(--tx) font-medium text-right max-w-[60%] truncate">{val}</span>
+            <button onClick={onClose} className="nav-close shrink-0"><X size={15} /></button>
+          </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="sheet-body pb-4">
+
+          {/* Confidence */}
+          <div className="rounded-2xl px-4 py-3.5 mb-3"
+            style={{ background: `${confColor}10`, border: `1px solid ${confColor}30` }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-(--tx-sub)">AI confidence score</p>
+              <p className="font-syne font-extrabold text-2xl" style={{ color: confColor }}>{scan.confidence}%</p>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--card-br)' }}>
+              <div className="h-full rounded-full transition-all"
+                style={{ width: `${scan.confidence}%`, background: confColor }} />
+            </div>
+          </div>
+
+          {/* Symptoms */}
+          {scan.symptoms?.length > 0 && (
+            <div className="glass-card mb-3">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-sub) mb-3">Symptoms detected</p>
+              <div className="flex flex-col gap-2">
+                {scan.symptoms.map((s, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
+                      style={{ background: confColor }} />
+                    <p className="text-sm text-(--tx-sub) leading-snug">{s}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-            <div className="flex items-center justify-between pt-3 mt-1">
-              <span className="text-xs text-(--tx-sub)">Escrow</span>
-              <span className="badge green text-[10px]">
-                <CheckCircle size={9} /> Released
-              </span>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── UNTREATED: dispatched order (awaiting confirmation) ── */}
-        {!treated && scan.order?.status === 'dispatched' && (
-          <div className="info-banner amber mb-4">
-            <Package size={14} className="text-brand-amber flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-(--tx) mb-0.5">Order dispatched</p>
-              <p className="text-xs text-(--tx-sub) leading-relaxed">
-                {scan.order.dealer} has dispatched your order. Confirm delivery to release payment.
-              </p>
+          {/* Remedy */}
+          {scan.remedy && (
+            <div className="rounded-2xl px-4 py-3.5 mb-3 flex items-start gap-3"
+              style={{ background: 'rgba(29,158,117,0.07)', border: '1px solid rgba(29,158,117,0.2)' }}>
+              <span className="text-xl shrink-0">💊</span>
+              <div>
+                <p className="text-sm font-syne font-bold text-(--tx) mb-1">Recommended treatment</p>
+                <p className="text-xs text-(--tx-sub) leading-relaxed">{scan.remedy}</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ── UNTREATED: no order yet ── */}
-        {!treated && !scan.order && scan.treatment_product && (
-          <div className="glass-card mb-2">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">📦</span>
+          {/* ── ORDER DETAILS (treated) ── */}
+          {treated && scan.order && (
+            <div className="mb-3">
+              {/* Escrow status pill */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex-1 h-px" style={{ background: 'var(--card-br)' }} />
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  escrowStatus === 'released' ? 'text-brand-green' : 'text-brand-amber'
+                }`} style={{
+                  background: escrowStatus === 'released' ? 'rgba(29,158,117,0.1)' : 'rgba(239,159,39,0.1)',
+                  border: escrowStatus === 'released' ? '1px solid rgba(29,158,117,0.25)' : '1px solid rgba(239,159,39,0.25)',
+                }}>
+                  <ShieldCheck size={10} />
+                  {escrowStatus === 'released' ? 'Escrow released' : 'Escrow held'}
+                </div>
+                <div className="flex-1 h-px" style={{ background: 'var(--card-br)' }} />
+              </div>
+
+              {/* Order info cards */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="rounded-2xl px-3 py-3"
+                  style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+                  <p className="text-[10px] text-(--tx-dim) uppercase tracking-widest mb-1">Product</p>
+                  <p className="text-xs font-semibold text-(--tx) leading-snug">{scan.treatment_product?.name || '—'}</p>
+                </div>
+                <div className="rounded-2xl px-3 py-3"
+                  style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+                  <p className="text-[10px] text-(--tx-dim) uppercase tracking-widest mb-1">Dealer</p>
+                  <p className="text-xs font-semibold text-(--tx) leading-snug truncate">{scan.order.dealer}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="rounded-2xl px-3 py-3"
+                  style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+                  <p className="text-[10px] text-(--tx-dim) uppercase tracking-widest mb-1">Amount paid</p>
+                  <p className="text-sm font-syne font-extrabold text-brand-green">₦{scan.order.amount.toLocaleString()}</p>
+                </div>
+                <div className="rounded-2xl px-3 py-3"
+                  style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+                  <p className="text-[10px] text-(--tx-dim) uppercase tracking-widest mb-1">Order ref</p>
+                  <p className="text-xs font-mono font-semibold text-(--tx-sub)">{scan.order.ref}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-2xl px-3 py-3"
+                  style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+                  <p className="text-[10px] text-(--tx-dim) uppercase tracking-widest mb-1">Ordered</p>
+                  <p className="text-xs font-semibold text-(--tx)">{scan.order.date_ordered}</p>
+                </div>
+                <div className="rounded-2xl px-3 py-3"
+                  style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+                  <p className="text-[10px] text-(--tx-dim) uppercase tracking-widest mb-1">Delivered</p>
+                  <p className="text-xs font-semibold text-(--tx)">{scan.order.date_delivered || '—'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── DISPATCHED: awaiting confirmation ── */}
+          {!treated && isDispatched && (
+            <div className="rounded-2xl px-4 py-3.5 mb-3 flex items-start gap-3"
+              style={{ background: 'rgba(239,159,39,0.07)', border: '1px solid rgba(239,159,39,0.2)' }}>
+              <Truck size={16} className="text-brand-amber shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-syne font-bold text-(--tx) mb-0.5">Order dispatched</p>
+                <p className="text-xs text-(--tx-sub) leading-relaxed">
+                  {scan.order.dealer} has dispatched your order. Confirm delivery to release payment.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── NO ORDER YET ── */}
+          {!treated && !scan.order && scan.treatment_product && (
+            <div className="rounded-2xl px-4 py-3.5 mb-3 flex items-center gap-3"
+              style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
+              <span className="text-2xl shrink-0">📦</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-(--tx) truncate">{scan.treatment_product.name}</p>
-                <p className="text-xs text-(--tx-sub)">Recommended cure product</p>
+                <p className="text-xs text-(--tx-sub)">Recommended treatment</p>
               </div>
-              <p className="font-syne font-extrabold text-brand-green text-base flex-shrink-0">
+              <p className="font-syne font-extrabold text-brand-green shrink-0">
                 ₦{scan.treatment_product.price.toLocaleString()}
               </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* CTAs */}
-        <div className="mt-4 flex flex-col gap-2">
+        </div>
+
+        {/* Sticky footer CTAs */}
+        <div className="sheet-footer flex flex-col gap-2">
           {!treated && !scan.order && (
-            <button className="btn-main" onClick={() => onBuyTreatment(scan)}>
-              <ChevronRight size={16} /> Buy treatment now
+            <button className="btn-main w-full" onClick={() => onBuyTreatment(scan)}>
+              <Package size={15} /> Buy treatment now
             </button>
           )}
-          {!treated && scan.order?.status === 'dispatched' && (
-            <button className="btn-main" onClick={() => onBuyTreatment(scan)}>
-              <CheckCircle size={16} /> Confirm delivery & release payment
+          {!treated && isDispatched && (
+            <button className="btn-main w-full" onClick={() => onBuyTreatment(scan)}>
+              <CheckCircle size={15} /> Confirm delivery & release payment
             </button>
           )}
           {!treated && (
-            <button className="btn-main ghost" onClick={() => { onClose(); /* navigate to scan */ }}>
+            <button className="btn-main ghost w-full" onClick={onClose}>
               🔬 Re-scan this crop
             </button>
           )}
         </div>
+
       </div>
     </div>
   )
@@ -176,13 +225,11 @@ export default function History() {
     Untreated: history.filter(h => h.status === 'pending').length,
   }
 
-  // Navigate to checkout pre-loaded with this scan's treatment
   const handleBuyTreatment = (scan) => {
     if (scan.order?.status === 'dispatched') {
       navigate('/order-tracking', { state: { order: scan.order } })
       return
     }
-    // Pre-load scan store so Results → Checkout flow works
     setCropType(scan.crop)
     setDiagnosis({
       disease: scan.disease,
@@ -259,8 +306,8 @@ export default function History() {
             </div>
           ) : (
             filtered.map((scan, idx) => {
-              const treated = scan.status === 'treated'
-              const hasActiveOrder = scan.order?.status === 'dispatched'
+              const treated      = scan.status === 'treated'
+              const isDispatched = scan.order?.status === 'dispatched'
               return (
                 <button key={scan.id}
                   className="glass-card text-left w-full active:scale-[0.985] transition-all"
@@ -268,25 +315,23 @@ export default function History() {
                   onClick={() => setActiveScan(scan)}>
 
                   <div className="flex items-start gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      treated ? 'bg-brand-green/10' : hasActiveOrder ? 'bg-brand-amber/10' : 'bg-red-500/10'
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      treated ? 'bg-brand-green/10' : isDispatched ? 'bg-brand-amber/10' : 'bg-red-500/10'
                     }`}>
                       <Leaf size={15} className={
-                        treated ? 'text-brand-green' : hasActiveOrder ? 'text-brand-amber' : 'text-red-400'
+                        treated ? 'text-brand-green' : isDispatched ? 'text-brand-amber' : 'text-red-400'
                       } />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-syne font-bold text-sm text-(--tx) truncate mb-0.5">{scan.disease}</p>
                       <p className="text-xs text-(--tx-sub)">{scan.crop} · {scan.date}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                      <span className={`badge ${
-                        treated ? 'green' : hasActiveOrder ? 'amber' : 'red'
-                      }`}>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span className={`badge ${treated ? 'green' : isDispatched ? 'amber' : 'red'}`}>
                         {treated
                           ? <><CheckCircle size={9} /> Treated</>
-                          : hasActiveOrder
-                            ? <><Clock size={9} /> Dispatched</>
+                          : isDispatched
+                            ? <><Truck size={9} /> Dispatched</>
                             : <><AlertCircle size={9} /> Untreated</>
                         }
                       </span>
@@ -296,30 +341,28 @@ export default function History() {
 
                   {/* Confidence bar */}
                   <div className="flex items-center gap-2.5">
-                    <span className="text-[10px] text-(--tx-dim) w-16 flex-shrink-0">Confidence</span>
+                    <span className="text-[10px] text-(--tx-dim) w-16 shrink-0">Confidence</span>
                     <div className="conf-track">
                       <div className={`conf-fill ${treated ? 'green' : 'amber'}`}
                         style={{ width: `${scan.confidence}%` }} />
                     </div>
-                    <span className={`text-xs font-semibold font-mono flex-shrink-0 ${
+                    <span className={`text-xs font-semibold font-mono shrink-0 ${
                       treated ? 'text-brand-green' : 'text-brand-amber'
                     }`}>{scan.confidence}%</span>
                   </div>
 
-                  {/* Dispatched nudge */}
-                  {hasActiveOrder && (
+                  {isDispatched && (
                     <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl"
                       style={{ background: 'rgba(239,159,39,0.07)', border: '1px solid rgba(239,159,39,0.18)' }}>
-                      <Package size={12} className="text-brand-amber flex-shrink-0" />
+                      <Truck size={12} className="text-brand-amber shrink-0" />
                       <p className="text-xs text-brand-amber">On its way — tap to confirm delivery</p>
                     </div>
                   )}
 
-                  {/* Untreated nudge */}
-                  {!treated && !hasActiveOrder && (
+                  {!treated && !isDispatched && (
                     <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl"
                       style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.15)' }}>
-                      <AlertCircle size={12} className="text-red-400 flex-shrink-0" />
+                      <AlertCircle size={12} className="text-red-400 shrink-0" />
                       <p className="text-xs text-red-400">Treatment not purchased — tap to buy</p>
                     </div>
                   )}
@@ -332,7 +375,6 @@ export default function History() {
         <div className="h-8" />
       </div>
 
-      {/* Scan detail sheet */}
       {activeScan && (
         <ScanDetailSheet
           scan={activeScan}

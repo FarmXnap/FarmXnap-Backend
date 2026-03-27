@@ -75,10 +75,10 @@ export default function DealerSignup() {
               style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-br)' }}
               onFocus={e => e.currentTarget.style.borderColor='rgba(239,159,39,0.5)'}
               onBlur={e => e.currentTarget.style.borderColor='var(--input-br)'}>
-              <span className="pl-4 pr-2 font-mono text-sm font-semibold text-brand-amber flex-shrink-0 select-none">
+              <span className="pl-4 pr-2 font-mono text-sm font-semibold text-brand-amber shrink-0 select-none">
                 +234
               </span>
-              <div className="w-px h-5 flex-shrink-0" style={{ background: 'var(--card-br)' }} />
+              <div className="w-px h-5 shrink-0" style={{ background: 'var(--card-br)' }} />
               <input
                 className="flex-1 bg-transparent outline-none px-3 py-3.5 text-sm font-dm"
                 style={{ color: 'var(--tx)' }}

@@ -1,17 +1,12 @@
-import { useState } from 'react'
+import { useAutoError } from '../hooks/useAutoError'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AppLogo from '../component/AppLogo'
 import { Upload, Check } from 'lucide-react'
 import PinSheet from '../component/PinSheet'
 import StepProgress from '../component/StepProgress'
-import { submitDealerDetails } from '../services/api'
+import { submitDealerDetails, fetchBanks } from '../services/api'
 import { NIGERIA_STATES, getLgasByState } from '../data/nigeriaApi'
-
-const BANKS = [
-  'Access Bank', 'GTBank', 'First Bank', 'Zenith Bank', 'UBA',
-  'Fidelity Bank', 'Sterling Bank', 'Polaris Bank', 'Wema Bank',
-  'Stanbic IBTC', 'FCMB', 'Unity Bank', 'Other',
-]
 
 function FileBox({ label, file, onChange }) {
   return (
@@ -39,12 +34,20 @@ export default function DealerDetails() {
     business_name: '', cac_registration_number: '', business_address: '',
     state: '', lga: '', bank: '', account_number: '',
   })
-  const [cacFile, setCacFile] = useState(null)
-  const [idFile,  setIdFile]  = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [showPin, setShowPin] = useState(false)
-  const [error,   setError]   = useState('')
+  const [cacFile,    setCacFile]    = useState(null)
+  const [idFile,     setIdFile]     = useState(null)
+  const [loading,    setLoading]    = useState(false)
+  const [showPin,    setShowPin]    = useState(false)
+  const [error,      setError]      = useAutoError()
+  const [banks,      setBanks]      = useState([])
+  const [banksLoading, setBanksLoading] = useState(true)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    fetchBanks()
+      .then(list => { setBanks(list); setBanksLoading(false) })
+      .catch(() => { setBanksLoading(false) }) // fail silently — select will just be empty
+  }, [])
 
   if (!phone) { navigate('/signup/dealer'); return null }
 
@@ -199,8 +202,8 @@ export default function DealerDetails() {
             <span className="field-label">Bank *</span>
             <select className="field-select" value={form.bank}
               onChange={e => set('bank', e.target.value)}>
-              <option value="">Select bank</option>
-              {BANKS.map(b => <option key={b}>{b}</option>)}
+              <option value="">{banksLoading ? 'Loading banks…' : 'Select bank'}</option>
+              {banks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
             </select>
           </div>
 
@@ -216,7 +219,7 @@ export default function DealerDetails() {
         </div>
 
         <StepProgress currentStep={3} role="dealer" />
-        <div className="h-2" />
+        <div className="h-20" />
       </div>
 
       <div className="page-cta">
