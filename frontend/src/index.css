@@ -222,7 +222,7 @@
 
   /* --- Page CTA --- */
   .page-cta {
-    @apply flex-shrink-0 relative z-10 px-6 pt-3;
+    @apply shrink-0 relative z-10 px-6 pt-3;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
     background: linear-gradient(to top, var(--bg) 60%, transparent);
   }
@@ -230,7 +230,7 @@
 
   /* --- Buttons --- */
   .btn-main {
-    @apply w-full font-syne font-bold text-[15px] rounded-2xl py-4
+    @apply w-full font-syne font-bold text-[12px] rounded-2xl py-4
            text-white cursor-pointer relative overflow-hidden
            transition-all active:scale-[0.97] active:opacity-90
            disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100
@@ -241,7 +241,7 @@
   .btn-main.amber  { background: var(--color-brand-amber); }
   .btn-main.ghost  { background: var(--card-bg); color: var(--tx-sub); border: 1px solid var(--card-br); }
   .btn-main.ghost::after  { display: none; }
-  .btn-main.danger { background: rgba(239,68,68,0.15); color: rgba(239,68,68,0.9); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-main.danger { background: rgba(220,38,38,0.9); color: #ffffff; border: none; }
   .btn-main.danger::after { display: none; }
   .btn-sub {
     @apply w-full font-dm font-medium text-sm rounded-2xl py-3.5 cursor-pointer transition-all mt-2;
@@ -254,7 +254,7 @@
   .cta-note button { @apply border-none bg-transparent cursor-pointer underline underline-offset-2; color: var(--cta-link-color, rgba(29,158,117,0.75)); font-family: var(--font-dm); font-size: inherit; }
 
   /* --- Spinner --- */
-  .spinner { @apply w-4 h-4 rounded-full flex-shrink-0; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; animation: spin 0.7s linear infinite; }
+  .spinner { @apply w-4 h-4 rounded-full shrink-0; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; animation: spin 0.7s linear infinite; }
 
   /* --- Error banner --- */
   .err-banner { @apply flex items-center gap-2 rounded-2xl px-4 py-3 text-sm; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.18); color: rgba(239,68,68,0.85); }
@@ -299,7 +299,7 @@
   .timeline::before { content: ''; @apply absolute top-4 bottom-4; left: 16px; width: 1px; background: var(--card-br); }
   .timeline-step { @apply flex items-start gap-4 pb-5 relative; }
   .timeline-step:last-child { @apply pb-0; }
-  .timeline-dot { @apply w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 relative z-10 text-sm transition-all; }
+  .timeline-dot { @apply w-8 h-8 rounded-full flex items-center justify-center shrink-0 relative z-10 text-sm transition-all; }
   .timeline-dot.done   { background: rgba(29,158,117,0.15); border: 1.5px solid rgba(29,158,117,0.4); }
   .timeline-dot.active { background: rgba(29,158,117,0.10); border: 1.5px solid rgba(29,158,117,0.35); }
   .timeline-dot.wait   { background: var(--card-bg); border: 1.5px solid var(--card-br); }

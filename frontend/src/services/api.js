@@ -114,7 +114,18 @@ export const pingServer = async () => {
   try { await fetch(`${BASE_URL}/health`, { method: 'GET' }) } catch {}
 }
 
-// Admin fetch — X-Admin-Secret header (API docs say "one-milli")
+// Fetch bank list from real API
+export const fetchBanks = async () => {
+  const res  = await fetch(`${BASE_URL}/banks`)
+  const json = await res.json()
+  if (!res.ok) throw new Error('Could not load bank list. Please try again.')
+  // Return only active Nigerian banks, sorted alphabetically by name
+  return (json.data || [])
+    .filter(b => b.active !== false)
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// Admin fetch — X-Admin-Secret header
 const adminCall = async (method, path, body) => {
   const headers = { 'X-Admin-Secret': 'hack-one-milli' }
   if (body) headers['Content-Type'] = 'application/json'
@@ -546,7 +557,7 @@ export const deleteProduct = async (id) => ({ success: true })
 export const verifyFarmerPhone = async (phone, code) => ({ success: true, phone })
 export const verifyDealerPhone = async (phone, code) => ({ success: true, phone })
 
-// 11. POST /farmer_profiles/:id/diagnose — real AI diagnosis with image upload
+// 11. POST /farmer_profiles/:id/diagnose — real AI diagnosis, NO mock fallbacks
 export const diagnoseCrop = async (imageDataOrFile, cropType) => {
   const token = getToken()
 
@@ -564,136 +575,122 @@ export const diagnoseCrop = async (imageDataOrFile, cropType) => {
     hasToken: !!token,
   }))
 
-  // If farmer_profile_id is missing or same as user id (bad fallback), try to fetch it live
+  // If farmer_profile_id is missing or same as user id (bad fallback), fetch it live
   if ((!farmerProfileId || farmerProfileId === stored?.id) && stored?.id && token) {
-    console.log('[diagnoseCrop] farmer_profile_id missing or equals user id — fetching from admin endpoint')
+    console.log('[diagnoseCrop] farmer_profile_id missing — fetching from admin endpoint')
     try {
       const { raw } = await adminGetAllUsers()
       const rawUser = raw?.find(u => u.id === stored.id)
       if (rawUser?.farmerProfile?.id) {
         farmerProfileId = rawUser.farmerProfile.id
-        console.log('[diagnoseCrop] Recovered farmer_profile_id from admin:', farmerProfileId)
-        // Persist it so future scans don't need to fetch
-        const authRaw = localStorage.getItem('farmxnap-auth')
-        if (authRaw) {
-          try {
+        console.log('[diagnoseCrop] Recovered farmer_profile_id:', farmerProfileId)
+        // Persist so future scans don't need to re-fetch
+        try {
+          const authRaw = localStorage.getItem('farmxnap-auth')
+          if (authRaw) {
             const parsed = JSON.parse(authRaw)
             parsed.state.user.farmer_profile_id = farmerProfileId
             localStorage.setItem('farmxnap-auth', JSON.stringify(parsed))
-          } catch {}
-        }
+          }
+        } catch {}
       }
     } catch (e) {
       console.warn('[diagnoseCrop] Could not recover profile id:', e.message)
     }
   }
 
-  // If still no profile ID or no token — fall back to mock
-  if (!farmerProfileId || !token) {
-    console.log('[diagnoseCrop] No farmer_profile_id or token — using mock', { farmerProfileId, hasToken: !!token })
-    return diagnoseCropMock(cropType)
+  // Hard fail — no mock fallback
+  if (!token) throw new Error('You are not logged in. Please sign in and try again.')
+  if (!farmerProfileId) throw new Error('Farmer profile not found. Please sign out and sign in again.')
+
+  // Build FormData — accept base64 string or File/Blob
+  const formData = new FormData()
+  if (typeof imageDataOrFile === 'string' && imageDataOrFile.startsWith('data:')) {
+    const [meta, b64] = imageDataOrFile.split(',')
+    const mime = meta.match(/:(.*?);/)?.[1] || 'image/jpeg'
+    const bytes = atob(b64)
+    const arr   = new Uint8Array(bytes.length)
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+    formData.append('image', new Blob([arr], { type: mime }), 'crop.jpg')
+  } else if (imageDataOrFile instanceof File || imageDataOrFile instanceof Blob) {
+    formData.append('image', imageDataOrFile, imageDataOrFile.name || 'crop.jpg')
+  } else {
+    throw new Error('Invalid image. Please take a new photo and try again.')
   }
 
-  console.log('[diagnoseCrop] Using farmer_profile_id:', farmerProfileId)
+  console.log('[diagnoseCrop] Sending to API — farmer_profile_id:', farmerProfileId)
 
-  try {
-    const formData = new FormData()
+  const res = await apiUpload('POST', `/farmer_profiles/${farmerProfileId}/diagnose`, formData, token)
+  const d   = res.data
 
-    // imageDataOrFile can be a base64 string (from webcam) or a File object
-    if (typeof imageDataOrFile === 'string' && imageDataOrFile.startsWith('data:')) {
-      // Convert base64 to Blob
-      const [meta, b64] = imageDataOrFile.split(',')
-      const mime = meta.match(/:(.*?);/)?.[1] || 'image/jpeg'
-      const bytes = atob(b64)
-      const arr   = new Uint8Array(bytes.length)
-      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
-      formData.append('image', new Blob([arr], { type: mime }), 'crop.jpg')
-    } else if (imageDataOrFile instanceof File || imageDataOrFile instanceof Blob) {
-      formData.append('image', imageDataOrFile, 'crop.jpg')
-    } else {
-      return diagnoseCropMock(cropType)
-    }
+  console.log('[diagnoseCrop] Raw API response:', JSON.stringify(d))
 
-    const res = await apiUpload('POST', `/farmer_profiles/${farmerProfileId}/diagnose`, formData, token)
-    const d   = res.data
-
-    // Healthy crop response — no disease field
-    if (!d.diagnosis?.disease) {
-      return {
-        healthy: true,
-        crop:    d.diagnosis?.crop || cropType,
-        remedy:  d.diagnosis?.instructions || 'Your crop looks healthy! Keep up the good work.',
-        treatments: [],
-        nearby_dealers: [],
-        scanned_at: new Date().toISOString(),
-      }
-    }
-
-    // Match label helper per API docs
-    const getMatchLabel = (rank) => {
-      if (rank > 2.5) return 'Best Match'
-      if (rank > 0.5) return 'Recommended'
-      return 'General Treatment'
-    }
-
+  // Healthy crop — API returns diagnosis without a disease field
+  if (!d?.diagnosis?.disease) {
     return {
-      healthy:    false,
-      disease:    d.diagnosis.disease,
-      crop:       d.diagnosis.crop || cropType,
-      confidence: 90, // API doesn't return confidence — use 90 as default
-      symptoms:   [],
-      remedy:     d.diagnosis.instructions || '',
-      treatments: (d.treatments || []).map(t => ({
-        id:               t.id || ('t-' + Math.random().toString(36).slice(2,8)),
-        name:             t.name,
-        active_ingredient:t.active_ingredient,
-        price:            parseFloat(t.price) || 0,
-        stock_quantity:   t.stock_quantity,
-        unit:             t.unit,
-        description:      t.description || '',
-        disease_target:   t.target_problems || '',
-        category:         t.category || 'Fungicide',
-        // Dealer info from treatment
-        dealer_name:      t.business_name,
-        dealer_address:   t.business_address,
-        dealer_phone:     t.phone_number,
-        dealer_state:     t.state,
-        dealer_bank:      t.bank,
-        dealer_account:   t.account_number,
-        rank:             t.rank,
-        match_label:      getMatchLabel(t.rank),
-        in_stock:         t.stock_quantity === undefined || (t.stock_quantity ?? 0) > 0,
-      })),
-      // Use treatments as nearby dealers for the results page
-      nearby_dealers: (d.treatments || []).map(t => ({
-        id:            t.id || ('d-' + Math.random().toString(36).slice(2,8)),
-        name:          t.business_name,
-        address:       t.business_address,
-        phone:         t.phone_number,
-        state:         t.state,
-        price:         parseFloat(t.price) || 0,
-        in_stock:      (t.stock_quantity ?? 0) > 0,
-        verified:      true,
-        rank:          t.rank,
-        match_label:   getMatchLabel(t.rank),
-        product_name:  t.name,
-        product:       t,
-      })),
-      treatment_product: d.treatments?.[0] ? {
-        id:    d.treatments[0].id || 'prod-real',
-        name:  d.treatments[0].name,
-        price: parseFloat(d.treatments[0].price) || 0,
-      } : null,
-      scanned_at: new Date().toISOString(),
+      healthy:        true,
+      crop:           d?.diagnosis?.crop || cropType,
+      remedy:         d?.diagnosis?.instructions || 'Your crop looks healthy! Keep up the good work.',
+      treatments:     [],
+      nearby_dealers: [],
+      scanned_at:     new Date().toISOString(),
     }
-  } catch (e) {
-    // If API returns "not a crop" error — surface it
-    if (e.message?.toLowerCase().includes('crop') || e.message?.toLowerCase().includes('plant')) {
-      throw e
-    }
-    // Other errors — fall back to mock so demo still works
-    console.warn('[diagnoseCrop] API failed, using mock:', e.message)
-    return diagnoseCropMock(cropType)
+  }
+
+  // Match label per API docs rank values
+  const getMatchLabel = (rank) => {
+    if (rank > 2.5) return 'Best Match'
+    if (rank > 0.5) return 'Recommended'
+    return 'General Treatment'
+  }
+
+  return {
+    healthy:    false,
+    disease:    d.diagnosis.disease,
+    crop:       d.diagnosis.crop || cropType,
+    confidence: 90,
+    symptoms:   [],
+    remedy:     d.diagnosis.instructions || '',
+    treatments: (d.treatments || []).map(t => ({
+      id:                t.id,
+      name:              t.name,
+      active_ingredient: t.active_ingredient,
+      price:             parseFloat(t.price) || 0,
+      stock_quantity:    t.stock_quantity,
+      unit:              t.unit,
+      description:       t.description || '',
+      disease_target:    t.target_problems || '',
+      category:          t.category || 'Fungicide',
+      dealer_name:       t.business_name,
+      dealer_address:    t.business_address,
+      dealer_phone:      t.phone_number,
+      dealer_state:      t.state,
+      dealer_bank:       t.bank,
+      dealer_account:    t.account_number,
+      rank:              t.rank,
+      match_label:       getMatchLabel(t.rank),
+      in_stock:          (t.stock_quantity ?? 0) > 0,
+    })),
+    nearby_dealers: (d.treatments || []).map(t => ({
+      id:           t.id,
+      name:         t.business_name,
+      address:      t.business_address,
+      phone:        t.phone_number,
+      state:        t.state,
+      price:        parseFloat(t.price) || 0,
+      in_stock:     (t.stock_quantity ?? 0) > 0,
+      verified:     true,
+      rank:         t.rank,
+      match_label:  getMatchLabel(t.rank),
+      product_name: t.name,
+      product:      t,
+    })),
+    treatment_product: d.treatments?.[0] ? {
+      id:    d.treatments[0].id,
+      name:  d.treatments[0].name,
+      price: parseFloat(d.treatments[0].price) || 0,
+    } : null,
+    scanned_at: new Date().toISOString(),
   }
 }
 
@@ -747,7 +744,7 @@ const MOCK_TIPS = [
   { id: 1, title: 'Best time to spray fungicide',   body: 'Apply fungicide in the early morning or late evening to prevent evaporation and maximise leaf absorption. Avoid spraying before rain.',   crop: 'All crops', tag: 'Prevention'  },
   { id: 2, title: 'Cassava mosaic early signs',      body: 'Watch for yellowing and twisting of young leaves. Early detection and treatment saves up to 80% of your yield.',                          crop: 'Cassava',   tag: 'Detection'   },
   { id: 3, title: 'Crop rotation benefits',          body: 'Rotating maize with legumes like cowpea replenishes soil nitrogen and breaks pest cycles naturally. Rotate every season.',                crop: 'Maize',     tag: 'Soil health' },
-  { id: 4, title: 'Escrow protects your money',      body: 'Your payment is held safely by Interswitch until you confirm delivery. Never release escrow before inspecting your treatment products.',  crop: 'All crops', tag: 'Finance'     },
+  { id: 4, title: 'Escrow protects your money',      body: 'Your payment is held safely in FarmXnap Escrow until you confirm delivery. Never release escrow before inspecting your treatment products.',  crop: 'All crops', tag: 'Finance'     },
   { id: 5, title: 'How to confirm delivery',         body: 'After your dealer delivers, go to Orders tab → tap the order → enter your PIN to confirm. This releases payment to the dealer.',           crop: 'All crops', tag: 'How-to'      },
   { id: 6, title: 'Tomato blight prevention',        body: 'Space tomato plants at least 60cm apart for airflow. Avoid watering leaves — drip irrigate at the base to prevent fungal spread.',       crop: 'Tomato',    tag: 'Prevention'  },
 ]
@@ -803,20 +800,54 @@ export const farmerConfirmDelivery = async (orderId, pin) => {
   return { success: true }
 }
 
-// ── Orders & Payments (mock) ──────────────────────────────────────────────────
-export const createOrder = async ({ item, dealer, payment_method, pin }) => {
-  await delay(1000)
-  const orderId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase()
-  const ref     = 'FXNAP-' + Math.random().toString(36).slice(2, 10).toUpperCase()
-  return { success: true, order: { id: orderId, reference: ref, item, dealer, payment_method, status: 'escrow_held', escrow_status: 'held', paid_at: new Date().toISOString(), expires_at: new Date(Date.now() + TIMERS.DEALER_DISPATCH_MS).toISOString(), auto_release_at: new Date(Date.now() + TIMERS.AUTO_RELEASE_MS).toISOString() } }
+// ── Orders — REAL API ─────────────────────────────────────────────────────────
+// POST /products/:product_id/orders — no request body
+export const createOrder = async ({ item, dealer, payment_method, tx_ref, interswitch_ref }) => {
+  const token     = getToken()
+  const productId = item?.id
+
+  // Log what we're sending for debugging
+  console.log('[createOrder] product_id:', productId, 'item:', item?.name)
+
+  if (!productId || !token) {
+    // Fallback to mock if no product_id (e.g. from mock diagnosis)
+    console.warn('[createOrder] No product_id or token — using mock order')
+    const orderId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase()
+    const ref     = tx_ref || 'FXNAP-' + Math.random().toString(36).slice(2, 10).toUpperCase()
+    return { success: true, order: { id: orderId, reference: ref, item, dealer, payment_method, status: 'escrow_held', escrow_status: 'held', paid_at: new Date().toISOString(), expires_at: new Date(Date.now() + TIMERS.DEALER_DISPATCH_MS).toISOString() } }
+  }
+
+  const res = await apiCall('POST', `/products/${productId}/orders`, undefined, token)
+
+  // Response structure TBD — normalise whatever comes back
+  const data = res.data || res
+  console.log('[createOrder] API response:', data)
+
+  return {
+    success:   true,
+    order: {
+      id:             data?.id            || data?.order_id || ('ORD-' + Math.random().toString(36).slice(2,8).toUpperCase()),
+      reference:      data?.reference     || data?.ref      || tx_ref || interswitch_ref || '',
+      item,
+      dealer,
+      payment_method,
+      tx_ref,
+      interswitch_ref,
+      status:         data?.status        || 'escrow_held',
+      escrow_status:  data?.escrow_status || 'held',
+      paid_at:        data?.paid_at       || new Date().toISOString(),
+      expires_at:     data?.expires_at    || new Date(Date.now() + TIMERS.DEALER_DISPATCH_MS).toISOString(),
+      raw:            data,
+    }
+  }
 }
 export const initiatePayment  = async () => { await delay(2000); return { status: 'success', reference: 'FXNAP-' + Math.random().toString(36).slice(2, 10).toUpperCase() } }
 export const confirmDelivery  = async () => { await delay(1200); return { success: true, status: 'completed', funds_released: true } }
 export const getOrderStatus   = async () => { await delay(600);  return { status: 'dispatched', dispatched_at: new Date().toISOString() } }
 export const releaseEscrow    = async () => { await delay(1400); return { success: true, message: 'Escrow released. Dealer payout queued.' } }
-export const refundEscrow     = async () => { await delay(1200); return { success: true, message: 'Refund initiated to farmer via Interswitch' } }
+export const refundEscrow     = async () => { await delay(1200); return { success: true, message: 'Refund initiated to farmer via FarmXnap Escrow' } }
 export const initiateInterswitchPayment = async ({ amount }) => { await delay(1200); return { success: true, payment_ref: 'ISNG-' + Math.random().toString(36).slice(2, 10).toUpperCase(), payment_url: 'https://pay.interswitch.com/pay/mock', amount, status: 'pending' } }
-export const verifyInterswitchPayment   = async () => { await delay(1000); return { success: true, status: 'escrow_held', message: 'Payment verified and held in escrow' } }
+export const verifyInterswitchPayment   = async () => { await delay(1000); return { success: true, status: 'escrow_held', message: 'Payment verified by Interswitch and held in FarmXnap Escrow' } }
 
 // ── Dealer Mock Data ──────────────────────────────────────────────────────────
 const getStoredDealer = () => {

@@ -50,30 +50,51 @@ export const useWalletStore = create(
     (set) => ({
       balance: 12500,
       transactions: [
-        { id: 'tx-001', type: 'credit', amount: 20000, desc: 'Wallet top-up via Interswitch',           date: '12 Mar 2026', status: 'completed' },
-        { id: 'tx-002', type: 'debit',  amount: 4872,  desc: 'Imidacloprid 200SL — AgroFirst PH',       date: '14 Mar 2026', status: 'completed' },
-        { id: 'tx-003', type: 'credit', amount: 5000,  desc: 'Wallet top-up via Interswitch',           date: '16 Mar 2026', status: 'completed' },
-        { id: 'tx-004', type: 'debit',  amount: 3328,  desc: 'Mancozeb 80WP — GreenField Supplies',     date: '18 Mar 2026', status: 'completed' },
-        { id: 'tx-005', type: 'refund', amount: 3328,  desc: 'Refund — order not delivered in time',    date: '19 Mar 2026', status: 'completed' },
+        { id: 'tx-001', type: 'credit',   amount: 20000, desc: 'Wallet top-up via Interswitch',              date: '10 Mar 2026', status: 'completed', ref: 'FXNAP20260310A' },
+        { id: 'tx-002', type: 'debit',    amount: 4872,  desc: 'Imidacloprid 200SL — AgroFirst PH',          date: '12 Mar 2026', status: 'completed', ref: 'ORD-00234' },
+        { id: 'tx-003', type: 'credit',   amount: 5000,  desc: 'Wallet top-up via Interswitch',              date: '14 Mar 2026', status: 'completed', ref: 'FXNAP20260314B' },
+        { id: 'tx-004', type: 'debit',    amount: 3828,  desc: 'Mancozeb 80WP — GreenField Supplies',        date: '15 Mar 2026', status: 'completed', ref: 'ORD-00218' },
+        { id: 'tx-005', type: 'refund',   amount: 3828,  desc: 'Refund — order cancelled by admin',          date: '16 Mar 2026', status: 'completed', ref: 'REF-00218' },
+        { id: 'tx-006', type: 'debit',    amount: 2228,  desc: 'Carbendazim 50WP — NaturaFarm Store',        date: '18 Mar 2026', status: 'completed', ref: 'ORD-00198' },
+        { id: 'tx-007', type: 'credit',   amount: 10000, desc: 'Wallet top-up via Interswitch',              date: '20 Mar 2026', status: 'completed', ref: 'FXNAP20260320C' },
+        { id: 'tx-008', type: 'withdraw', amount: 8000,  desc: 'Withdrawal to GTBank — 0123456789',          date: '21 Mar 2026', status: 'completed', ref: 'WDR-20260321' },
+        { id: 'tx-009', type: 'refund',   amount: 2228,  desc: 'Refund — dealer did not dispatch in time',   date: '22 Mar 2026', status: 'completed', ref: 'REF-00198' },
+        { id: 'tx-010', type: 'debit',    amount: 1828,  desc: 'Acetamiprid 20SP — FarmFirst Supplies',      date: '23 Mar 2026', status: 'completed', ref: 'ORD-00301' },
       ],
       topUp: (amount, ref) => set(s => ({
         balance: s.balance + amount,
         transactions: [
-          { id: 'tx-' + Date.now(), type: 'credit', amount, desc: 'Wallet top-up via Interswitch', date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }), status: 'completed', ref },
+          { id: 'tx-' + Date.now(), type: 'credit', amount, desc: 'Wallet top-up via Interswitch',
+            date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }),
+            status: 'completed', ref },
           ...s.transactions,
         ],
       })),
-      deduct: (amount, desc) => set(s => ({
+      deduct: (amount, desc, ref) => set(s => ({
         balance: s.balance - amount,
         transactions: [
-          { id: 'tx-' + Date.now(), type: 'debit', amount, desc, date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }), status: 'completed' },
+          { id: 'tx-' + Date.now(), type: 'debit', amount, desc,
+            date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }),
+            status: 'completed', ref: ref || ('ORD-' + Math.random().toString(36).slice(2,8).toUpperCase()) },
           ...s.transactions,
         ],
       })),
-      refund: (amount, desc) => set(s => ({
+      refund: (amount, desc, ref) => set(s => ({
         balance: s.balance + amount,
         transactions: [
-          { id: 'tx-' + Date.now(), type: 'refund', amount, desc, date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }), status: 'completed' },
+          { id: 'tx-' + Date.now(), type: 'refund', amount, desc,
+            date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }),
+            status: 'completed', ref: ref || ('REF-' + Math.random().toString(36).slice(2,8).toUpperCase()) },
+          ...s.transactions,
+        ],
+      })),
+      withdraw: (amount, bankName, accountNumber) => set(s => ({
+        balance: s.balance - amount,
+        transactions: [
+          { id: 'tx-' + Date.now(), type: 'withdraw', amount,
+            desc: `Withdrawal to ${bankName} — ${accountNumber}`,
+            date: new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }),
+            status: 'completed', ref: 'WDR-' + Date.now() },
           ...s.transactions,
         ],
       })),

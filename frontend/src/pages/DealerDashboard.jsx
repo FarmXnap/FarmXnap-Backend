@@ -8,7 +8,7 @@ import {
   UserCircle, Star, ShieldCheck, Phone, Mail, MapPin, Building2,
   Wallet, ChevronRight, Clock, MessageSquare, Navigation, Leaf, Moon, Sun, Upload,
 } from 'lucide-react'
-import { logoutUser, requestEscrowRelease, TIMERS } from '../services/api'
+import { logoutUser, requestEscrowRelease, TIMERS, fetchBanks } from '../services/api'
 import { NIGERIA_STATES, getLgasByState } from '../data/nigeriaApi'
 import { useAuthStore, useToastStore, useThemeStore } from '../store'
 import {
@@ -20,7 +20,7 @@ import {
 
 const CATEGORIES = ['Fungicide', 'Insecticide', 'Herbicide', 'Fertilizer', 'Other']
 const UNITS      = ['100g', '250g', '500g', '1kg', '100ml', '200ml', '500ml', '1L', 'Pack']
-const BANKS      = ['Access Bank', 'GTBank', 'First Bank', 'Zenith Bank', 'UBA', 'Fidelity', 'Sterling', 'Other']
+
 const STATES     = ['Rivers', 'Lagos', 'Kano', 'Oyo', 'Kaduna', 'Enugu', 'Delta', 'Anambra', 'Other']
 const TABS = [
   { key: 'overview',  label: 'Overview',  icon: LayoutDashboard },
@@ -114,7 +114,7 @@ function ProductSheet({ product, onClose, onSave }) {
                 { label: 'Description',       tip: 'Include dosage, mixing instructions — builds farmer trust' },
               ].map(({ label, tip }) => (
                 <div key={label} className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 bg-brand-amber" />
+                  <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 bg-brand-amber" />
                   <p className="text-[11px] text-(--tx-sub) leading-relaxed">
                     <span className="font-semibold text-(--tx)">{label}:</span> {tip}
                   </p>
@@ -306,7 +306,7 @@ function ProfileSheet({ profile, onClose, onSave }) {
             {/* Payout divider */}
             <div className="flex items-center gap-3 pt-1">
               <div className="flex-1 h-px" style={{ background:'var(--card-br)' }} />
-              <p className="text-(--tx-dim) text-[10px] uppercase tracking-widest flex-shrink-0">Payout details</p>
+              <p className="text-(--tx-dim) text-[10px] uppercase tracking-widest shrink-0">Payout details</p>
               <div className="flex-1 h-px" style={{ background:'var(--card-br)' }} />
             </div>
 
@@ -314,8 +314,8 @@ function ProfileSheet({ profile, onClose, onSave }) {
             <div>
               <span className="field-label">Bank</span>
               <select className="field-select" value={form.bank} onChange={e => set('bank', e.target.value)}>
-                <option value="">Select bank</option>
-                {BANKS.map(b => <option key={b}>{b}</option>)}
+                <option value="">{banksLoading ? 'Loading banks…' : 'Select bank'}</option>
+                {banks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
               </select>
             </div>
 
@@ -365,6 +365,15 @@ export default function DealerDashboard() {
   const [releaseStep,       setReleaseStep]       = useState('reason') // 'reason' | 'details'
   const [releaseSubmitting, setReleaseSubmitting] = useState(false)
   const [releaseSuccess,    setReleaseSuccess]    = useState(false)
+  const [banks,             setBanks]             = useState([])
+  const [banksLoading,      setBanksLoading]      = useState(true)
+
+  // Load bank list from real API on mount
+  useEffect(() => {
+    fetchBanks()
+      .then(list => { setBanks(list); setBanksLoading(false) })
+      .catch(() => setBanksLoading(false))
+  }, [])
 
   useEffect(() => {
     // Build profile immediately from auth store (populated at login/signup)
@@ -483,11 +492,11 @@ export default function DealerDashboard() {
       <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, background: 'radial-gradient(circle, rgba(239,159,39,0.12) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0, borderRadius: '50%' }} />
 
       {/* ── Topbar ── */}
-      <div className="flex items-center gap-3 px-5 flex-shrink-0"
+      <div className="flex items-center gap-3 px-5 shrink-0"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 40px)', paddingBottom: 18, background: 'linear-gradient(135deg, rgba(239,159,39,0.08) 0%, transparent 60%)' }}>
         {/* Avatar */}
         <button onClick={() => setTab('profile')}
-          className="w-11 h-11 rounded-full flex items-center justify-center font-syne font-extrabold text-sm flex-shrink-0 active:scale-90 transition-all"
+          className="w-11 h-11 rounded-full flex items-center justify-center font-syne font-extrabold text-sm shrink-0 active:scale-90 transition-all"
           style={{ background: 'rgba(239,159,39,0.15)', border: '2px solid rgba(239,159,39,0.3)', color: '#EF9F27' }}>
           {(profile?.business_name || user?.business_name || 'Dealer Store')
             .split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
@@ -507,7 +516,7 @@ export default function DealerDashboard() {
         {/* Notification bell */}
         <div className="relative">
           <button
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 shrink-0"
             style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}
             onClick={() => setShowNotifs(v => !v)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-(--tx-sub)">
@@ -556,7 +565,7 @@ export default function DealerDashboard() {
                     setShowNotifs(false)
                     setSelectedOrder(order)
                   }}>
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
                     style={{ background: 'rgba(239,159,39,0.1)', border: '1px solid rgba(239,159,39,0.2)' }}>
                     <Package size={13} className="text-brand-amber" />
                   </div>
@@ -567,7 +576,7 @@ export default function DealerDashboard() {
                       <MapPin size={9} /> {order.farmer_location}
                     </p>
                   </div>
-                  <ChevronRight size={13} className="text-(--tx-dim) flex-shrink-0 mt-1" />
+                  <ChevronRight size={13} className="text-(--tx-dim) shrink-0 mt-1" />
                 </button>
               ))
             )}
@@ -605,22 +614,22 @@ export default function DealerDashboard() {
             <div className="flex flex-col gap-2 mb-4">
               {outOfStock > 0 && (
                 <div className="info-banner red">
-                  <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+                  <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="text-red-400 text-xs font-medium">{outOfStock} product{outOfStock > 1 ? 's' : ''} out of stock</p>
                     <p className="text-red-400/55 text-[11px]">Farmers can't see these</p>
                   </div>
-                  <button onClick={() => setTab('inventory')} className="text-red-400 text-xs underline flex-shrink-0">Fix</button>
+                  <button onClick={() => setTab('inventory')} className="text-red-400 text-xs underline shrink-0">Fix</button>
                 </div>
               )}
               {lowStock > 0 && (
                 <div className="info-banner amber">
-                  <AlertTriangle size={14} className="text-brand-amber flex-shrink-0 mt-0.5" />
+                  <AlertTriangle size={14} className="text-brand-amber shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="text-brand-amber text-xs font-medium">{lowStock} product{lowStock > 1 ? 's' : ''} running low</p>
                     <p className="text-brand-amber/55 text-[11px]">10 units or below</p>
                   </div>
-                  <button onClick={() => setTab('inventory')} className="text-brand-amber text-xs underline flex-shrink-0">View</button>
+                  <button onClick={() => setTab('inventory')} className="text-brand-amber text-xs underline shrink-0">View</button>
                 </div>
               )}
             </div>
@@ -633,14 +642,14 @@ export default function DealerDashboard() {
               : orders.slice(0,3).map(o => (
                 <div key={o.id} className="glass-card">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-(--card-bg) flex items-center justify-center shrink-0">
                       <Package size={14} className="text-brand-amber" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-(--tx) text-sm font-medium truncate">{o.product}</p>
                       <p className="text-(--tx-sub) text-xs">From {o.farmer} · {o.date}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-right shrink-0">
                       <p className="text-(--tx) text-sm font-medium">₦{o.amount.toLocaleString()}</p>
                       <span className={ORDER_STATUS[o.status]?.cls}>{ORDER_STATUS[o.status]?.label}</span>
                     </div>
@@ -705,7 +714,7 @@ export default function DealerDashboard() {
                   {products.map(p => (
                     <div key={p.id} className="glass-card">
                       <div className="flex items-start gap-3">
-                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(239,159,39,0.12)", border: "1.5px solid rgba(239,159,39,0.2)" }}>
+                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(239,159,39,0.12)", border: "1.5px solid rgba(239,159,39,0.2)" }}>
                           <span className="font-syne font-bold text-brand-amber text-sm">
                             {p.name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() || '??'}
                           </span>
@@ -716,7 +725,7 @@ export default function DealerDashboard() {
                               <p className="text-(--tx) text-sm font-semibold truncate">{p.name}</p>
                               <p className="text-(--tx-sub) text-xs">{p.category} · {p.unit}</p>
                             </div>
-                            <div className="flex gap-1.5 flex-shrink-0">
+                            <div className="flex gap-1.5 shrink-0">
                               <button onClick={() => setModal({ type: 'edit', product: p })}
                                 className="w-8 h-8 rounded-xl bg-(--card-bg) flex items-center justify-center active:scale-95 transition-all">
                                 <Pencil size={13} className="text-(--tx-sub)" />
@@ -758,7 +767,7 @@ export default function DealerDashboard() {
               { key: 'delivered',  label: `Delivered (${orders.filter(o => o.status === 'delivered').length})` },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setOrderFilter(key)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all border ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all border ${
                   orderFilter === key
                     ? key === 'pending'
                       ? 'bg-brand-amber/15 text-brand-amber border-brand-amber/25'
@@ -794,7 +803,7 @@ export default function DealerDashboard() {
                           </p>
                         )}
                       </div>
-                      <span className={ORDER_STATUS[o.status]?.cls + ' flex-shrink-0'}>
+                      <span className={ORDER_STATUS[o.status]?.cls + ' shrink-0'}>
                         {ORDER_STATUS[o.status]?.label}
                       </span>
                     </div>
@@ -892,7 +901,7 @@ export default function DealerDashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: 'rgba(239,159,39,0.1)', border: '1px solid rgba(239,159,39,0.2)' }}>
                     <span className="text-lg">🏦</span>
                   </div>
@@ -931,7 +940,7 @@ export default function DealerDashboard() {
                           <p className="text-(--tx) text-sm font-semibold truncate">{o.product}</p>
                           <p className="text-(--tx-sub) text-xs">{o.farmer} · {o.date}</p>
                         </div>
-                        <span className={`badge flex-shrink-0 ${isReleased ? 'green' : isRefunded ? 'red' : 'amber'}`}>
+                        <span className={`badge shrink-0 ${isReleased ? 'green' : isRefunded ? 'red' : 'amber'}`}>
                           {isReleased ? '✓ Released' : isRefunded ? '↩ Refunded' : '🔒 Escrow'}
                         </span>
                       </div>
@@ -944,7 +953,7 @@ export default function DealerDashboard() {
                             <p className="text-(--tx-dim) text-[10px]">₦{fee.toLocaleString(undefined, { maximumFractionDigits: 0 })} fee deducted</p>
                           )}
                           {isEscrow && (
-                            <p className="text-(--tx-dim) text-[10px]">Held by Interswitch</p>
+                            <p className="text-(--tx-dim) text-[10px]">Held in FarmXnap Escrow</p>
                           )}
                         </div>
                         {o.ref && <p className="text-(--tx-dim) text-[10px] font-mono">{o.ref}</p>}
@@ -970,7 +979,7 @@ export default function DealerDashboard() {
                 {/* Business card */}
                 <div className="glass-card">
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-extrabold text-lg text-brand-amber"
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 font-syne font-extrabold text-lg text-brand-amber"
                       style={{ background: 'rgba(239,159,39,0.12)', border: '2px solid rgba(239,159,39,0.25)' }}>
                       {profile.business_name?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
                     </div>
@@ -1021,7 +1030,7 @@ export default function DealerDashboard() {
                       { icon: Building2, label: 'Address',  val: profile.address },
                     ].map(({ icon: Icon, label, val }) => (
                       <div key={label} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-xl bg-(--card-bg) flex items-center justify-center shrink-0">
                           <Icon size={13} className="text-(--tx-sub)" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1139,7 +1148,7 @@ export default function DealerDashboard() {
                   <h3 className="font-syne font-extrabold text-lg text-(--tx) leading-tight">{selectedOrder.product}</h3>
                   <p className="text-(--tx-dim) text-xs font-mono mt-0.5">{selectedOrder.ref}</p>
                 </div>
-                <button onClick={() => setSelectedOrder(null)} className="nav-close flex-shrink-0">
+                <button onClick={() => setSelectedOrder(null)} className="nav-close shrink-0">
                   <X size={15} />
                 </button>
               </div>
@@ -1151,7 +1160,7 @@ export default function DealerDashboard() {
               <div className="glass-card mb-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Farmer details</p>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-syne font-bold text-sm text-brand-green"
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-syne font-bold text-sm text-brand-green"
                     style={{ background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.2)' }}>
                     {selectedOrder.farmer.split(' ').map(n => n[0]).join('').slice(0,2)}
                   </div>
@@ -1167,7 +1176,7 @@ export default function DealerDashboard() {
                     { icon: Leaf,   label: 'Crop',     val: `${selectedOrder.crop} · ${selectedOrder.disease}`, href: null },
                   ].map(({ icon: Icon, label, val, href }) => (
                     <div key={label} className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0">
+                      <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center shrink-0">
                         <Icon size={12} className="text-(--tx-sub)" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1179,7 +1188,7 @@ export default function DealerDashboard() {
                       </div>
                       {href && (
                         <a href={href}
-                          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                           style={{ background: 'rgba(239,159,39,0.1)', border: '1px solid rgba(239,159,39,0.2)' }}>
                           <Phone size={13} className="text-brand-amber" />
                         </a>
@@ -1188,7 +1197,7 @@ export default function DealerDashboard() {
                   ))}
                   {selectedOrder.notes && (
                     <div className="flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-7 h-7 rounded-xl bg-(--card-bg) flex items-center justify-center shrink-0 mt-0.5">
                         <MessageSquare size={12} className="text-(--tx-sub)" />
                       </div>
                       <div>
@@ -1236,7 +1245,7 @@ export default function DealerDashboard() {
                 ].filter(t => t.val).map(({ label, val, done }) => (
                   <div key={label} className="flex justify-between mb-2 last:mb-0">
                     <span className="text-xs text-(--tx-sub) flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${done ? 'bg-brand-green' : 'bg-(--card-br)'}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${done ? 'bg-brand-green' : 'bg-(--card-br)'}`} />
                       {label}
                     </span>
                     <span className={`text-xs font-medium ${done ? 'text-(--tx)' : 'text-(--tx-dim)'}`}>{val}</span>
@@ -1258,7 +1267,7 @@ export default function DealerDashboard() {
                   <div className="flex flex-col gap-2">
                     <div className="rounded-2xl p-3 flex items-center gap-3"
                       style={{ background: countdown?.urgent ? 'rgba(239,68,68,0.08)' : 'rgba(239,159,39,0.08)', border: `1px solid ${countdown?.urgent ? 'rgba(239,68,68,0.2)' : 'rgba(239,159,39,0.2)'}` }}>
-                      <span className="text-xl flex-shrink-0">⏱</span>
+                      <span className="text-xl shrink-0">⏱</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-(--tx)">Farmer confirmation window</p>
                         <p className={`text-xs mt-0.5 ${countdown?.urgent ? 'text-red-400' : 'text-brand-amber'}`}>
@@ -1268,7 +1277,7 @@ export default function DealerDashboard() {
                     </div>
                     {selectedOrder.release_requested ? (
                       <div className="info-banner amber">
-                        <span className="flex-shrink-0">📋</span>
+                        <span className="shrink-0">📋</span>
                         <p className="text-xs text-(--tx-sub)">Release request submitted — under admin review</p>
                       </div>
                     ) : countdown?.expired ? (
@@ -1278,7 +1287,7 @@ export default function DealerDashboard() {
                       </button>
                     ) : (
                       <div className="info-banner amber">
-                        <span className="flex-shrink-0">🔒</span>
+                        <span className="shrink-0">🔒</span>
                         <p className="text-xs text-(--tx-sub)">Payment held in escrow. Farmer confirms on delivery.</p>
                       </div>
                     )}
@@ -1287,7 +1296,7 @@ export default function DealerDashboard() {
               })()}
               {selectedOrder.status === 'delivered' && (
                 <div className="info-banner green">
-                  <Check size={14} className="text-brand-green flex-shrink-0" />
+                  <Check size={14} className="text-brand-green shrink-0" />
                   <p className="text-xs text-(--tx-sub)">Order completed — payment sent to your bank via Interswitch</p>
                 </div>
               )}
@@ -1374,7 +1383,7 @@ export default function DealerDashboard() {
                     {/* Order summary pill */}
                     <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
                       style={{ background: 'rgba(239,159,39,0.07)', border: '1px solid rgba(239,159,39,0.2)' }}>
-                      <span className="text-xl flex-shrink-0">🛒</span>
+                      <span className="text-xl shrink-0">🛒</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-syne font-bold text-(--tx) truncate">{releaseSheet.product}</p>
                         <p className="text-xs text-(--tx-sub)">{releaseSheet.farmer} · ₦{releaseSheet.amount?.toLocaleString()}</p>
@@ -1391,12 +1400,12 @@ export default function DealerDashboard() {
                             border: releaseReason === r.key ? '1.5px solid rgba(239,159,39,0.4)' : '1px solid var(--card-br)',
                           }}
                           onClick={() => setReleaseReason(r.key)}>
-                          <span className="text-xl flex-shrink-0">{r.emoji}</span>
+                          <span className="text-xl shrink-0">{r.emoji}</span>
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm font-semibold leading-tight ${releaseReason === r.key ? 'text-(--tx)' : 'text-(--tx-sub)'}`}>{r.label}</p>
                             <p className="text-[11px] text-(--tx-dim) mt-0.5">{r.desc}</p>
                           </div>
-                          <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                          <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all"
                             style={{
                               background: releaseReason === r.key ? '#EF9F27' : 'transparent',
                               border: releaseReason === r.key ? 'none' : '2px solid var(--tx-dim)',
@@ -1457,7 +1466,7 @@ export default function DealerDashboard() {
                         <button className="w-full flex items-center gap-3 py-4 px-4 rounded-2xl transition-all active:scale-[0.98]"
                           style={{ background: 'rgba(239,159,39,0.05)', border: '1.5px dashed rgba(239,159,39,0.3)' }}
                           onClick={() => releaseFileRef.current?.click()}>
-                          <Upload size={18} className="text-brand-amber flex-shrink-0" />
+                          <Upload size={18} className="text-brand-amber shrink-0" />
                           <div className="text-left">
                             <p className="text-brand-amber text-sm font-semibold">Tap to attach proof</p>
                             <p className="text-(--tx-dim) text-xs">Photo, PDF, waybill · Max 10MB</p>
@@ -1478,7 +1487,7 @@ export default function DealerDashboard() {
                           'If farmer ignores → admin reviews and decides — no auto-release',
                         ].map(s => (
                           <div key={s} className="flex items-start gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#818cf8' }} />
+                            <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#818cf8' }} />
                             <p className="text-[11px] text-(--tx-sub) leading-relaxed">{s}</p>
                           </div>
                         ))}
@@ -1548,32 +1557,33 @@ export default function DealerDashboard() {
 
       {/* ── Sign out confirm sheet ── */}
       {showSignOut && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center max-w-[430px] mx-auto"
-          style={{ background: 'rgba(0,0,0,0.7)' }}
-          onClick={() => setShowSignOut(false)}>
-          <div className="w-full rounded-t-3xl p-6" onClick={e => e.stopPropagation()}
-            style={{ background: 'var(--bg-nav)', border: '1px solid var(--card-br)' }}>
-            <div className="w-10 h-1 rounded-full mx-auto mb-5 bg-(--card-br)" />
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                <LogOut size={22} className="text-red-400" />
+        <div className="sheet-backdrop" onClick={() => setShowSignOut(false)}>
+          <div className="sheet-panel" onClick={e => e.stopPropagation()}>
+            <div className="sheet-header">
+              <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'var(--card-br)' }} />
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'rgba(239,68,68,0.1)', border: '1.5px solid rgba(239,68,68,0.2)' }}>
+                  <LogOut size={24} className="text-red-400" />
+                </div>
+                <div>
+                  <p className="font-syne font-extrabold text-xl text-(--tx) mb-1">Sign out?</p>
+                  <p className="text-(--tx-sub) text-sm leading-relaxed max-w-[260px]">
+                    You'll need to sign in again to access your dealer portal.
+                  </p>
+                </div>
               </div>
-              <p className="font-syne font-bold text-lg text-(--tx) mb-2">Sign out?</p>
-              <p className="text-sm text-(--tx-sub)">You'll need to sign in again to access your dealer portal.</p>
             </div>
-            <div className="flex flex-col gap-2">
-              <button className="btn-main danger" onClick={async () => {
-                // Logout locally first — instant UX
+            <div className="sheet-footer flex flex-col gap-2">
+              <button className="btn-main danger w-full" onClick={async () => {
                 setShowSignOut(false)
                 logout()
                 navigate('/', { replace: true })
-                // Invalidate token on server in background
                 logoutUser().catch(() => {})
               }}>
                 <LogOut size={15} /> Yes, sign me out
               </button>
-              <button className="btn-main ghost" onClick={() => setShowSignOut(false)}>Cancel</button>
+              <button className="btn-main ghost w-full" onClick={() => setShowSignOut(false)}>Cancel</button>
             </div>
           </div>
         </div>
