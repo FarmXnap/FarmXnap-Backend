@@ -315,7 +315,7 @@ function ProfileSheet({ profile, onClose, onSave }) {
               <span className="field-label">Bank</span>
               <select className="field-select" value={form.bank} onChange={e => set('bank', e.target.value)}>
                 <option value="">{banksLoading ? 'Loading banks…' : 'Select bank'}</option>
-                {banks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                {banks.map(b => <option key={b.id} value={b.code}>{b.name}</option>)}
               </select>
             </div>
 

@@ -13,9 +13,11 @@ const FILTERS = ['All', 'Treated', 'Untreated']
 // ── Scan detail bottom sheet ──────────────────────────────────────────────────
 function ScanDetailSheet({ scan, onClose, onBuyTreatment }) {
   if (!scan) return null
-  const treated      = scan.status === 'treated'
+  const isHealthy    = !scan.disease
+  const treated      = scan.status === 'treated' || isHealthy
   const isDispatched = scan.order?.status === 'dispatched'
-  const confColor    = scan.confidence >= 85 ? '#ef4444' : scan.confidence >= 70 ? '#EF9F27' : '#1D9E75'
+  const confidence   = scan.confidence || 90
+  const confColor    = confidence >= 85 ? '#ef4444' : confidence >= 70 ? '#EF9F27' : '#1D9E75'
   const escrowStatus = scan.order?.escrow_status
 
   return (
@@ -38,9 +40,9 @@ function ScanDetailSheet({ scan, onClose, onBuyTreatment }) {
                 </span>
                 <span className="text-(--tx-dim) text-xs">{scan.crop} · {scan.date}</span>
               </div>
-              <h3 className="font-syne font-extrabold text-xl text-(--tx) leading-tight">{scan.disease}</h3>
+              <h3 className="font-syne font-extrabold text-xl text-(--tx) leading-tight">{scan.disease || "Healthy crop ✓"}</h3>
             </div>
-            <button onClick={onClose} className="nav-close shrink-0"><X size={15} /></button>
+            <button onClick={onClose} className="nav-close flex-shrink-0"><X size={15} /></button>
           </div>
         </div>
 
@@ -52,26 +54,41 @@ function ScanDetailSheet({ scan, onClose, onBuyTreatment }) {
             style={{ background: `${confColor}10`, border: `1px solid ${confColor}30` }}>
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-(--tx-sub)">AI confidence score</p>
-              <p className="font-syne font-extrabold text-2xl" style={{ color: confColor }}>{scan.confidence}%</p>
+              <p className="font-syne font-extrabold text-2xl" style={{ color: confColor }}>{confidence}%</p>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--card-br)' }}>
               <div className="h-full rounded-full transition-all"
-                style={{ width: `${scan.confidence}%`, background: confColor }} />
+                style={{ width: `${confidence}%`, background: confColor }} />
             </div>
           </div>
 
           {/* Symptoms */}
-          {scan.symptoms?.length > 0 && (
+          {/* Symptoms from old API, or active_ingredient/category from new API */}
+          {(scan.symptoms?.length > 0 || scan.active_ingredient || scan.category) && (
             <div className="glass-card mb-3">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-sub) mb-3">Symptoms detected</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-sub) mb-3">
+                {scan.symptoms?.length > 0 ? 'Symptoms detected' : 'Treatment info'}
+              </p>
               <div className="flex flex-col gap-2">
-                {scan.symptoms.map((s, i) => (
-                  <div key={i} className="flex items-start gap-2.5">
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
-                      style={{ background: confColor }} />
-                    <p className="text-sm text-(--tx-sub) leading-snug">{s}</p>
-                  </div>
-                ))}
+                {scan.symptoms?.length > 0
+                  ? scan.symptoms.map((s, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
+                          style={{ background: confColor }} />
+                        <p className="text-sm text-(--tx-sub) leading-snug">{s}</p>
+                      </div>
+                    ))
+                  : [
+                      scan.active_ingredient && { label: 'Active ingredient', val: scan.active_ingredient },
+                      scan.category          && { label: 'Product category',  val: scan.category },
+                      scan.search_term       && { label: 'Treatment target',  val: scan.search_term },
+                    ].filter(Boolean).map(({ label, val }) => (
+                      <div key={label} className="flex items-center justify-between py-1">
+                        <span className="text-xs text-(--tx-dim)">{label}</span>
+                        <span className="text-xs font-semibold text-(--tx)">{val}</span>
+                      </div>
+                    ))
+                }
               </div>
             </div>
           )}
@@ -80,7 +97,7 @@ function ScanDetailSheet({ scan, onClose, onBuyTreatment }) {
           {scan.remedy && (
             <div className="rounded-2xl px-4 py-3.5 mb-3 flex items-start gap-3"
               style={{ background: 'rgba(29,158,117,0.07)', border: '1px solid rgba(29,158,117,0.2)' }}>
-              <span className="text-xl shrink-0">💊</span>
+              <span className="text-xl flex-shrink-0">💊</span>
               <div>
                 <p className="text-sm font-syne font-bold text-(--tx) mb-1">Recommended treatment</p>
                 <p className="text-xs text-(--tx-sub) leading-relaxed">{scan.remedy}</p>
@@ -150,7 +167,7 @@ function ScanDetailSheet({ scan, onClose, onBuyTreatment }) {
           {!treated && isDispatched && (
             <div className="rounded-2xl px-4 py-3.5 mb-3 flex items-start gap-3"
               style={{ background: 'rgba(239,159,39,0.07)', border: '1px solid rgba(239,159,39,0.2)' }}>
-              <Truck size={16} className="text-brand-amber shrink-0 mt-0.5" />
+              <Truck size={16} className="text-brand-amber flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-syne font-bold text-(--tx) mb-0.5">Order dispatched</p>
                 <p className="text-xs text-(--tx-sub) leading-relaxed">
@@ -164,12 +181,12 @@ function ScanDetailSheet({ scan, onClose, onBuyTreatment }) {
           {!treated && !scan.order && scan.treatment_product && (
             <div className="rounded-2xl px-4 py-3.5 mb-3 flex items-center gap-3"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
-              <span className="text-2xl shrink-0">📦</span>
+              <span className="text-2xl flex-shrink-0">📦</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-(--tx) truncate">{scan.treatment_product.name}</p>
                 <p className="text-xs text-(--tx-sub)">Recommended treatment</p>
               </div>
-              <p className="font-syne font-extrabold text-brand-green shrink-0">
+              <p className="font-syne font-extrabold text-brand-green flex-shrink-0">
                 ₦{scan.treatment_product.price.toLocaleString()}
               </p>
             </div>
@@ -215,14 +232,17 @@ export default function History() {
     getFarmerHistory().then(d => { setHistory(d); setLoading(false) })
   }, [])
 
+  // New API: disease===null means healthy, disease present means needs treatment
+  const isTreated   = h => h.status === 'treated' || !h.disease
+  const isUntreated = h => h.status === 'pending'  || (h.disease && h.status !== 'treated')
   const filtered = filter === 'All' ? history
-    : filter === 'Treated'   ? history.filter(h => h.status === 'treated')
-    : history.filter(h => h.status === 'pending')
+    : filter === 'Treated'   ? history.filter(isTreated)
+    : history.filter(isUntreated)
 
   const counts = {
     All:       history.length,
-    Treated:   history.filter(h => h.status === 'treated').length,
-    Untreated: history.filter(h => h.status === 'pending').length,
+    Treated:   history.filter(isTreated).length,
+    Untreated: history.filter(isUntreated).length,
   }
 
   const handleBuyTreatment = (scan) => {
@@ -306,8 +326,10 @@ export default function History() {
             </div>
           ) : (
             filtered.map((scan, idx) => {
-              const treated      = scan.status === 'treated'
+              const isHealthy    = !scan.disease
+              const treated      = scan.status === 'treated' || isHealthy
               const isDispatched = scan.order?.status === 'dispatched'
+              const cardConf     = scan.confidence || 90
               return (
                 <button key={scan.id}
                   className="glass-card text-left w-full active:scale-[0.985] transition-all"
@@ -315,7 +337,7 @@ export default function History() {
                   onClick={() => setActiveScan(scan)}>
 
                   <div className="flex items-start gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                       treated ? 'bg-brand-green/10' : isDispatched ? 'bg-brand-amber/10' : 'bg-red-500/10'
                     }`}>
                       <Leaf size={15} className={
@@ -323,10 +345,10 @@ export default function History() {
                       } />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-syne font-bold text-sm text-(--tx) truncate mb-0.5">{scan.disease}</p>
+                      <p className="font-syne font-bold text-sm text-(--tx) truncate mb-0.5">{scan.disease || "Healthy crop ✓"}</p>
                       <p className="text-xs text-(--tx-sub)">{scan.crop} · {scan.date}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       <span className={`badge ${treated ? 'green' : isDispatched ? 'amber' : 'red'}`}>
                         {treated
                           ? <><CheckCircle size={9} /> Treated</>
@@ -341,20 +363,20 @@ export default function History() {
 
                   {/* Confidence bar */}
                   <div className="flex items-center gap-2.5">
-                    <span className="text-[10px] text-(--tx-dim) w-16 shrink-0">Confidence</span>
+                    <span className="text-[10px] text-(--tx-dim) w-16 flex-shrink-0">Confidence</span>
                     <div className="conf-track">
                       <div className={`conf-fill ${treated ? 'green' : 'amber'}`}
-                        style={{ width: `${scan.confidence}%` }} />
+                        style={{ width: `${cardConf}%` }} />
                     </div>
-                    <span className={`text-xs font-semibold font-mono shrink-0 ${
+                    <span className={`text-xs font-semibold font-mono flex-shrink-0 ${
                       treated ? 'text-brand-green' : 'text-brand-amber'
-                    }`}>{scan.confidence}%</span>
+                    }`}>{cardConf}%</span>
                   </div>
 
                   {isDispatched && (
                     <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl"
                       style={{ background: 'rgba(239,159,39,0.07)', border: '1px solid rgba(239,159,39,0.18)' }}>
-                      <Truck size={12} className="text-brand-amber shrink-0" />
+                      <Truck size={12} className="text-brand-amber flex-shrink-0" />
                       <p className="text-xs text-brand-amber">On its way — tap to confirm delivery</p>
                     </div>
                   )}
@@ -362,7 +384,7 @@ export default function History() {
                   {!treated && !isDispatched && (
                     <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl"
                       style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.15)' }}>
-                      <AlertCircle size={12} className="text-red-400 shrink-0" />
+                      <AlertCircle size={12} className="text-red-400 flex-shrink-0" />
                       <p className="text-xs text-red-400">Treatment not purchased — tap to buy</p>
                     </div>
                   )}

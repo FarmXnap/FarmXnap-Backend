@@ -79,12 +79,13 @@ export default function RoleSelect() {
             return (
               <button
                 key={role.key}
-                onClick={() => setSelected(role.key)}
+                onClick={() => setSelected(isSel ? null : role.key)}
                 className={`w-full text-left rounded-3xl p-5 transition-all active:scale-[0.98] border-[1.5px] ${
                   isSel ? `${role.bg} ${role.border}` : 'bg-(--card-bg) border-(--card-br)'
                 }`}
               >
-                <div className="flex items-start justify-between gap-3 mb-4">
+                {/* Always visible: icon + title + radio */}
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${
                       isSel ? `${role.bg} border ${role.border}` : 'bg-(--card-bg) border border-(--card-br)'
@@ -98,7 +99,7 @@ export default function RoleSelect() {
                       <p className="font-syne font-bold text-(--tx) text-base leading-tight">{role.title}</p>
                     </div>
                   </div>
-                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 transition-all"
+                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
                     style={{
                       borderColor: isSel ? role.accent : 'var(--card-br)',
                       background:  isSel ? role.accent : 'transparent',
@@ -107,26 +108,29 @@ export default function RoleSelect() {
                   </div>
                 </div>
 
-                <div className={`h-px mb-4 transition-all ${
-                  isSel ? (role.key === 'farmer' ? 'bg-brand-green/20' : 'bg-brand-amber/20') : 'bg-(--card-br)'
-                }`} />
-
-                <p className="text-[13px] text-(--tx-sub) leading-relaxed mb-4">{role.desc}</p>
-
-                <div className="flex flex-col gap-2">
-                  {role.perks.map(p => (
-                    <div key={p} className="flex items-center gap-2.5">
-                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${role.dot} ${isSel ? 'opacity-100' : 'opacity-30'}`} />
-                      <span className={`text-xs ${isSel ? 'text-(--tx-sub)' : 'text-(--tx-dim)'}`}>{p}</span>
+                {/* Expanded details — only when selected */}
+                {isSel && (
+                  <div className="mt-4 anim-1">
+                    <div className={`h-px mb-4 ${
+                      role.key === 'farmer' ? 'bg-brand-green/20' : 'bg-brand-amber/20'
+                    }`} />
+                    <p className="text-[13px] text-(--tx-sub) leading-relaxed mb-4">{role.desc}</p>
+                    <div className="flex flex-col gap-2">
+                      {role.perks.map(p => (
+                        <div key={p} className="flex items-center gap-2.5">
+                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${role.dot}`} />
+                          <span className="text-xs text-(--tx-sub)">{p}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </button>
             )
           })}
         </div>
 
-        <div className="h-2" />
+        <div className="h-24" />
       </div>
 
       <div className="page-cta">

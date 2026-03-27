@@ -32,7 +32,7 @@ export default function DealerDetails() {
 
   const [form, setForm] = useState({
     business_name: '', cac_registration_number: '', business_address: '',
-    state: '', lga: '', bank: '', account_number: '',
+    state: '', lga: '', bank: '', bank_name: '', account_number: '',
   })
   const [cacFile,    setCacFile]    = useState(null)
   const [idFile,     setIdFile]     = useState(null)
@@ -201,9 +201,13 @@ export default function DealerDetails() {
           <div className="field-wrap">
             <span className="field-label">Bank *</span>
             <select className="field-select" value={form.bank}
-              onChange={e => set('bank', e.target.value)}>
+              onChange={e => {
+                const selected = banks.find(b => b.code === e.target.value)
+                set('bank', e.target.value)        // code → sent to API
+                set('bank_name', selected?.name || e.target.value) // name → display
+              }}>
               <option value="">{banksLoading ? 'Loading banks…' : 'Select bank'}</option>
-              {banks.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+              {banks.map(b => <option key={b.id} value={b.code}>{b.name}</option>)}
             </select>
           </div>
 
