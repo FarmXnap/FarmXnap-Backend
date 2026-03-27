@@ -83,7 +83,7 @@ export default function FarmerDetails() {
         {/* Phone verified badge */}
         <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-5 anim-1"
           style={{ background: 'rgba(29,158,117,0.08)', border: '1.5px solid rgba(29,158,117,0.2)' }}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: 'rgba(29,158,117,0.15)' }}>
             <Check size={14} className="text-brand-green" strokeWidth={2.5} />
           </div>
@@ -91,7 +91,7 @@ export default function FarmerDetails() {
             <p className="text-xs text-brand-green font-semibold uppercase tracking-wide mb-0.5">Verified</p>
             <p className="text-sm font-mono font-bold text-(--tx) truncate">+234 {phone}</p>
           </div>
-          <span className="text-[10px] px-2 py-1 rounded-full font-semibold text-brand-green flex-shrink-0"
+          <span className="text-[10px] px-2 py-1 rounded-full font-semibold text-brand-green shrink-0"
             style={{ background: 'rgba(29,158,117,0.12)', border: '1px solid rgba(29,158,117,0.2)' }}>
             ✓ OTP confirmed
           </span>

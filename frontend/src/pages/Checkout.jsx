@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLogo from '../component/AppLogo'
 import { Lock, Shield, Clock, CheckCircle, ChevronRight } from 'lucide-react'
-import { useCartStore, useOrderStore, useAuthStore } from '../store'
+import { useCartStore, useOrderStore, useAuthStore, useWalletStore } from '../store'
 import { createOrder, TIMERS } from '../services/api'
 
 // ── Interswitch Credentials ────────────────────────────────────────────────
@@ -20,49 +20,104 @@ export default function Checkout() {
   const { item, dealer, clearCart } = useCartStore()
   const setOrder  = useOrderStore(s => s.setOrder)
   const user      = useAuthStore(s => s.user)
+  const { balance: walletBalance, deduct: walletDeduct } = useWalletStore()
 
-  const [step,    setStep]    = useState('review')  // review | paying | escrow_locked
-  const [error,   setError]   = useState('')
-  const [txRef,   setTxRef]   = useState('')
+  const [step,       setStep]       = useState('review')  // review | paying | escrow_locked
+  const [error,      setError]      = useState('')
+  const [txRef,      setTxRef]      = useState('')
+  const [payMethod,  setPayMethod]  = useState('interswitch') // 'interswitch' | 'wallet'
   const scriptLoaded = useRef(false)
 
-  if (!item || !dealer) { navigate('/results'); return null }
+  // Guard: redirect in effect, not during render
+  useEffect(() => {
+    if (!item || !dealer) navigate('/results')
+  }, [])
+
+  // Load Interswitch inline checkout script
+  useEffect(() => {
+    if (document.getElementById('isw-inline')) {
+      scriptLoaded.current = true
+      return
+    }
+    const script   = document.createElement('script')
+    script.id      = 'isw-inline'
+    script.src     = ISW.scriptUrl
+    script.async   = true
+    script.onload  = () => { scriptLoaded.current = true; console.log('[Interswitch] Script loaded') }
+    script.onerror = () => console.error('[Interswitch] Failed to load:', ISW.scriptUrl)
+    document.body.appendChild(script)
+  }, [])
+
+  // All hooks are above this line — safe to early return now
+  if (!item || !dealer) return null
 
   const productPrice = item.price || 0
   const deliveryFee  = 500
   const platformFee  = Math.round(productPrice * 0.04)
   const total        = productPrice + deliveryFee + platformFee
   const dealerNet    = productPrice + deliveryFee
-  const totalKobo    = total * 100   // Interswitch requires amount in kobo
-
-  // Load the TEST inline script once on mount
-  useEffect(() => {
-    if (scriptLoaded.current || document.getElementById('isw-inline')) return
-    const script  = document.createElement('script')
-    script.id     = 'isw-inline'
-    script.src    = ISW.scriptUrl
-    script.async  = true
-    script.onload = () => { scriptLoaded.current = true }
-    script.onerror = () => console.error('[Interswitch] Script failed to load from', ISW.scriptUrl)
-    document.body.appendChild(script)
-  }, [])
+  const totalKobo    = total * 100
 
   const generateRef = () =>
     'FXNAP-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7).toUpperCase()
 
+  const handleWalletPay = async () => {
+    setError('')
+    if (walletBalance < total) {
+      setError(`Insufficient wallet balance. You have ₦${walletBalance.toLocaleString()} but need ₦${total.toLocaleString()}.`)
+      return
+    }
+    setStep('paying')
+    try {
+      const ref = generateRef()
+      setTxRef(ref)
+      const { order } = await createOrder({
+        item, dealer,
+        payment_method: 'wallet',
+        tx_ref: ref,
+      })
+      walletDeduct(total, `${item.name} — ${dealer.name}`, ref)
+      setOrder(order)
+      clearCart()
+      setStep('escrow_locked')
+      setTimeout(() => navigate('/order-tracking', { state: { order } }), 2800)
+    } catch (e) {
+      setStep('review')
+      setError(e.message || 'Payment failed. Please try again.')
+    }
+  }
+
   const handlePay = async () => {
     setError('')
 
-    if (typeof window.webpayCheckout !== 'function') {
-      setError('Payment gateway not ready — please wait a moment and try again.')
-      return
-    }
+    // Wait up to 5s for script to load
+    const getCheckout = () => new Promise((resolve, reject) => {
+      if (typeof window.webpayCheckout === 'function') return resolve(window.webpayCheckout)
+      let attempts = 0
+      const poll = setInterval(() => {
+        attempts++
+        if (typeof window.webpayCheckout === 'function') {
+          clearInterval(poll)
+          resolve(window.webpayCheckout)
+        } else if (attempts >= 50) { // 50 × 100ms = 5s
+          clearInterval(poll)
+          reject(new Error('Payment gateway not ready. Please refresh and try again.'))
+        }
+      }, 100)
+    })
+
+    setStep('paying')
+    const webpayCheckout = await getCheckout().catch(e => {
+      setStep('review')
+      setError(e.message)
+      return null
+    })
+    if (!webpayCheckout) return
 
     const ref = generateRef()
     setTxRef(ref)
-    setStep('paying')
 
-    window.webpayCheckout({
+    webpayCheckout({
       merchant_code:     ISW.merchantCode,
       pay_item_id:       ISW.payItemId,
       pay_item_name:     `${item.name || 'Treatment'} — FarmXnap`,
@@ -130,7 +185,7 @@ export default function Checkout() {
           <p className="text-brand-green text-[11px] font-bold uppercase tracking-[0.2em] mb-2">Escrow locked</p>
           <p className="font-syne font-extrabold text-2xl text-(--tx) mb-2">Payment secured!</p>
           <p className="text-sm text-(--tx-sub) leading-relaxed max-w-[260px]">
-            <span className="text-(--tx) font-semibold">₦{total.toLocaleString()}</span> is safely held by Interswitch.
+            <span className="text-(--tx) font-semibold">₦{total.toLocaleString()}</span> is safely held in FarmXnap Escrow.
             <br />Released only after you confirm delivery.
           </p>
         </div>
@@ -143,11 +198,11 @@ export default function Checkout() {
           {[
             { icon: '📦', title: 'Dealer notified',     desc: 'They prepare your order'                },
             { icon: '🚚', title: 'Delivery dispatched', desc: "You're notified when it ships"          },
-            { icon: '✅', title: 'You confirm receipt', desc: 'Interswitch releases payment to dealer' },
+            { icon: '✅', title: 'You confirm receipt', desc: 'FarmXnap Escrow releases payment to dealer' },
           ].map(({ icon, title, desc }) => (
             <div key={title} className="flex items-start gap-3 px-3 py-2.5 rounded-xl text-left"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
-              <span className="text-base flex-shrink-0">{icon}</span>
+              <span className="text-base shrink-0">{icon}</span>
               <div>
                 <p className="text-xs font-semibold text-(--tx)">{title}</p>
                 <p className="text-[11px] text-(--tx-sub) mt-0.5">{desc}</p>
@@ -180,7 +235,7 @@ export default function Checkout() {
         <div className="glass-card mb-4 anim-1"
           style={{ background:'rgba(29,158,117,0.06)', border:'1px solid rgba(29,158,117,0.2)' }}>
           <div className="flex items-center gap-2 mb-3">
-            <Shield size={15} className="text-brand-green flex-shrink-0" />
+            <Shield size={15} className="text-brand-green shrink-0" />
             <p className="font-syne font-bold text-sm text-(--tx)">How your payment is protected</p>
           </div>
           <div className="flex items-center text-[11px] text-(--tx-sub)">
@@ -198,11 +253,11 @@ export default function Checkout() {
                     <span className="text-base">{icon}</span>
                     <span className="text-center leading-tight">{label}</span>
                   </div>
-                : <span key={i} className="text-brand-green/40 font-bold text-base flex-shrink-0">›</span>
+                : <span key={i} className="text-brand-green/40 font-bold text-base shrink-0">›</span>
             ))}
           </div>
           <div className="mt-3 pt-3 border-t border-(--card-br) flex items-start gap-2">
-            <Clock size={11} className="text-brand-amber flex-shrink-0 mt-0.5" />
+            <Clock size={11} className="text-brand-amber shrink-0 mt-0.5" />
             <p className="text-[11px] text-(--tx-sub) leading-relaxed">
               Auto-refund if dealer doesn't dispatch in <span className="text-(--tx) font-medium">{TIMERS.LABEL_DISPATCH}</span>.
               Auto-release if you don't confirm within <span className="text-(--tx) font-medium">{TIMERS.LABEL_CONFIRM}</span>.
@@ -212,7 +267,7 @@ export default function Checkout() {
 
         {/* Dealer */}
         <div className="glass-card flex items-center gap-3 mb-3 anim-1">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-brand-green/10 border border-brand-green/20">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-brand-green/10 border border-brand-green/20">
             <span className="font-syne font-extrabold text-sm text-brand-green">
               {dealer.name?.slice(0,2).toUpperCase()}
             </span>
@@ -246,35 +301,81 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* What Interswitch accepts */}
+        {/* Payment method selector */}
         <div className="glass-card mb-4 anim-2">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-sub)">Pay via Interswitch</p>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-              style={{ background:'rgba(29,158,117,0.1)', color:'#1D9E75', border:'1px solid rgba(29,158,117,0.2)' }}>
-              🔒 Escrow
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { icon:'💳', label:'Debit / Credit card'  },
-              { icon:'🏦', label:'Bank Transfer'         },
-              { icon:'#️⃣', label:'USSD (*737# etc)'     },
-              { icon:'📱', label:'Wallet (Opay, Palmpay)'},
-            ].map(({ icon, label }) => (
-              <div key={label} className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
-                <span className="text-base">{icon}</span>
-                <p className="text-xs text-(--tx-sub)">{label}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-sub) mb-3">Choose payment method</p>
+          <div className="flex flex-col gap-2">
+            {/* Wallet option */}
+            <button
+              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all active:scale-[0.98]"
+              style={{
+                background: payMethod === 'wallet' ? 'rgba(29,158,117,0.08)' : 'var(--card-bg)',
+                border: payMethod === 'wallet' ? '1.5px solid rgba(29,158,117,0.4)' : '1px solid var(--card-br)',
+              }}
+              onClick={() => setPayMethod('wallet')}>
+              <span className="text-xl shrink-0">💰</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold leading-tight ${payMethod === 'wallet' ? 'text-(--tx)' : 'text-(--tx-sub)'}`}>
+                  FarmXnap Wallet
+                </p>
+                <p className="text-[11px] mt-0.5" style={{ color: walletBalance >= total ? '#1D9E75' : '#ef4444' }}>
+                  {walletBalance >= total
+                    ? `Balance: ₦${walletBalance.toLocaleString()} ✓ Sufficient`
+                    : `Balance: ₦${walletBalance.toLocaleString()} — Insufficient`}
+                </p>
               </div>
-            ))}
+              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all"
+                style={{
+                  background: payMethod === 'wallet' ? '#1D9E75' : 'transparent',
+                  border: payMethod === 'wallet' ? 'none' : '2px solid var(--tx-dim)',
+                }}>
+                {payMethod === 'wallet' && <div className="w-2 h-2 rounded-full bg-white" />}
+              </div>
+            </button>
+
+            {/* Interswitch option */}
+            <button
+              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all active:scale-[0.98]"
+              style={{
+                background: payMethod === 'interswitch' ? 'rgba(29,158,117,0.08)' : 'var(--card-bg)',
+                border: payMethod === 'interswitch' ? '1.5px solid rgba(29,158,117,0.4)' : '1px solid var(--card-br)',
+              }}
+              onClick={() => setPayMethod('interswitch')}>
+              <span className="text-xl shrink-0">💳</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold leading-tight ${payMethod === 'interswitch' ? 'text-(--tx)' : 'text-(--tx-sub)'}`}>
+                  Interswitch
+                </p>
+                <p className="text-[11px] text-(--tx-dim) mt-0.5">Card · Bank transfer · USSD · Mobile money</p>
+              </div>
+              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-all"
+                style={{
+                  background: payMethod === 'interswitch' ? '#1D9E75' : 'transparent',
+                  border: payMethod === 'interswitch' ? 'none' : '2px solid var(--tx-dim)',
+                }}>
+                {payMethod === 'interswitch' && <div className="w-2 h-2 rounded-full bg-white" />}
+              </div>
+            </button>
           </div>
-          <p className="text-[11px] text-(--tx-dim) text-center mt-3">
-            A secure popup from Interswitch will open
-          </p>
+
+          {/* Low wallet balance nudge */}
+          {payMethod === 'wallet' && walletBalance < total && (
+            <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-2xl"
+              style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <span className="text-sm shrink-0">⚠️</span>
+              <p className="text-xs text-(--tx-sub) leading-relaxed">
+                You need ₦{(total - walletBalance).toLocaleString()} more.{' '}
+                <button className="text-brand-green font-semibold underline underline-offset-2 bg-transparent border-none cursor-pointer"
+                  onClick={() => navigate('/wallet')}>
+                  Top up wallet →
+                </button>
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* TEST mode notice + test cards */}
+        {/* TEST mode notice (only for Interswitch) */}
+        {payMethod === 'interswitch' && (
         <div className="rounded-2xl px-4 py-3 mb-4 anim-2"
           style={{ background:'rgba(239,159,39,0.07)', border:'1px solid rgba(239,159,39,0.2)' }}>
           <div className="flex items-center gap-2 mb-2">
@@ -300,13 +401,14 @@ export default function Checkout() {
             ))}
           </div>
         </div>
+        )}
 
         {error && (
           <div className="err-banner mb-4 anim-1"><span>⚠</span> {error}</div>
         )}
 
         <p className="text-center text-xs text-(--tx-dim) mb-4 flex items-center justify-center gap-1.5">
-          <Lock size={11} /> Powered by <span className="text-(--tx-sub) font-medium">Interswitch</span> · PCI DSS compliant
+          <Lock size={11} /> {payMethod === 'wallet' ? '💰 FarmXnap Wallet · Instant deduction' : 'Payment via Interswitch · Held in FarmXnap Escrow'}
         </p>
 
         <div className="h-24" />
@@ -314,13 +416,23 @@ export default function Checkout() {
 
       {/* CTA */}
       <div className="page-cta">
-        <button className="btn-main" onClick={handlePay} disabled={step === 'paying'}>
-          {step === 'paying'
-            ? <><span className="spinner" /> Opening payment…</>
-            : <><Lock size={15} /> Pay ₦{total.toLocaleString()} via Interswitch <ChevronRight size={15} /></>
-          }
-        </button>
-        <p className="cta-note">🔒 Held by Interswitch · Released only when you confirm delivery</p>
+        {payMethod === 'wallet' ? (
+          <button className="btn-main" onClick={handleWalletPay}
+            disabled={step === 'paying' || walletBalance < total}>
+            {step === 'paying'
+              ? <><span className="spinner" /> Processing…</>
+              : <><span>💰</span> Pay ₦{total.toLocaleString()} from Wallet <ChevronRight size={15} /></>
+            }
+          </button>
+        ) : (
+          <button className="btn-main" onClick={handlePay} disabled={step === 'paying'}>
+            {step === 'paying'
+              ? <><span className="spinner" /> Opening payment…</>
+              : <><Lock size={15} /> Pay ₦{total.toLocaleString()} via Interswitch <ChevronRight size={15} /></>
+            }
+          </button>
+        )}
+        <p className="cta-note">🔒 Held in FarmXnap Escrow · Released when you confirm delivery</p>
       </div>
     </div>
   )

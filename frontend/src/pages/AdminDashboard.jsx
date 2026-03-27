@@ -96,7 +96,7 @@ function DonutChart({ data }) {
   })
   return (
     <div className="flex items-center gap-5">
-      <svg width="128" height="128" viewBox="0 0 128 128" className="flex-shrink-0">
+      <svg width="128" height="128" viewBox="0 0 128 128" className="shrink-0">
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--card-br)" strokeWidth={sw} />
         {segs.map((s, i) => (
           <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw}
@@ -109,7 +109,7 @@ function DonutChart({ data }) {
       <div className="flex flex-col gap-1.5 flex-1 min-w-0">
         {data.map((d, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CC[i] }} />
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: CC[i] }} />
             <span className="text-(--tx-sub) text-xs flex-1 truncate">{d.disease}</span>
             <span className="text-(--tx) text-xs font-mono font-bold">{d.percent}%</span>
           </div>
@@ -442,7 +442,7 @@ export default function AdminDashboard() {
             opacity: d.status === 'suspended' ? 0.85 : 1,
           }}>
           {/* Avatar */}
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-bold text-sm"
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-syne font-bold text-sm"
             style={{ background: s.bg, border: `1.5px solid ${s.br}`, color: s.color }}>
             {d.business_name.slice(0,2).toUpperCase()}
           </div>
@@ -452,7 +452,7 @@ export default function AdminDashboard() {
             <p className="text-(--tx-sub) text-xs truncate">{d.phone} · {d.state}</p>
           </div>
           {/* Badge + chevron */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
               style={{ background: s.bg, color: s.color, border: `1px solid ${s.br}` }}>
               {s.label}
@@ -539,11 +539,11 @@ export default function AdminDashboard() {
             style={{ background:'var(--bg-nav)', border:'1px solid var(--card-br)', borderBottom:'none', maxHeight:'88vh' }}>
 
             {/* Handle + header */}
-            <div className="px-5 pt-4 pb-3 flex-shrink-0">
+            <div className="px-5 pt-4 pb-3 shrink-0">
               <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background:'var(--card-br)' }} />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base flex-shrink-0"
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base shrink-0"
                     style={
                       drawerDealer.status === 'pending'   ? { background:'rgba(239,159,39,0.12)', border:'1.5px solid rgba(239,159,39,0.25)', color:'#EF9F27' } :
                       drawerDealer.status === 'suspended' ? { background:'rgba(239,68,68,0.12)',  border:'1.5px solid rgba(239,68,68,0.25)',  color:'#f87171' } :
@@ -697,7 +697,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-col gap-2">
                   <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
                     style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.15)' }}>
-                    <Ban size={14} className="text-red-400 flex-shrink-0" />
+                    <Ban size={14} className="text-red-400 shrink-0" />
                     <div>
                       <p className="text-xs font-semibold text-red-400">Account suspended</p>
                       <p className="text-[11px] text-(--tx-dim)">This dealer cannot receive orders or log in</p>
@@ -748,7 +748,7 @@ export default function AdminDashboard() {
 
     return (
       <div className="flex flex-col gap-5">
-        <SH title="Escrow management" sub="All Interswitch escrow transactions" badge={disputed.length > 0 ? disputed.length : undefined} />
+        <SH title="Escrow management" sub="All FarmXnap Escrow transactions" badge={disputed.length > 0 ? disputed.length : undefined} />
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
@@ -768,17 +768,17 @@ export default function AdminDashboard() {
 
         {/* Interswitch flow explainer */}
         <Card>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">Interswitch escrow flow</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-3">FarmXnap Escrow flow</p>
           {[
-            { step:'1', label:'Farmer pays',         desc:'Interswitch holds funds in escrow — not accessible by dealer', dot:'#1D9E75' },
+            { step:'1', label:'Farmer pays',         desc:'Interswitch processes payment — FarmXnap Escrow holds funds, not accessible by dealer', dot:'#1D9E75' },
             { step:'2', label:'Dealer dispatches',   desc:`Dealer ships and marks order sent. ${TIMERS.LABEL_CONFIRM} farmer confirm window starts`, dot:'#EF9F27' },
             { step:'3', label:'Farmer confirms',     desc:'Farmer verifies receipt with PIN. Backend signals Interswitch', dot:'#1D9E75' },
-            { step:'4', label:'Interswitch releases',desc:'Net amount (minus 4% fee) transferred to dealer bank account', dot:'#1D9E75' },
-            { step:'⏱', label:`${TIMERS.LABEL_DISPATCH} auto-refund`, desc:'Dealer no-show → Interswitch returns full amount to farmer', dot:'#3B82F6' },
+            { step:'4', label:'FarmXnap releases',   desc:'Net amount (minus 4% fee) transferred to dealer bank account', dot:'#1D9E75' },
+            { step:'⏱', label:`${TIMERS.LABEL_DISPATCH} deadline`, desc:'Dealer no-show → Admin reviews → FarmXnap Escrow refunds farmer', dot:'#3B82F6' },
           ].map(({ step, label, desc, dot }, i, arr) => (
             <div key={step} className="flex gap-3">
               <div className="flex flex-col items-center">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center font-syne font-bold text-xs text-(--tx) flex-shrink-0"
+                <div className="w-7 h-7 rounded-full flex items-center justify-center font-syne font-bold text-xs text-(--tx) shrink-0"
                   style={{ background: `${dot}25`, border: `1.5px solid ${dot}60` }}>
                   {step}
                 </div>
@@ -792,40 +792,55 @@ export default function AdminDashboard() {
           ))}
         </Card>
 
-        {/* ── Unified Disputes Queue ── */}
+        {/* ── Disputes Queue ── */}
         {disputes.length > 0 && (() => {
           const open     = disputes.filter(d => !['resolved_refund','resolved_release'].includes(d.status))
           const resolved = disputes.filter(d =>  ['resolved_refund','resolved_release'].includes(d.status))
+
+          const REASON_LABELS = {
+            not_shipped:'Dealer never shipped', no_delivery:'Product never arrived',
+            wrong_product:'Wrong product received', damaged:'Product arrived damaged',
+            expired:'Product expired', partial:'Incomplete order',
+            no_response:'Dealer unresponsive', other:'Other issue',
+            no_communication:'Dealer unresponsive', unavailable:'Item out of stock',
+            wrong_tracking:'Dispatch info incorrect',
+          }
+
           return (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-red-400 mb-3 flex items-center gap-2">
-                <AlertTriangle size={11} /> Disputes & release requests ({open.length} open)
-              </p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-red-400 flex items-center gap-2">
+                  <AlertTriangle size={11} /> Appeals & disputes ({open.length} open)
+                </p>
+                {resolved.length > 0 && (
+                  <span className="text-[10px] text-(--tx-dim)">{resolved.length} resolved</span>
+                )}
+              </div>
               <div className="flex flex-col gap-3">
                 {open.map(d => {
+                  const isFarmerAppeal  = d.type === 'farmer_appeal' || d.type === 'not_dispatched' || d.type === 'delivery_issue'
                   const isDealerRelease = d.type === 'dealer_release'
-                  const isFarmerAppeal  = d.type === 'farmer_appeal'
-                  const typeColor = isDealerRelease ? 'rgba(239,159,39' : 'rgba(239,68,68'
-                  const typeLabel = isDealerRelease ? '📤 Dealer release request' : '🚨 Farmer appeal'
-                  const isAdminReview = d.status === 'admin_review' || d.status === 'pending_farmer_response'
+                  const typeColor  = isFarmerAppeal ? 'rgba(239,68,68' : 'rgba(239,159,39'
+                  const typeLabelTxt = isFarmerAppeal ? '🚨 Farmer appeal' : '📤 Dealer release request'
+                  const reasonLabel = REASON_LABELS[d.reason || d.farmer_reason] || d.reason || d.farmer_reason || '—'
                   return (
                     <Card key={d.id}>
-                      {/* Type badge */}
-                      <div className="flex items-center justify-between mb-3">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between mb-3 gap-2">
                         <span className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-                          style={{ background:`${typeColor},0.1)`, color: isDealerRelease ? '#EF9F27' : '#f87171', border:`1px solid ${typeColor},0.25)` }}>
-                          {typeLabel}
+                          style={{ background:`${typeColor},0.1)`, color: isFarmerAppeal ? '#f87171' : '#EF9F27', border:`1px solid ${typeColor},0.25)` }}>
+                          {typeLabelTxt}
                         </span>
-                        <span className="text-[10px] text-(--tx-dim)">{d.raised_at}</span>
+                        <span className="text-[10px] text-(--tx-dim) shrink-0">{d.raised_at || '—'}</span>
                       </div>
 
-                      {/* Parties */}
+                      {/* Parties grid */}
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         {[
-                          { label: 'Farmer', val: d.farmer },
-                          { label: 'Dealer', val: d.dealer },
-                          { label: 'Product', val: d.product },
-                          { label: 'Amount', val: `₦${d.amount?.toLocaleString()}` },
+                          { label: 'Farmer',  val: d.farmer  || '—' },
+                          { label: 'Dealer',  val: d.dealer  || '—' },
+                          { label: 'Product', val: d.product || '—' },
+                          { label: 'Escrow',  val: `₦${(d.amount || 0).toLocaleString()}` },
                         ].map(({ label, val }) => (
                           <div key={label} className="rounded-xl px-3 py-2" style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
                             <p className="text-(--tx-dim) text-[10px] mb-0.5">{label}</p>
@@ -834,90 +849,88 @@ export default function AdminDashboard() {
                         ))}
                       </div>
 
-                      {/* Reason / note */}
-                      {(d.farmer_note || d.dealer_note || d.reason) && (
-                        <div className="rounded-xl p-3 mb-3" style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
-                          <p className="text-(--tx-dim) text-[10px] uppercase tracking-wide mb-1">
-                            {isDealerRelease ? 'Dealer note' : 'Farmer reason'}
-                          </p>
-                          <p className="text-xs text-(--tx-sub) leading-relaxed italic">
-                            "{d.dealer_note || d.farmer_note || d.reason}"
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Delivery proof (dealer release only) */}
-                      {isDealerRelease && d.dealer_proof && (
-                        <div className="rounded-xl p-3 mb-3 flex items-center gap-3"
-                          style={{ background:'rgba(239,159,39,0.06)', border:'1px solid rgba(239,159,39,0.2)' }}>
-                          <span className="text-xl flex-shrink-0">📎</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] text-brand-amber uppercase tracking-wide mb-0.5">Delivery proof</p>
-                            <p className="text-xs text-(--tx) truncate font-mono">{d.dealer_proof}</p>
-                          </div>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full"
-                            style={{ background:'rgba(239,159,39,0.1)', color:'#EF9F27' }}>View</span>
-                        </div>
-                      )}
-
-                      {/* Farmer response status */}
-                      {isDealerRelease && (
-                        <div className="rounded-xl px-3 py-2.5 mb-3 flex items-center justify-between"
-                          style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
-                          <p className="text-[10px] text-(--tx-dim) uppercase tracking-wide">Farmer response</p>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            d.status === 'pending_farmer_response' ? 'text-brand-amber' :
-                            d.status === 'farmer_confirmed'        ? 'text-brand-green' :
-                            'text-red-400'
-                          }`} style={{ background: d.status === 'pending_farmer_response' ? 'rgba(239,159,39,0.1)' : d.status === 'farmer_confirmed' ? 'rgba(29,158,117,0.1)' : 'rgba(239,68,68,0.1)' }}>
-                            {d.status === 'pending_farmer_response' ? '⏳ Awaiting (47h left)' :
-                             d.status === 'farmer_confirmed'        ? '✓ Farmer confirmed' :
-                             '⚠ Farmer disputed'}
+                      {/* Reason pill */}
+                      {reasonLabel !== '—' && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-[10px] text-(--tx-dim) uppercase tracking-wide">Reason:</span>
+                          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                            style={{ background:`${typeColor},0.08)`, color: isFarmerAppeal ? '#f87171' : '#EF9F27', border:`1px solid ${typeColor},0.2)` }}>
+                            {reasonLabel}
                           </span>
                         </div>
                       )}
 
-                      {/* Auto-release notice */}
-                      {isDealerRelease && d.status === 'pending_farmer_response' && (
-                        <div className="info-banner amber mb-3">
-                          <Clock size={12} className="text-brand-amber flex-shrink-0" />
-                          <p className="text-xs text-(--tx-sub)">Payment auto-releases to dealer if farmer doesn't respond in {TIMERS.LABEL_RELEASE}</p>
+                      {/* Farmer's statement */}
+                      {(d.farmer_note || d.dealer_note || d.reason || d.note) && (
+                        <div className="rounded-xl p-3 mb-3" style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
+                          <p className="text-(--tx-dim) text-[10px] uppercase tracking-wide mb-1">
+                            {isFarmerAppeal ? "Farmer's statement" : "Dealer's note"}
+                          </p>
+                          <p className="text-xs text-(--tx-sub) leading-relaxed italic">
+                            "{d.farmer_note || d.dealer_note || d.note || d.reason}"
+                          </p>
                         </div>
                       )}
 
-                      {/* Actions */}
+                      {/* Proof attached */}
+                      {(d.proof || d.dealer_proof || d.farmer_proof) && (
+                        <div className="rounded-xl p-3 mb-3 flex items-center gap-3"
+                          style={{ background:'rgba(239,159,39,0.06)', border:'1px solid rgba(239,159,39,0.2)' }}>
+                          <span className="text-xl">📎</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-brand-amber uppercase tracking-wide mb-0.5">Proof attached</p>
+                            <p className="text-xs text-(--tx) font-mono truncate">{d.proof || d.dealer_proof || d.farmer_proof}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Status badge */}
+                      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl mb-3"
+                        style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)' }}>
+                        <p className="text-[10px] text-(--tx-dim) uppercase tracking-wide">Status</p>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: d.status === 'open' ? 'rgba(239,68,68,0.1)' : 'rgba(239,159,39,0.1)',
+                            color: d.status === 'open' ? '#f87171' : '#EF9F27',
+                          }}>
+                          {d.status === 'open' ? '🔴 Awaiting verdict' : '⏳ Under review'}
+                        </span>
+                      </div>
+
+                      {/* Admin action buttons */}
+                      <p className="text-[10px] text-(--tx-dim) uppercase tracking-widest mb-2">Admin verdict</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setConfirm({
                             title: 'Refund farmer?',
-                            message: `Return ₦${d.amount?.toLocaleString()} to ${d.farmer} via Interswitch.`,
+                            message: `Return ₦${(d.amount || 0).toLocaleString()} to ${d.farmer || 'farmer'} via Interswitch.`,
                             confirmLabel: 'Refund farmer',
                             confirmColor: 'bg-blue-500',
                             onConfirm: async () => {
                               if (isDealerRelease) await adminResolveRelease(d.id, 'refund')
                               else await adminResolveAppeal(d.id, 'refund')
                               setDisputes(prev => prev.map(x => x.id === d.id ? {...x, status:'resolved_refund'} : x))
-                              showToast(`Refund issued to ${d.farmer}`)
+                              showToast(`Refund issued to ${d.farmer || 'farmer'}`)
                             }
                           })}
-                          className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-blue-400 active:scale-95 transition-all"
+                          className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-blue-400 active:scale-95 transition-all flex items-center justify-center gap-1.5"
                           style={{ background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.25)' }}>
                           ↩ Refund farmer
                         </button>
                         <button
                           onClick={() => setConfirm({
                             title: 'Release to dealer?',
-                            message: `Pay ₦${d.amount?.toLocaleString()} to ${d.dealer} via Interswitch.`,
+                            message: `Pay ₦${(d.amount || 0).toLocaleString()} to ${d.dealer || 'dealer'} via Interswitch.`,
                             confirmLabel: 'Release to dealer',
                             confirmColor: 'bg-brand-green',
                             onConfirm: async () => {
                               if (isDealerRelease) await adminResolveRelease(d.id, 'release')
                               else await adminResolveAppeal(d.id, 'release')
                               setDisputes(prev => prev.map(x => x.id === d.id ? {...x, status:'resolved_release'} : x))
-                              showToast(`Payment released to ${d.dealer}`)
+                              showToast(`Payment released to ${d.dealer || 'dealer'}`)
                             }
                           })}
-                          className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-brand-green active:scale-95 transition-all"
+                          className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-brand-green active:scale-95 transition-all flex items-center justify-center gap-1.5"
                           style={{ background:'rgba(29,158,117,0.1)', border:'1px solid rgba(29,158,117,0.25)' }}>
                           ✓ Release to dealer
                         </button>
@@ -939,7 +952,7 @@ export default function AdminDashboard() {
                           <p className="text-xs font-semibold text-(--tx) truncate">{d.farmer} → {d.dealer}</p>
                           <p className="text-xs text-(--tx-dim)">₦{d.amount?.toLocaleString()}</p>
                         </div>
-                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold flex-shrink-0 ${d.status === 'resolved_refund' ? 'text-blue-400' : 'text-brand-green'}`}
+                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold shrink-0 ${d.status === 'resolved_refund' ? 'text-blue-400' : 'text-brand-green'}`}
                           style={{ background: d.status === 'resolved_refund' ? 'rgba(59,130,246,0.1)' : 'rgba(29,158,117,0.1)' }}>
                           {d.status === 'resolved_refund' ? '↩ Refunded' : '✓ Released'}
                         </span>
@@ -978,7 +991,7 @@ export default function AdminDashboard() {
                       <p className="text-xs text-(--tx-sub) truncate">{order.product}</p>
                       <p className="text-xs text-(--tx-dim)">{order.dealer} · {order.ref}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-right shrink-0">
                       <p className="font-syne font-extrabold text-brand-green text-base">₦{order.amount.toLocaleString()}</p>
                       <p className="text-[10px] text-(--tx-dim)">Fee: ₦{order.platform_fee}</p>
                     </div>
@@ -1054,13 +1067,13 @@ export default function AdminDashboard() {
                   )}
                   {order.escrow_status === 'released' && (
                     <p className="text-xs text-brand-green flex items-center gap-1.5">
-                      <CheckCircle size={11} /> Released to dealer via Interswitch
+                      <CheckCircle size={11} /> Released to dealer via FarmXnap Escrow
                     </p>
                   )}
                   {order.escrow_status === 'refunded' && (
                     <div>
                       <p className="text-xs text-blue-400 flex items-center gap-1.5 mb-1">
-                        <RefreshCw size={11} /> Refunded to farmer via Interswitch
+                        <RefreshCw size={11} /> Refunded to farmer via FarmXnap Escrow
                       </p>
                       {order.refund_reason && (
                         <p className="text-[10px] text-(--tx-dim) italic">{order.refund_reason}</p>
@@ -1116,7 +1129,7 @@ export default function AdminDashboard() {
         {/* Header */}
         <div>
           <h2 className="font-syne font-extrabold text-lg text-(--tx) mb-0.5">Transaction ledger</h2>
-          <p className="text-(--tx-sub) text-xs">Read-only · All Interswitch escrow movements</p>
+          <p className="text-(--tx-sub) text-xs">Read-only · All FarmXnap Escrow movements</p>
         </div>
 
         {/* Summary hero */}
@@ -1153,15 +1166,15 @@ export default function AdminDashboard() {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-(--tx-dim) mb-4">How Interswitch handles money</p>
           <div className="flex flex-col gap-0">
             {[
-              { icon:'💳', step:'Farmer pays',          desc:'Interswitch locks funds in escrow — neither FarmXnap nor dealer can touch it', color:'#1D9E75' },
+              { icon:'💳', step:'Farmer pays',          desc:'Interswitch processes payment — FarmXnap Escrow holds funds securely', color:'#1D9E75' },
               { icon:'🚚', step:'Dealer ships',          desc:'Escrow stays locked during transit',                                          color:'#EF9F27' },
-              { icon:'✅', step:'Farmer confirms',       desc:'Triggers automatic Interswitch release — no manual step',                    color:'#1D9E75' },
+              { icon:'✅', step:'Farmer confirms',       desc:'Triggers FarmXnap Escrow release to dealer — no manual step needed',        color:'#1D9E75' },
               { icon:'🏦', step:'Dealer bank credited',  desc:'Net amount (minus 4% fee) sent directly to dealer bank account',            color:'#1D9E75' },
-              { icon:'↩',  step:'Dispute → refund',     desc:'Admin rules for farmer → Interswitch reverses funds back to farmer',        color:'#3b82f6' },
+              { icon:'↩',  step:'Dispute → refund',     desc:'Admin rules for farmer → FarmXnap Escrow returns funds to farmer',          color:'#3b82f6' },
             ].map(({ icon, step, desc, color }, i, arr) => (
               <div key={step} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0"
                     style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}>{icon}</div>
                   {i < arr.length - 1 && <div className="w-px flex-1 my-1" style={{ background:'var(--card-br)' }} />}
                 </div>
@@ -1174,7 +1187,7 @@ export default function AdminDashboard() {
           </div>
           <div className="mt-1 px-3 py-2.5 rounded-xl" style={{ background:'rgba(29,158,117,0.06)', border:'1px solid rgba(29,158,117,0.15)' }}>
             <p className="text-xs text-brand-green font-semibold">FarmXnap never holds money</p>
-            <p className="text-[11px] text-(--tx-dim) mt-0.5">All funds flow through Interswitch directly. Admin only triggers release/refund instructions.</p>
+            <p className="text-[11px] text-(--tx-dim) mt-0.5">Interswitch processes all payments. FarmXnap Escrow holds and controls fund release/refund.</p>
           </div>
         </Card>
 
@@ -1188,7 +1201,7 @@ export default function AdminDashboard() {
               { key: 'refunded', label: `Refunded (${refunded.length})` },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setFilter(key)}
-                className="px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all"
+                className="px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all"
                 style={{
                   background: filter === key ? '#1D9E75' : 'var(--card-bg)',
                   color: filter === key ? '#fff' : 'var(--tx-sub)',
@@ -1233,7 +1246,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-(--tx-sub)">{o.farmer} → {o.dealer}</p>
                         <p className="text-[10px] text-(--tx-dim) mt-0.5">{o.paid_at}</p>
                       </div>
-                      <div className="text-right flex-shrink-0">
+                      <div className="text-right shrink-0">
                         <p className="font-syne font-bold text-base text-(--tx)">₦{o.amount.toLocaleString()}</p>
                         {o.escrow_status === 'released' && (
                           <>
@@ -1271,7 +1284,7 @@ export default function AdminDashboard() {
                     <p className="text-xs font-semibold text-(--tx) truncate">{d.product || d.order_ref}</p>
                     <p className="text-[11px] text-(--tx-dim)">{d.farmer} · {d.raised_at}</p>
                   </div>
-                  <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold flex-shrink-0"
+                  <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold shrink-0"
                     style={{
                       background: d.status === 'resolved_refund' ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)',
                       color: d.status === 'resolved_refund' ? '#3b82f6' : '#10b981',
@@ -1328,7 +1341,7 @@ export default function AdminDashboard() {
                     className="w-full text-left flex items-center gap-3 px-4 py-3.5 transition-all active:scale-[0.98]"
                     style={{ background:'var(--card-bg)', border:'1px solid var(--card-br)', borderRadius:16 }}>
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-bold text-sm"
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-syne font-bold text-sm"
                       style={{ background:'rgba(29,158,117,0.12)', border:'1.5px solid rgba(29,158,117,0.25)', color:'#1D9E75' }}>
                       {f.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}
                     </div>
@@ -1338,7 +1351,7 @@ export default function AdminDashboard() {
                       <p className="text-(--tx-sub) text-xs truncate">{f.phone} · {f.state}</p>
                     </div>
                     {/* Badge + chevron */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${BADGE[f.status] || BADGE.active}`}>
                         {f.status}
                       </span>
@@ -1359,11 +1372,11 @@ export default function AdminDashboard() {
               style={{ background:'var(--bg-nav)', border:'1px solid var(--card-br)', borderBottom:'none', maxHeight:'88vh' }}>
 
               {/* Handle + header */}
-              <div className="px-5 pt-4 pb-3 flex-shrink-0">
+              <div className="px-5 pt-4 pb-3 shrink-0">
                 <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background:'var(--card-br)' }} />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base flex-shrink-0"
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-syne font-bold text-base shrink-0"
                       style={{ background:'rgba(29,158,117,0.12)', border:'1.5px solid rgba(29,158,117,0.25)', color:'#1D9E75' }}>
                       {drawerFarmer.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}
                     </div>
@@ -1439,7 +1452,7 @@ export default function AdminDashboard() {
                   <div className="flex flex-col gap-2">
                     <div className="rounded-2xl px-4 py-3 flex items-center gap-3"
                       style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.15)' }}>
-                      <Ban size={14} className="text-red-400 flex-shrink-0" />
+                      <Ban size={14} className="text-red-400 shrink-0" />
                       <div>
                         <p className="text-xs font-semibold text-red-400">Account suspended</p>
                         <p className="text-[11px] text-(--tx-dim)">This farmer cannot access FarmXnap</p>
@@ -1492,7 +1505,7 @@ export default function AdminDashboard() {
                     <p className="text-(--tx) text-sm font-semibold">{s.farmer}</p>
                     <p className="text-(--tx-sub) text-xs">{s.crop} · {s.state}</p>
                   </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
                     s.treated ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                               : 'bg-red-500/15 text-red-400 border border-red-500/20'
                   }`}>
@@ -1505,10 +1518,10 @@ export default function AdminDashboard() {
                     <div className={`h-1 rounded-full ${s.confidence>=90?'bg-brand-green':s.confidence>=75?'bg-brand-amber':'bg-red-400'}`}
                       style={{ width:`${s.confidence}%` }} />
                   </div>
-                  <span className={`text-xs font-mono font-bold flex-shrink-0 ${s.confidence>=90?'text-brand-green':s.confidence>=75?'text-brand-amber':'text-red-400'}`}>
+                  <span className={`text-xs font-mono font-bold shrink-0 ${s.confidence>=90?'text-brand-green':s.confidence>=75?'text-brand-amber':'text-red-400'}`}>
                     {s.confidence}%
                   </span>
-                  <p className="text-(--tx-dim) text-xs flex-shrink-0">{s.date}</p>
+                  <p className="text-(--tx-dim) text-xs shrink-0">{s.date}</p>
                 </div>
               </Card>
             ))
@@ -1527,7 +1540,7 @@ export default function AdminDashboard() {
       <div style={{ position:'fixed', bottom:-80, right:-80, width:300, height:300, background:'radial-gradient(circle, rgba(29,158,117,0.06) 0%, transparent 70%)', pointerEvents:'none', zIndex:0, borderRadius:'50%' }} />
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 flex-shrink-0 h-full"
+      <aside className="hidden lg:flex flex-col w-56 shrink-0 h-full"
         style={{ background:'var(--bg-nav)', borderRight:'1px solid var(--card-br)' }}>
         {/* Logo */}
         <div className="px-5 pt-6 pb-5" style={{ borderBottom:'1px solid var(--card-br)' }}>
@@ -1563,16 +1576,16 @@ export default function AdminDashboard() {
           })}
         </nav>
         {/* Admin badge */}
-        <div className="px-4 pb-6 pt-3 flex-shrink-0" style={{ borderTop:'1px solid rgba(29,158,117,0.1)' }}>
+        <div className="px-4 pb-6 pt-3 shrink-0" style={{ borderTop:'1px solid rgba(29,158,117,0.1)' }}>
           <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
             style={{ background:'rgba(29,158,117,0.08)', border:'1px solid rgba(29,158,117,0.15)' }}>
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
               style={{ background:'rgba(29,158,117,0.2)' }}>
               <Shield size={12} className="text-brand-green" />
             </div>
             <div>
               <p className="text-xs font-semibold text-white">Super Admin</p>
-              <p className="text-[10px] text-(--tx-dim)">Logout</p>
+              <p className="text-[10px] text-(--tx-dim)">hack-one-milli</p>
             </div>
           </div>
         </div>
@@ -1618,10 +1631,10 @@ export default function AdminDashboard() {
               })}
             </nav>
             {/* Admin badge — same as desktop */}
-            <div className="px-4 pb-6 pt-3 flex-shrink-0" style={{ borderTop:'1px solid var(--card-br)' }}>
+            <div className="px-4 pb-6 pt-3 shrink-0" style={{ borderTop:'1px solid var(--card-br)' }}>
               <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
                 style={{ background:'rgba(29,158,117,0.08)', border:'1px solid rgba(29,158,117,0.15)' }}>
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
                   style={{ background:'rgba(29,158,117,0.2)' }}>
                   <Shield size={12} className="text-brand-green" />
                 </div>
@@ -1639,7 +1652,7 @@ export default function AdminDashboard() {
       {/* Main content */}
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
         {/* Top bar */}
-        <header className="flex-shrink-0 flex items-center justify-between px-5 pb-3.5"
+        <header className="shrink-0 flex items-center justify-between px-5 pb-3.5"
           style={{ background:'var(--bg-nav)', borderBottom:'1px solid var(--card-br)', backdropFilter:'blur(12px)', paddingTop:'calc(env(safe-area-inset-top, 0px) + 14px)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setDrawerOpen(true)} className="lg:hidden w-8 h-8 rounded-xl flex items-center justify-center text-(--tx-sub)"
@@ -1668,7 +1681,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* Bottom nav (mobile) */}
-        <div className="lg:hidden flex-shrink-0 order-last"
+        <div className="lg:hidden shrink-0 order-last"
           style={{ background:'var(--bg-nav)', borderTop:'1px solid var(--card-br)', paddingBottom:'calc(env(safe-area-inset-bottom,0px) + 4px)' }}>
           <div className="flex items-center">
             {NAV.map(({ key, label, icon: Icon }) => {
@@ -1722,10 +1735,10 @@ export default function AdminDashboard() {
             {apiError && (
               <div className="flex items-start gap-3 px-4 py-3 rounded-2xl mb-5"
                 style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.25)' }}>
-                <AlertCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-red-400 mb-0.5">API Error</p>
-                  <p className="text-xs text-(--tx-sub) break-words">{apiError}</p>
+                  <p className="text-xs text-(--tx-sub) wrap-break-word">{apiError}</p>
                 </div>
                 <button
                   onClick={() => {
@@ -1734,7 +1747,7 @@ export default function AdminDashboard() {
                       .then(({ farmers: f, dealers: d }) => { setFarmers(f); setDealers(d) })
                       .catch(e => setApiError(e.message))
                   }}
-                  className="text-xs text-brand-amber underline flex-shrink-0">
+                  className="text-xs text-brand-amber underline shrink-0">
                   Retry
                 </button>
               </div>

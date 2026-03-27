@@ -12,6 +12,7 @@ import Results from "./pages/Results";
 import Checkout from "./pages/Checkout";
 import FarmerDashboard from "./pages/FarmerDashboard";
 import History from "./pages/History";
+import Wallet from "./pages/Wallet";
 import DealerDashboard from "./pages/DealerDashboard";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute, { AuthRoute } from "./component/ProtectedRoute";
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/checkout" element={<ProtectedRoute requiredRole="farmer"><Checkout /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute requiredRole="farmer"><FarmerDashboard /></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute requiredRole="farmer"><History /></ProtectedRoute>} />
+        <Route path="/wallet" element={<ProtectedRoute requiredRole="farmer"><Wallet /></ProtectedRoute>} />
         <Route path="/order-tracking" element={<ProtectedRoute requiredRole="farmer"><OrderTracking /></ProtectedRoute>} />
 
         {/* Dealer routes */}

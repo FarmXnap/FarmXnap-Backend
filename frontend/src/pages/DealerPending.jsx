@@ -49,7 +49,7 @@ export default function DealerPending() {
 
       <div className="page-body pt-4">
         <div className="flex flex-col items-center text-center anim-1">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 flex-shrink-0"
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 shrink-0"
             style={{ background: 'rgba(239,159,39,0.1)', border: '2px solid rgba(239,159,39,0.25)' }}>
             <Clock size={32} className="text-brand-amber" />
           </div>
@@ -64,7 +64,7 @@ export default function DealerPending() {
 
         {/* Status */}
         <div className="info-banner amber mb-4 anim-2">
-          <span className="text-lg flex-shrink-0">📱</span>
+          <span className="text-lg shrink-0">📱</span>
           <div>
             <p className="text-sm font-semibold text-(--tx) mb-0.5">Checking every 30 seconds</p>
             <p className="text-xs text-(--tx-sub) leading-relaxed">
@@ -87,7 +87,7 @@ export default function DealerPending() {
             { emoji: '🚀', title: 'Start selling',    desc: 'List products and receive farmer orders' },
           ].map(({ emoji, title, desc }) => (
             <div key={title} className="flex items-start gap-3 mb-3 last:mb-0">
-              <span className="text-lg flex-shrink-0">{emoji}</span>
+              <span className="text-lg shrink-0">{emoji}</span>
               <div>
                 <p className="text-sm font-medium text-(--tx)">{title}</p>
                 <p className="text-xs text-(--tx-dim) mt-0.5">{desc}</p>
