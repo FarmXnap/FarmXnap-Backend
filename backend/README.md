@@ -560,13 +560,18 @@ Fetch a list of products by a verified agro-dealer.
       "target_problems": "Early blight, Downy mildew.",
       "agro_dealer_profile_id": "rahv942immebxa0qcrnivd7z",
       "links": {
-        { "create":
-          { "method": "POST", "href": "/api/v1/products" }
+        { "view":
+          { "method": "GET", "href": "/api/v1/products/hgertxs38i5v0nf2g493el7n" }
         }
       }
     },
     // ...
-  ]
+  ],
+  "links": {
+    { "create":
+      { "method": "POST", "href": "/api/v1/products" }
+    }
+  }
 }
 ```
 
@@ -629,7 +634,12 @@ JSON
   "message": "Product created successfully.",
   "data": {
     "id": "lbap3onpjxz49st1u857e6p1",
-    "name": "Mancozeb 80WP"
+    "name": "Mancozeb 80WP",
+    "links": {
+      { "view":
+        { "method": "GET", "href": "/api/v1/products/lbap3onpjxz49st1u857e6p1" }
+      }
+    }
   }
 }
 ```
@@ -677,9 +687,75 @@ JSON
 }
 ```
 
+### **11. Show Product by A Verified Agro-dealer**
+
+Show a product by a verified agro-dealer.
+
+- **Endpoint:** `GET /products/:id`
+- **Auth Required:** Yes
+- **Authorization:** Verified `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Success Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": "hgertxs38i5v0nf2g493el7n",
+    "name": "Mancozeb 80WP",
+    "category": "Fungicide",
+    "unit": "1kg",
+    "price": "3500.00",
+    "stock_quantity": 48,
+    "target_problems": "Maize leaf spot, blight, and rust.",
+    "description": "A protective wettable powder for maize and other cereal crops...",
+    "created_at": "2026-03-27T07:36:16.147+00:00",
+    "updated_at": "2026-03-27T07:36:16.147+00:00",
+    "links": {
+      { "update": {}
+      }
+    }
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You do not have permission to access this resource."
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You cannot perform this action until you complete verification.'"
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "Product not found.'"
+}
+```
+
 ---
 
-### **11. Scan an image and get diagnosis and treatment results**
+### **12. Scan an image and get diagnosis and treatment results**
 
 - **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
 - **Auth Required:** Yes

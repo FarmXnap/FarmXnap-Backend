@@ -30,12 +30,63 @@ export default class ProductsController {
       data: user.agroDealerProfile.products.map((product) => ({
         ...product.serialize(),
         links: {
-          create: {
-            method: 'POST',
-            href: router.makeUrl('api.v1.products.store', [product.agro_dealer_profile_id]),
+          view: {
+            method: 'GET',
+            href: router.makeUrl('api.v1.products.show', [product.id]),
           },
+          update: {},
         },
       })),
+      links: {
+        create: {
+          method: 'POST',
+          href: router.makeUrl('api.v1.products.store'),
+        },
+      },
+    })
+  }
+
+  /**
+   * Show product by an agro-dealer.
+   *
+   * `GET /api/v1/products/:id`
+   */
+  public async show({ response, auth, params }: HttpContext) {
+    const user = auth.user!
+    await user.load('agroDealerProfile') // Middleware ensures the user is an agro-dealer
+    const unverified = await this.#checkVerification(user.agroDealerProfile)
+
+    if (unverified) {
+      return response.forbidden(unverified)
+    }
+
+    const product = await Product.query()
+      .select([
+        'id',
+        'name',
+        'category',
+        'unit',
+        'price',
+        'stock_quantity',
+        'target_problems',
+        'description',
+        'created_at',
+        'updated_at',
+      ])
+      .where({ id: params.id, agro_dealer_profile_id: user.agroDealerProfile?.id })
+      .first()
+
+    if (!product) {
+      return response.notFound({ error: 'Product not found.' })
+    }
+
+    return response.ok({
+      data: {
+        ...product.serialize(),
+        links: {
+          update: {},
+        },
+      },
     })
   }
 
@@ -96,6 +147,13 @@ export default class ProductsController {
       data: {
         id: product.id,
         name: product.name,
+        links: {
+          view: {
+            method: 'GET',
+            href: router.makeUrl('api.v1.products.show', [product.id]),
+          },
+          update: {},
+        },
       },
     })
   }

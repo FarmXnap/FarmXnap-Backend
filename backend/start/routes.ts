@@ -74,9 +74,10 @@ router
     router
       .resource('products', () => import('#controllers/products_controller'))
       .apiOnly()
-      .only(['store', 'index'])
+      .only(['store', 'index', 'show'])
       .middleware('index', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
       .middleware('store', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
+      .middleware('show', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
   })
   .prefix('api/v1')
   .as('api.v1')
