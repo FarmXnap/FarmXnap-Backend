@@ -14,6 +14,11 @@ const appUrl =
 
 export const callbackUrl = `${appUrl}/api/v1/payments/callback`
 
+export const interswitchInquiryBaseUrl =
+  env.get('NODE_ENV') === 'production'
+    ? 'https://webpay.interswitchng.com'
+    : 'https://qa.interswitchng.com'
+
 export const interswitchBankListAndVerificationBaseUrl =
   env.get('NODE_ENV') === 'production'
     ? `https://api.interswitchng.com/marketplace-routing`
