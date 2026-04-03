@@ -1,17 +1,26 @@
-**/node_modules/
+# Dependencies and AdonisJS build
+node_modules
+build
+tmp
 
-**/.env
-**/.env.local
-**/.env.*.local
-**/.env.test
-**/.env.*.test
+# Secrets
+.env
+.env.test
+.env.local
+.env.production.local
+.env.development.local
 
-**/dist/
-**/build/
-**/.next/
+# Frontend assets compiled code
+public/assets
 
-**/npm-debug.log*
-**/yarn-error.log*
+# Build tools specific
+npm-debug.log
+yarn-error.log
 
+# Editors specific
+.fleet
+.idea
+.vscode
+
+# Platform specific
 .DS_Store
-Thumbs.db
