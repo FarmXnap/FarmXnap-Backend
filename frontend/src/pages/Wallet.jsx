@@ -140,7 +140,7 @@ export default function WalletPage() {
     setWdError('')
     setWdLoading(true)
     await new Promise(r => setTimeout(r, 1500))
-    const bankName = banks.find(b => String(b.id) === String(wdBank))?.name || wdBank
+    const bankName = banks.find(b => b.code === wdBank)?.name || wdBank
     withdraw(amt, bankName, wdAccount)
     setWdLoading(false)
     setWdSuccess(true)
@@ -169,7 +169,7 @@ export default function WalletPage() {
       <div className="page-body pt-2">
 
         {/* Header */}
-        <header className="page-header pb-4">
+        <header className="page-header pb-2">
           <p className="page-eyebrow">Finance</p>
         </header>
 
@@ -214,7 +214,7 @@ export default function WalletPage() {
         <div className="flex gap-2 mb-4 overflow-x-auto pb-0.5 anim-2" style={{ scrollbarWidth: 'none' }}>
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
                 filter === f
                   ? 'bg-brand-green text-white border-transparent'
                   : 'text-(--tx-sub) border-(--card-br) bg-(--card-bg)'
@@ -247,7 +247,7 @@ export default function WalletPage() {
                     className="glass-card flex items-center gap-3 text-left w-full active:scale-[0.985] transition-all"
                     style={{ animationDelay: `${idx * 0.03}s` }}
                     onClick={() => { setActiveTx(tx); setSheet('tx') }}>
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
                       style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
                       <Icon size={16} style={{ color: cfg.color }} />
                     </div>
@@ -255,7 +255,7 @@ export default function WalletPage() {
                       <p className="text-sm font-semibold text-(--tx) truncate leading-tight">{tx.desc}</p>
                       <p className="text-[11px] text-(--tx-dim) mt-0.5">{cfg.label} · {tx.date}</p>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="text-right flex-shrink-0">
                       <p className="font-syne font-bold text-sm" style={{ color: cfg.color }}>
                         {cfg.sign}₦{tx.amount.toLocaleString()}
                       </p>
@@ -321,7 +321,7 @@ export default function WalletPage() {
 
               {/* Test notice */}
               <div className="info-banner amber mb-2">
-                <span className="text-base shrink-0">🧪</span>
+                <span className="text-base flex-shrink-0">🧪</span>
                 <div>
                   <p className="text-xs font-semibold text-(--tx)">Test mode — no real charges</p>
                   <p className="text-[11px] text-(--tx-sub) mt-0.5 leading-relaxed">
@@ -380,13 +380,13 @@ export default function WalletPage() {
                       ₦{parseInt(wdAmount).toLocaleString()}
                     </p>
                     <p className="text-sm text-(--tx-sub) leading-relaxed max-w-[260px]">
-                      Sent to {banks.find(b => String(b.id) === String(wdBank))?.name || 'your bank'} account ending in <span className="text-(--tx) font-semibold">{wdAccount.slice(-4)}</span>. Arrives in 1–3 business days.
+                      Sent to {banks.find(b => b.code === wdBank)?.name || 'your bank'} account ending in <span className="text-(--tx) font-semibold">{wdAccount.slice(-4)}</span>. Arrives in 1–3 business days.
                     </p>
                   </div>
                   <div className="glass-card w-full text-left">
                     {[
                       { label: 'Amount',  val: `₦${parseInt(wdAmount).toLocaleString()}` },
-                      { label: 'Bank',    val: banks.find(b => String(b.id) === String(wdBank))?.name || '—' },
+                      { label: 'Bank',    val: banks.find(b => b.code === wdBank)?.name || '—' },
                       { label: 'Account', val: `•••• •••• ${wdAccount.slice(-4)}` },
                       { label: 'Status',  val: 'Processing', color: '#EF9F27' },
                     ].map(({ label, val, color }) => (
@@ -407,7 +407,7 @@ export default function WalletPage() {
                   <p className="field-label">Bank</p>
                   <select className="field-select mb-4" value={wdBank} onChange={e => setWdBank(e.target.value)}>
                     <option value="">{banksLoading ? 'Loading banks…' : 'Select your bank'}</option>
-                    {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    {banks.map(b => <option key={b.id} value={b.code}>{b.name}</option>)}
                   </select>
 
                   <p className="field-label">Account number</p>
@@ -428,7 +428,7 @@ export default function WalletPage() {
                       onChange={e => setWdAmount(e.target.value)}
                       style={{ WebkitUserSelect: 'text', userSelect: 'text' }}
                     />
-                    <button className="text-xs font-semibold text-brand-amber shrink-0 bg-transparent border-none cursor-pointer"
+                    <button className="text-xs font-semibold text-brand-amber flex-shrink-0 bg-transparent border-none cursor-pointer"
                       onClick={() => setWdAmount(String(balance))}>
                       MAX
                     </button>
@@ -437,7 +437,7 @@ export default function WalletPage() {
                   {/* Balance preview */}
                   {wdAmount && parseInt(wdAmount) > 0 && (
                     <div className={`info-banner mb-4 mt-2 ${parseInt(wdAmount) > balance ? 'red' : 'green'}`}>
-                      <span className="text-sm shrink-0">{parseInt(wdAmount) > balance ? '⚠️' : '✓'}</span>
+                      <span className="text-sm flex-shrink-0">{parseInt(wdAmount) > balance ? '⚠️' : '✓'}</span>
                       <div>
                         <p className="text-xs font-semibold text-(--tx)">
                           {parseInt(wdAmount) > balance ? 'Insufficient balance' : 'Balance after withdrawal'}
@@ -527,7 +527,7 @@ export default function WalletPage() {
                           {val}
                         </span>
                         {canCopy && (
-                          <button onClick={() => copyRef(activeTx.ref)} className="shrink-0">
+                          <button onClick={() => copyRef(activeTx.ref)} className="flex-shrink-0">
                             {copied === activeTx.ref
                               ? <Check size={11} className="text-brand-green" />
                               : <Copy size={11} className="text-(--tx-dim)" />}

@@ -231,8 +231,8 @@ export const submitDealerDetails = async (data) => {
     state:                   details.state,
     lga:                     details.lga || '',
     cac_registration_number: details.cac_registration_number,
-    bank:                    details.bank,
-    account_number:          details.account_number,
+    bank_code:               details.bank,            // bank code e.g. "044" — API field: bank_code
+    bank_account_number:     details.account_number,  // API field: bank_account_number
   }, tempToken)
 
   ;['farmxnap-otp','farmxnap-uid','farmxnap-phone','farmxnap-temp-token'].forEach(k => {
@@ -258,7 +258,8 @@ export const submitDealerDetails = async (data) => {
       state:                   details.state,
       lga:                     details.lga || '',
       cac_registration_number: details.cac_registration_number,
-      bank:                    details.bank,
+      bank:                    details.bank,           // code sent to API
+      bank_name:               details.bank_name || details.bank, // display name
       account_number:          details.account_number,
       phone:                   normalizePhone(details.phone || ''),
       member_since:            new Date().toLocaleDateString('en-GB', { month:'long', year:'numeric' }),
@@ -325,8 +326,9 @@ export const verifyOTP = async (phone, code) => {
           lga:                     p.lga,
           cac_registration_number: p.cac_registration_number,
           cac_number:              p.cac_registration_number,
-          bank:                    p.bank,
-          account_number:          p.account_number,
+          bank:                    p.bank_name        || p.bank,
+          account_number:          p.bank_account_number || p.account_number,
+          bank_account_name:       p.bank_account_name  || null,
           is_verified:             p.is_verified,
           member_since:            p.created_at
             ? new Date(p.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
@@ -399,8 +401,9 @@ export const adminGetAllUsers = async () => {
         state:            p.state            || '—',
         lga:              p.lga              || '—',
         cac_number:       p.cac_registration_number || '—',
-        bank:             p.bank             || '—',
-        account_number:   p.account_number   || '—',
+        bank:             p.bank_name        || p.bank        || '—',
+        account_number:   p.bank_account_number || p.account_number || '—',
+        bank_account_name: p.bank_account_name || null,
         is_verified:      p.is_verified === true,
         status:           p.is_verified ? 'approved' : 'pending',
         joined:           p.created_at
@@ -477,8 +480,10 @@ export const fetchDealerProfile = async (userId, profileId) => {
       state:                   p.state,
       lga:                     p.lga,
       cac_registration_number: p.cac_registration_number,
-      bank:                    p.bank,
-      account_number:          p.account_number,
+      // Updated field names per API docs
+      bank:                    p.bank_name        || p.bank,           // bank_name in new docs
+      account_number:          p.bank_account_number || p.account_number, // bank_account_number in new docs
+      bank_account_name:       p.bank_account_name || null,
       is_verified:             p.is_verified,
       phone:                   res.data.phone_number,
       created_at:              p.created_at,
@@ -508,7 +513,7 @@ export const getDealerProducts = async () => {
   }))
 }
 
-// 10. POST /products — create product
+// 10. POST /products — create product (returns full product object per updated docs)
 export const addProduct = async (data) => {
   const token = getToken()
   const res   = await apiCall('POST', '/products', {
@@ -521,35 +526,52 @@ export const addProduct = async (data) => {
     unit:               data.unit,
     target_problems:    data.disease_target || data.target_problems || undefined,
   }, token)
+  const d = res.data || {}
   return {
-    id:              res.data?.id || 'prod-' + Date.now(),
-    name:            data.name,
-    category:        data.category,
-    unit:            data.unit,
-    price:           Number(data.price),
-    stock:           Number(data.stock),
-    stock_quantity:  Number(data.stock),
-    in_stock:        Number(data.stock) > 0,
-    disease_target:  data.disease_target || '',
-    target_problems: data.disease_target || '',
-    active_ingredient: data.active_ingredient || '',
+    id:               d.id              || 'prod-' + Date.now(),
+    name:             d.name            || data.name,
+    category:         d.category        || data.category,
+    unit:             d.unit            || data.unit,
+    price:            parseFloat(d.price) || Number(data.price),
+    stock:            d.stock_quantity  ?? Number(data.stock),
+    stock_quantity:   d.stock_quantity  ?? Number(data.stock),
+    in_stock:         (d.stock_quantity ?? Number(data.stock)) > 0,
+    disease_target:   d.target_problems || data.disease_target || '',
+    target_problems:  d.target_problems || data.disease_target || '',
+    active_ingredient: d.active_ingredient || data.active_ingredient || '',
+    description:      d.description     || data.description || '',
   }
 }
 
-// No PATCH/DELETE product endpoints yet — local mock
-export const updateProduct = async (id, data) => ({
-  id,
-  name:            data.name,
-  category:        data.category,
-  unit:            data.unit,
-  price:           Number(data.price),
-  stock:           Number(data.stock),
-  stock_quantity:  Number(data.stock),
-  in_stock:        Number(data.stock) > 0,
-  disease_target:  data.disease_target || '',
-  target_problems: data.disease_target || '',
-  active_ingredient: data.active_ingredient || '',
-})
+// 11. PUT /products/:id — update product (real API, all fields required per docs)
+export const updateProduct = async (id, data) => {
+  const token = getToken()
+  const res   = await apiCall('PUT', `/products/${id}`, {
+    name:               data.name,
+    active_ingredient:  data.active_ingredient || data.name,
+    price:              Number(data.price),
+    stock_quantity:     Number(data.stock),
+    description:        data.description || undefined,
+    category:           data.category,
+    unit:               data.unit,
+    target_problems:    data.disease_target || data.target_problems || undefined,
+  }, token)
+  const d = res.data || {}
+  return {
+    id:               d.id              || id,
+    name:             d.name            || data.name,
+    category:         d.category        || data.category,
+    unit:             d.unit            || data.unit,
+    price:            parseFloat(d.price) || Number(data.price),
+    stock:            d.stock_quantity  ?? Number(data.stock),
+    stock_quantity:   d.stock_quantity  ?? Number(data.stock),
+    in_stock:         (d.stock_quantity ?? Number(data.stock)) > 0,
+    disease_target:   d.target_problems || data.disease_target || '',
+    target_problems:  d.target_problems || data.disease_target || '',
+    active_ingredient: d.active_ingredient || data.active_ingredient || '',
+    description:      d.description     || data.description || '',
+  }
+}
 
 export const deleteProduct = async (id) => ({ success: true })
 
@@ -665,8 +687,9 @@ export const diagnoseCrop = async (imageDataOrFile, cropType) => {
       dealer_address:    t.business_address,
       dealer_phone:      t.phone_number,
       dealer_state:      t.state,
-      dealer_bank:       t.bank,
-      dealer_account:    t.account_number,
+      dealer_bank:         t.bank_name        || t.bank,
+      dealer_account:      t.bank_account_number || t.account_number,
+      dealer_account_name: t.bank_account_name || null,
       rank:              t.rank,
       match_label:       getMatchLabel(t.rank),
       in_stock:          (t.stock_quantity ?? 0) > 0,
@@ -723,13 +746,6 @@ const diagnoseCropMock = async (cropType) => {
 }
 
 // ── Farmer Mock Data ──────────────────────────────────────────────────────────
-const MOCK_HISTORY = [
-  { id: 'scan-001', crop: 'Cassava', disease: 'Cassava mosaic disease', date: 'Mar 18, 2026', confidence: 93, status: 'treated', symptoms: ['Yellow mosaic pattern on leaves','Leaf distortion and curling','Stunted plant growth','Pale green or yellow leaf colour'], remedy: 'Apply Imidacloprid 200SL to control whitefly vectors. Remove and destroy infected stems immediately. Use certified disease-free planting material for replanting.', treatment_product: { id: 'prod-001', name: 'Imidacloprid 200SL (500ml)', price: 4200 }, order: { id: 'ord-001', ref: 'ORD-00234', status: 'delivered', dealer: 'AgroFirst Port Harcourt', dealer_phone: '+234 701 234 5678', amount: 4872, date_ordered: 'Mar 18, 2026', date_delivered: 'Mar 19, 2026', escrow_status: 'released' } },
-  { id: 'scan-002', crop: 'Maize',   disease: 'Northern leaf blight',   date: 'Mar 12, 2026', confidence: 87, status: 'treated', symptoms: ['Long elliptical grey-green lesions','Lesions turn tan as they mature','Premature death of leaves'], remedy: 'Apply Mancozeb 80WP fungicide at first sign of disease. Ensure proper plant spacing for air circulation. Remove infected crop debris after harvest.', treatment_product: { id: 'prod-002', name: 'Mancozeb 80WP (1kg)', price: 3500 }, order: { id: 'ord-002', ref: 'ORD-00218', status: 'delivered', dealer: 'GreenField Supplies', dealer_phone: '+234 802 345 6789', amount: 3828, date_ordered: 'Mar 12, 2026', date_delivered: 'Mar 13, 2026', escrow_status: 'released' } },
-  { id: 'scan-003', crop: 'Tomato',  disease: 'Early blight',           date: 'Mar 5, 2026',  confidence: 91, status: 'pending', symptoms: ['Dark brown spots with concentric rings','Yellow halo around lesions','Lower leaves affected first'], remedy: 'Spray Copper oxychloride 50WP every 7–10 days. Remove affected leaves and destroy them. Avoid overhead irrigation to reduce leaf wetness.', treatment_product: { id: 'prod-003', name: 'Copper oxychloride 50WP (500g)', price: 2800 }, order: null },
-  { id: 'scan-004', crop: 'Yam',     disease: 'Yam anthracnose',        date: 'Feb 28, 2026', confidence: 78, status: 'treated', symptoms: ['Irregular brown leaf spots','Tip dieback on stems','Tuber rot at harvest'], remedy: 'Apply Carbendazim 50WP at planting and at 4-week intervals. Store tubers in a cool, dry, well-ventilated place. Remove and burn infected plant parts.', treatment_product: { id: 'prod-004', name: 'Carbendazim 50WP (250g)', price: 1900 }, order: { id: 'ord-003', ref: 'ORD-00198', status: 'dispatched', dealer: 'NaturaFarm Store', dealer_phone: '+234 803 456 7891', amount: 2228, date_ordered: 'Feb 28, 2026', date_delivered: null, escrow_status: 'held' } },
-]
-
 const MOCK_FARMER_ACTIVE_ORDERS = [
   { id: 'ord-003', ref: 'ORD-00198', scan_id: 'scan-004', product: 'Carbendazim 50WP (250g)', crop: 'Yam', disease: 'Yam anthracnose', dealer: 'NaturaFarm Store', dealer_phone: '+234 803 456 7891', dealer_address: '45 Farm Road, Enugu', amount: 2228, status: 'dispatched', date_ordered: 'Feb 28, 2026', escrow_status: 'held', expires_at: new Date(Date.now() + TIMERS.FARMER_CONFIRM_MS).toISOString() },
   { id: 'ord-005', ref: 'ORD-00315', scan_id: 'scan-001', product: 'Imidacloprid 200SL (500ml)', crop: 'Cassava', disease: 'Cassava mosaic disease', dealer: 'AgroFirst PH', dealer_phone: '+234 701 234 5678', dealer_address: '12 Agricultural Rd, Rumuola, PH', amount: 4872, status: 'pending', date_ordered: 'Mar 22, 2026', escrow_status: 'held', expires_at: new Date(Date.now() + TIMERS.DEALER_DISPATCH_MS).toISOString() },
@@ -749,8 +765,56 @@ const MOCK_TIPS = [
   { id: 6, title: 'Tomato blight prevention',        body: 'Space tomato plants at least 60cm apart for airflow. Avoid watering leaves — drip irrigate at the base to prevent fungal spread.',       crop: 'Tomato',    tag: 'Prevention'  },
 ]
 
+// GET /farmer_profiles/:farmer_profile_id/crop_scans — real scan history
+export const getFarmerHistory = async () => {
+  const token = getToken()
+  const stored = (() => {
+    try { return JSON.parse(localStorage.getItem('farmxnap-auth'))?.state?.user } catch { return null }
+  })()
+  let farmerProfileId = stored?.farmer_profile_id
+
+  // Recover profile ID if missing
+  if ((!farmerProfileId || farmerProfileId === stored?.id) && stored?.id && token) {
+    try {
+      const { raw } = await adminGetAllUsers()
+      const rawUser = raw?.find(u => u.id === stored.id)
+      if (rawUser?.farmerProfile?.id) farmerProfileId = rawUser.farmerProfile.id
+    } catch {}
+  }
+
+  if (!farmerProfileId || !token) return []
+
+  try {
+    const res  = await apiCall('GET', `/farmer_profiles/${farmerProfileId}/crop_scans`, undefined, token)
+    const scans = res.data || []
+
+    return scans.map(s => ({
+      id:               s.id,
+      crop:             s.crop             || 'Unknown',
+      disease:          s.disease          || null,       // null = healthy
+      date:             s.created_at
+        ? new Date(s.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+        : '—',
+      confidence:       90,                              // API doesn't return confidence
+      status:           s.disease ? 'pending' : 'healthy',
+      remedy:           s.instructions    || '',
+      symptoms:         [],                              // API doesn't return symptoms
+      active_ingredient: s.active_ingredient || '',
+      search_term:      s.search_term      || '',
+      category:         s.category         || '',
+      // treatment_product and order will be null until order API is implemented
+      treatment_product: null,
+      order:             null,
+      farmer_profile_id: s.farmer_profile_id,
+      raw:               s,
+    }))
+  } catch (e) {
+    console.warn('[getFarmerHistory] Failed:', e.message)
+    return []
+  }
+}
+
 export const getFarmerActiveOrders = async () => { await delay(600); return MOCK_FARMER_ACTIVE_ORDERS }
-export const getFarmerHistory      = async () => { await delay(700); return MOCK_HISTORY }
 export const getFarmerProfile      = async () => {
   await delay(200)
   const stored = getStoredUser()
@@ -795,8 +859,7 @@ export const farmerConfirmDelivery = async (orderId, pin) => {
   await delay(1000)
   const idx = MOCK_FARMER_ACTIVE_ORDERS.findIndex(o => o.id === orderId)
   if (idx !== -1) { MOCK_FARMER_ACTIVE_ORDERS[idx].status = 'delivered'; MOCK_FARMER_ACTIVE_ORDERS[idx].escrow_status = 'released' }
-  const sIdx = MOCK_HISTORY.findIndex(s => s.order?.id === orderId)
-  if (sIdx !== -1) { MOCK_HISTORY[sIdx].status = 'treated'; MOCK_HISTORY[sIdx].order.status = 'delivered'; MOCK_HISTORY[sIdx].order.escrow_status = 'released'; MOCK_HISTORY[sIdx].order.date_delivered = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) }
+  // History now comes from real API — no local mutation needed
   return { success: true }
 }
 

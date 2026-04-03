@@ -45,18 +45,18 @@ const SH = ({ title, action, onAction }) => (
 )
 
 const ScanRow = ({ scan, onClick }) => {
-  const treated = scan.status === 'treated'
+  const treated = scan.status === 'treated' || !scan.disease
   return (
     <button className="glass-card flex items-center gap-3 mb-2 w-full text-left active:scale-[0.985] transition-all"
       onClick={onClick}>
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${treated ? 'bg-brand-green/10' : 'bg-red-500/10'}`}>
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${treated ? 'bg-brand-green/10' : 'bg-red-500/10'}`}>
         <Leaf size={14} className={treated ? 'text-brand-green' : 'text-red-400'} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-(--tx) text-sm font-medium truncate">{scan.disease}</p>
         <p className="text-(--tx-sub) text-xs">{scan.crop} · {scan.date}</p>
       </div>
-      <span className={`badge shrink-0 ${treated ? 'green' : 'red'}`}>
+      <span className={`badge flex-shrink-0 ${treated ? 'green' : 'red'}`}>
         {treated ? 'Treated' : 'Untreated'}
       </span>
     </button>
@@ -161,7 +161,7 @@ function EditSheet({ profile, user, onClose, onSave }) {
                 <div className="mt-2 rounded-2xl overflow-hidden"
                   style={{ background: 'var(--input-bg)', border: '1.5px solid rgba(29,158,117,0.4)' }}>
                   <div className="flex items-center gap-3 px-4 py-3">
-                    <span className="text-lg shrink-0">🌱</span>
+                    <span className="text-lg flex-shrink-0">🌱</span>
                     <input
                       className="flex-1 bg-transparent outline-none text-sm text-(--tx) font-dm"
                       placeholder="Type your crop name…"
@@ -309,8 +309,8 @@ export default function FarmerDashboard() {
 
   const stats = {
     scans:   history.length,
-    treated: history.filter(h => h.status === 'treated').length,
-    pending: history.filter(h => h.status === 'pending').length,
+    treated: history.filter(h => h.status === 'treated' || !h.disease).length,
+    pending: history.filter(h => h.disease && h.status !== 'treated').length,
   }
   const score = stats.scans > 0 ? Math.round((stats.treated / stats.scans) * 100) : null
   const name  = profile?.name || profile?.full_name || user?.name || user?.full_name || 'Farmer'
@@ -363,21 +363,21 @@ export default function FarmerDashboard() {
                       className="w-full flex items-start gap-3 px-4 py-3.5 text-left transition-all active:bg-(--card-bg)"
                       style={{ borderBottom: '1px solid var(--card-br)' }}
                       onClick={() => { setShowNotifs(false); navigate('/order-tracking', { state: { order } }) }}>
-                      <div className="w-8 h-8 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Truck size={13} className="text-brand-amber" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-(--tx) mb-0.5 truncate">{order.product}</p>
                         <p className="text-xs text-(--tx-sub)">Dispatched by {order.dealer} — confirm delivery to release payment</p>
                       </div>
-                      <ChevronRight size={13} className="text-(--tx-dim) shrink-0 mt-1" />
+                      <ChevronRight size={13} className="text-(--tx-dim) flex-shrink-0 mt-1" />
                     </button>
                   ))}
                   {stats.pending > 0 && (
                     <button
                       className="w-full flex items-start gap-3 px-4 py-3.5 text-left transition-all active:bg-(--card-bg)"
                       onClick={() => { setShowNotifs(false); navigate('/history') }}>
-                      <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <AlertCircle size={13} className="text-red-400" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -386,7 +386,7 @@ export default function FarmerDashboard() {
                         </p>
                         <p className="text-xs text-(--tx-sub)">Buy treatment to protect your harvest</p>
                       </div>
-                      <ChevronRight size={13} className="text-(--tx-dim) shrink-0 mt-1" />
+                      <ChevronRight size={13} className="text-(--tx-dim) flex-shrink-0 mt-1" />
                     </button>
                   )}
                 </>
@@ -404,7 +404,7 @@ export default function FarmerDashboard() {
             {/* Avatar */}
             <button
               onClick={() => setTab('profile')}
-              className="w-11 h-11 rounded-full flex items-center justify-center font-syne font-extrabold text-base text-brand-green shrink-0 active:scale-90 transition-all"
+              className="w-11 h-11 rounded-full flex items-center justify-center font-syne font-extrabold text-base text-brand-green flex-shrink-0 active:scale-90 transition-all"
               style={{ background: 'rgba(29,158,117,0.15)', border: '2px solid rgba(29,158,117,0.3)' }}>
               {name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
             </button>
@@ -420,7 +420,7 @@ export default function FarmerDashboard() {
             {/* Bell */}
             <button
               onClick={() => setShowNotifs(v => !v)}
-              className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 shrink-0"
+              className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-(--tx-sub)">
@@ -474,14 +474,14 @@ export default function FarmerDashboard() {
           {/* Untreated alert */}
           {!loading && stats.pending > 0 && (
             <div className="info-banner red mb-4">
-              <AlertCircle size={15} className="text-red-400 shrink-0 mt-0.5" />
+              <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-red-400 text-xs font-medium">
                   {stats.pending} crop{stats.pending > 1 ? 's' : ''} still untreated
                 </p>
                 <p className="text-red-400/60 text-[11px]">Act quickly to prevent further spread</p>
               </div>
-              <button onClick={() => navigate('/history')} className="text-red-400 text-xs underline shrink-0">
+              <button onClick={() => navigate('/history')} className="text-red-400 text-xs underline flex-shrink-0">
                 View
               </button>
             </div>
@@ -524,7 +524,7 @@ export default function FarmerDashboard() {
                     <button className="w-full text-left active:opacity-70 transition-opacity"
                       onClick={() => navigate('/order-tracking', { state: { order } })}>
                       <div className="flex items-start gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center flex-shrink-0">
                           <Package size={16} className="text-brand-amber" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -533,16 +533,16 @@ export default function FarmerDashboard() {
                         </div>
                         {/* Status badge per actual state */}
                         {order.status === 'pending' && (
-                          <span className="badge amber shrink-0 text-[10px]">⏳ Awaiting dispatch</span>
+                          <span className="badge amber flex-shrink-0 text-[10px]">⏳ Awaiting dispatch</span>
                         )}
                         {order.status === 'paid' && (
-                          <span className="badge amber shrink-0 text-[10px]">🔒 Paid</span>
+                          <span className="badge amber flex-shrink-0 text-[10px]">🔒 Paid</span>
                         )}
                         {order.status === 'dispatched' && (
-                          <span className="badge amber shrink-0 text-[10px]"><Truck size={9} /> On its way</span>
+                          <span className="badge amber flex-shrink-0 text-[10px]"><Truck size={9} /> On its way</span>
                         )}
                         {order.status === 'disputed' && (
-                          <span className="badge red shrink-0 text-[10px]">⚠ Disputed</span>
+                          <span className="badge red flex-shrink-0 text-[10px]">⚠ Disputed</span>
                         )}
                       </div>
 
@@ -655,7 +655,7 @@ export default function FarmerDashboard() {
 
           {/* Escrow explainer */}
           <div className="info-banner green mb-5 anim-1">
-            <ShieldCheck size={15} className="text-brand-green shrink-0 mt-0.5" />
+            <ShieldCheck size={15} className="text-brand-green flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-(--tx) mb-0.5">Escrow protects every payment</p>
               <p className="text-xs text-(--tx-sub) leading-relaxed">
@@ -704,7 +704,7 @@ export default function FarmerDashboard() {
                       onClick={() => isPending && navigate('/order-tracking', { state: { order } })}>
                     {/* Top */}
                     <div className="flex items-start gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                         isPending ? 'bg-brand-amber/10 border border-brand-amber/20'
                                   : 'bg-brand-green/10 border border-brand-green/20'
                       }`}>
@@ -714,7 +714,7 @@ export default function FarmerDashboard() {
                         <p className="font-syne font-bold text-sm text-(--tx) truncate">{order.product}</p>
                         <p className="text-xs text-(--tx-sub)">{order.crop} · {order.disease}</p>
                       </div>
-                      <span className={`badge shrink-0 text-[10px] ${cfg.badge}`}>
+                      <span className={`badge flex-shrink-0 text-[10px] ${cfg.badge}`}>
                         <Icon size={9} /> {cfg.label}
                       </span>
                     </div>
@@ -816,12 +816,12 @@ export default function FarmerDashboard() {
               ].map(({ icon, label, amt, color, date }) => (
                 <div key={label} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl"
                   style={{ background: 'var(--card-bg)', border: '1px solid var(--card-br)' }}>
-                  <span className="text-lg shrink-0">{icon}</span>
+                  <span className="text-lg flex-shrink-0">{icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-(--tx) truncate">{label}</p>
                     <p className="text-[10px] text-(--tx-dim)">{date}</p>
                   </div>
-                  <p className="text-sm font-syne font-bold shrink-0" style={{ color }}>{amt}</p>
+                  <p className="text-sm font-syne font-bold flex-shrink-0" style={{ color }}>{amt}</p>
                 </div>
               ))}
             </div>
@@ -845,7 +845,7 @@ export default function FarmerDashboard() {
           <div className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-1 mb-4">
             {['All', ...CROPS].map(c => (
               <button key={c} onClick={() => setCropFilter(c)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all border ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all border ${
                   cropFilter === c
                     ? 'bg-brand-green text-white border-transparent'
                     : 'text-(--tx-sub) border-(--card-br) bg-(--card-bg)'
@@ -869,7 +869,7 @@ export default function FarmerDashboard() {
                 : filteredTips.map(tip => (
                   <div key={tip.id} className="glass-card">
                     <div className="flex items-start gap-3 mb-2">
-                      <div className="w-9 h-9 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center flex-shrink-0">
                         <Lightbulb size={15} className="text-brand-amber" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -887,13 +887,13 @@ export default function FarmerDashboard() {
           </div>
 
           <div className="info-banner green">
-            <span className="text-lg shrink-0">🌱</span>
+            <span className="text-lg flex-shrink-0">🌱</span>
             <div className="flex-1 min-w-0">
               <p className="text-brand-green text-xs font-medium">See something unusual?</p>
               <p className="text-brand-green/60 text-xs">Get instant AI diagnosis</p>
             </div>
             <button onClick={() => navigate('/scan')}
-              className="bg-brand-green text-white text-xs font-syne font-bold px-3 py-2 rounded-xl active:scale-95 transition-all shrink-0">
+              className="bg-brand-green text-white text-xs font-syne font-bold px-3 py-2 rounded-xl active:scale-95 transition-all flex-shrink-0">
               Scan now
             </button>
           </div>
@@ -911,7 +911,7 @@ export default function FarmerDashboard() {
               <div className="flex flex-col gap-3">
                 <div className="glass-card">
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 font-syne font-extrabold text-lg text-brand-green"
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 font-syne font-extrabold text-lg text-brand-green"
                       style={{ background: 'rgba(29,158,117,0.12)', border: '2px solid rgba(29,158,117,0.25)' }}>
                       {(profile.name || user?.name || '?').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                     </div>
@@ -941,7 +941,7 @@ export default function FarmerDashboard() {
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { label: 'Scans',   val: history.length,                                            color: 'text-(--tx)'       },
-                    { label: 'Treated', val: history.filter(h => h.status === 'treated').length,        color: 'text-brand-green'  },
+                    { label: 'Treated', val: history.filter(h => h.status === 'treated' || !h.disease).length, color: 'text-brand-green' },
                     { label: 'Orders',  val: activeOrders.length + history.filter(h => h.order).length, color: 'text-brand-amber'  },
                   ].map(({ label, val, color }) => (
                     <div key={label} className="stat-card text-center">
@@ -964,7 +964,7 @@ export default function FarmerDashboard() {
                       { icon: Phone,  label: 'Phone',        val: profile.phone      || user?.phone      || user?.phone_number || '—' },
                     ].map(({ icon: Icon, label, val }) => (
                       <div key={label} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-(--card-bg)">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-(--card-bg)">
                           <Icon size={13} className="text-(--tx-sub)" />
                         </div>
                         <div className="flex-1 min-w-0">
