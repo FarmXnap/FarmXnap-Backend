@@ -7,11 +7,10 @@ import app from '@adonisjs/core/services/app'
 import sinon from 'sinon'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
-import CropScan from '#models/crop_scan'
 
 const heavyFilePath = app.makePath('tmp', 'tests', 'too_large.jpg')
 
-test.group('Farmer Profiles / Crop Scans / Treatments', (group) => {
+test.group('Crop Scans / List Crop Scans', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
 
@@ -34,7 +33,7 @@ test.group('Farmer Profiles / Crop Scans / Treatments', (group) => {
     } catch {}
   })
 
-  test('should get crop scan treatments: {$self}')
+  test('should get crop scans for a farmer: {$self}')
     .with([
       'main_assertion',
       //   'not_logged_in',
@@ -61,23 +60,13 @@ test.group('Farmer Profiles / Crop Scans / Treatments', (group) => {
 
       const tokenValue = token.value!.release()
 
-      const cropScan = await CropScan.create({
-        crop: 'Maize',
-        disease: 'Eyespot',
-        category: 'Fungicide',
-        active_ingredient: 'Azoxystrobin',
-        search_term: 'Maize small yellow leaf spots',
-        instructions:
-          'Apply a recommended fungicide containing active ingredients like Azoxystrobin to control the spread of the disease.',
-      })
-
       const response = await client
-        .get(route('api.v1.farmer_profiles.crop_scans.treatments', [farmer.id, cropScan.id]))
+        .get(route('api.v1.farmer_profiles.crop_scans', [farmer.id]))
         .bearerToken(tokenValue)
 
       response.assertStatus(200)
     })
-    .tags(['farmer_profiles', 'crop_scans', 'treatments'])
-    // .pin()
+    .tags(['crop_scans', 'list_crop_scans'])
+  // .pin()
   // .timeout(30000)
 })
