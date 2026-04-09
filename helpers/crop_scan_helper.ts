@@ -2,16 +2,15 @@ import CropScan from '#models/crop_scan'
 import { AIDiagnosis } from '#services/ai_service'
 import db from '@adonisjs/lucid/services/db'
 
-export async function getTreatmentResults(aiDiagnosis: AIDiagnosis | CropScan) {
+export async function getCropTreatmentResults(aiDiagnosis: AIDiagnosis | CropScan) {
   const vectorSearch = `to_tsvector('english', p.name || ' ' || COALESCE(p.description, '') || ' ' || p.target_problems)`
   const querySearch = `websearch_to_tsquery('english', :searchTerm)`
-  // plainto_tsquery
   // prefer websearch_to_tsquery to plainto_tsquery
 
   /**
    * @todo Improve rank to factor in location proximity
    */
-  const result = await db.rawQuery(
+  const result = await db.rawQuery<{ rows: cropTreatmentResult[] } | undefined>(
     `
       SELECT
         p.id,
@@ -63,4 +62,30 @@ export async function getTreatmentResults(aiDiagnosis: AIDiagnosis | CropScan) {
   )
 
   return result
+}
+
+export type cropTreatmentResult = {
+  id: string
+  name: string
+  active_ingredient: string
+  price: string
+  stock_quantity: number
+  unit: string
+  description: string
+  category: string
+  target_problems: string
+  business_name: string
+  business_address: string
+  state: string
+  bank_name: string
+  bank_account_number: string
+  bank_account_name: string
+  phone_number: string
+  rank: number
+  links: {
+    create_order: {
+      method: string
+      href: string
+    }
+  }
 }

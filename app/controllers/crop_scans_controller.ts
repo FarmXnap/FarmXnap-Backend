@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import CropScan from '#models/crop_scan'
-import { getTreatmentResults } from '../../helpers/crop_scan_helper.js'
+import { getCropTreatmentResults } from '../../helpers/crop_scan_helper.js'
+import router from '@adonisjs/core/services/router'
 
 export default class CropScansController {
   /**
@@ -14,9 +15,19 @@ export default class CropScansController {
 
     const scans = await CropScan.query()
       .where('farmer_profile_id', user.farmerProfile!.id)
+      .select(['id', 'farmer_profile_id', 'crop', 'disease', 'created_at'])
       .orderBy('created_at', 'desc')
 
-    return response.ok({ data: scans })
+    return response.ok({
+      data: scans.map((scan) => ({
+        ...scan.serialize(),
+        links: {
+          get_treatments: scan.disease
+            ? { method: 'GET', href: router.makeUrl('api.v1.crop_scans.treatments', [scan.id]) }
+            : undefined, // Healthy crops don't need treatments
+        },
+      })),
+    })
   }
 
   /**
@@ -27,12 +38,25 @@ export default class CropScansController {
   public async indexTreatments({ params, response }: HttpContext) {
     const scan = await CropScan.findOrFail(params.crop_scan_id)
 
-    if (!scan.search_term && !scan.active_ingredient) {
+    if (!scan.disease) {
       return response.ok({ data: [] }) // Healthy crops don't need treatments
     }
 
-    const result = await getTreatmentResults(scan)
+    const result = await getCropTreatmentResults(scan)
 
-    return response.ok({ data: result?.rows ?? [] })
+    return response.ok({
+      data:
+        result?.rows && result.rows.length
+          ? result.rows.map((row) => ({
+              ...row,
+              links: {
+                create_order: {
+                  method: 'POST',
+                  href: router.makeUrl('api.v1.products.orders.store', [row.id]),
+                },
+              },
+            }))
+          : [],
+    })
   }
 }

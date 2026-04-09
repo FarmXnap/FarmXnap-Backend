@@ -4,6 +4,12 @@ import User from '#models/user'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
 import CropScan from '#models/crop_scan'
+import { CropScanFactory } from '#database/factories/crop_scan_factory'
+import {
+  assertTreatmentResults,
+  createProductsForAgroDealer,
+} from '../../../helpers/test_helper.js'
+import { cropTreatmentResult } from '../../../helpers/crop_scan_helper.js'
 
 test.group('Crop Scans / List Treatments', (group) => {
   group.each.setup(async () => {
@@ -13,12 +19,8 @@ test.group('Crop Scans / List Treatments', (group) => {
   })
 
   test('should get crop scan treatment reults: {$self}')
-    .with([
-      'main_assertion',
-      //   'not_logged_in',
-      //   'not_farmer',
-    ] as const)
-    .run(async ({ client, route }) => {
+    .with(['main_assertion', 'not_logged_in', 'not_farmer'] as const)
+    .run(async ({ client, route, assert }, condition) => {
       const farmer = await FarmerProfileFactory.with('user', 1, (userQuery) => {
         userQuery.apply('isFarmer')
       }).create()
@@ -34,12 +36,25 @@ test.group('Crop Scans / List Treatments', (group) => {
         farmer.load('user'),
       ])
 
-      // Simulate login
-      const token = await User.accessTokens.create(farmer.user)
+      let tokenValue = ''
+      if (condition !== 'not_logged_in') {
+        // Simulate login
+        const token = await User.accessTokens.create(
+          condition === 'not_farmer' ? agroDealers[0].user : farmer.user
+        )
 
-      const tokenValue = token.value!.release()
+        tokenValue = token.value!.release()
+      }
 
-      const cropScan = await CropScan.create({
+      for (const dealer of agroDealers) {
+        await createProductsForAgroDealer(dealer.id)
+      }
+
+      await CropScanFactory.merge({ farmer_profile_id: farmer.id }).createMany(2)
+
+      // Create a scan with a disease that is targeted by at least one product. (A crop scan for the `maize_with_spots.jpeg` image.)
+      const targetScan = await CropScan.create({
+        farmer_profile_id: farmer.id,
         crop: 'Maize',
         disease: 'Eyespot',
         category: 'Fungicide',
@@ -50,12 +65,34 @@ test.group('Crop Scans / List Treatments', (group) => {
       })
 
       const response = await client
-        .get(route('api.v1.crop_scans.treatments', [cropScan.id]))
+        .get(route('api.v1.crop_scans.treatments', [targetScan.id]))
         .bearerToken(tokenValue)
 
+      if (condition === 'not_logged_in') {
+        response.assertStatus(401)
+
+        return response.assertBodyContains({ error: 'Unauthorized access' })
+      }
+
+      if (condition === 'not_farmer') {
+        response.assertStatus(403)
+
+        return response.assertBodyContains({
+          error: 'You do not have permission to access this resource.',
+        })
+      }
+
       response.assertStatus(200)
+
+      const treatments: cropTreatmentResult[] = response.body().data
+
+      // Assert treatment results
+      await assertTreatmentResults({
+        verifiedDealer: agroDealers[1],
+        unVerifiedDealer: agroDealers[0],
+        assert,
+        treatments,
+      })
     })
     .tags(['crop_scans', 'list_treatments'])
-  // .pin()
-  // .timeout(30000)
 })

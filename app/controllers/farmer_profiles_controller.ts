@@ -9,8 +9,7 @@ import { rules } from '#services/validator_rules'
 import router from '@adonisjs/core/services/router'
 import CropScan from '#models/crop_scan'
 import { ProductCategory } from '#models/product'
-import { ModelObject } from '@adonisjs/lucid/types/model'
-import { getTreatmentResults } from '../../helpers/crop_scan_helper.js'
+import { getCropTreatmentResults } from '../../helpers/crop_scan_helper.js'
 
 export default class FarmerProfilesController {
   /**
@@ -206,14 +205,16 @@ export default class FarmerProfilesController {
 
     await user.load('farmerProfile')
 
+    const isHealthy = aiResult.disease === 'HEALTHY'
+
     await CropScan.create({
       farmer_profile_id: user.farmerProfile!.id,
       crop: aiResult.crop,
-      disease: aiResult.disease === 'HEALTHY' ? null : aiResult.disease,
+      disease: isHealthy ? null : aiResult.disease,
       instructions: aiResult.instructions,
-      search_term: aiResult.search_term,
-      active_ingredient: aiResult.active_ingredient,
-      category: aiResult.category as ProductCategory,
+      search_term: isHealthy ? null : aiResult.search_term,
+      active_ingredient: isHealthy ? null : aiResult.active_ingredient,
+      category: isHealthy ? null : (aiResult.category as ProductCategory),
     })
 
     if (aiResult.disease === 'HEALTHY') {
@@ -227,7 +228,7 @@ export default class FarmerProfilesController {
       })
     }
 
-    const result = await getTreatmentResults(aiResult)
+    const result = await getCropTreatmentResults(aiResult)
 
     return response.ok({
       data: {
@@ -238,7 +239,7 @@ export default class FarmerProfilesController {
         },
         treatments:
           result?.rows && result.rows.length
-            ? result.rows.map((row: ModelObject /** todo: provide type */) => ({
+            ? result.rows.map((row) => ({
                 ...row,
                 links: {
                   create_order: {

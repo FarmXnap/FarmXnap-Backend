@@ -3,7 +3,6 @@ import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
-import { ProductFactory } from '#database/factories/product_factory'
 import app from '@adonisjs/core/services/app'
 import { ModelObject } from '@adonisjs/lucid/types/model'
 import sinon from 'sinon'
@@ -14,6 +13,12 @@ import AiService, {
 } from '#services/ai_service'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
+import { cropTreatmentResult } from '../../../helpers/crop_scan_helper.js'
+import CropScan from '#models/crop_scan'
+import {
+  assertTreatmentResults,
+  createProductsForAgroDealer,
+} from '../../../helpers/test_helper.js'
 
 const heavyFilePath = app.makePath('tmp', 'tests', 'too_large.jpg')
 
@@ -76,43 +81,7 @@ test.group('Farmer Profiles / Diagnose', (group) => {
       await agroDealers[1].merge({ is_verified: true }).save()
 
       for (const dealer of agroDealers) {
-        await ProductFactory.merge({
-          agro_dealer_profile_id: dealer.id,
-          category: 'Fertilizer',
-          name: 'Muriate of Potash',
-          active_ingredient: 'Potassium',
-          description:
-            'Muriate of Potash (MOP) is a high-potassium fertilizer, typically containing 60% potash, used to strengthen plant roots, improve water retention, and increase fruit size and sweetness in crops like yam, cassava, and cocoa.',
-          target_problems: 'Boosts root strength and fruit yield.',
-        }).create()
-
-        await ProductFactory.merge({
-          agro_dealer_profile_id: dealer.id,
-          name: 'Mancozeb 80WP',
-          active_ingredient: 'Mancozeb 80WP',
-          category: 'Fungicide',
-          description: 'A protective wettable powder for maize and other cereal crops...',
-          target_problems: 'Maize leaf spot, blight, and rust',
-        }).create()
-
-        await ProductFactory.merge({
-          agro_dealer_profile_id: dealer.id,
-          name: 'Copper Oxychloride 50WP',
-          active_ingredient: 'Copper Oxychloride',
-          description:
-            'An inorganic copper-based powder that stays on the leaf surface to kill fungal and bacterial cells upon contact.',
-          category: 'Fungicide',
-          target_problems: 'Maize bacterial spots, black pod disease, and downy mildew.',
-        }).create()
-
-        await ProductFactory.merge({
-          agro_dealer_profile_id: dealer.id,
-          name: 'Azoxystrobin',
-          active_ingredient: 'Azoxystrobin',
-          category: 'Fungicide',
-          description: 'Systemic protection for maize leaves against aggressive fungal infections.',
-          target_problems: 'Maize eyespot, rust, rice blast, and powdery mildew.',
-        }).create()
+        await createProductsForAgroDealer(dealer.id)
       }
 
       await Promise.all([
@@ -185,22 +154,40 @@ test.group('Farmer Profiles / Diagnose', (group) => {
         return response.assertBodyContains({ errors: [`Image is required.`] })
       }
 
+      const cropsScans = await CropScan.query()
+
       if (condition === 'image_is_not_crop') {
         response.assertStatus(400)
+
+        assert.isEmpty(cropsScans)
 
         return response.assertBodyContains({ error: mockAiResponseNonCrop.instructions })
       }
 
       response.assertStatus(200)
 
+      // Assert that a crop scan record is created
+      assert.lengthOf(cropsScans, 1)
+
       if (condition === 'image_is_healthy_crop') {
-        return response.assertBodyContains({
+        response.assertBodyContains({
           data: {
             diagnosis: {
               instructions: mockAiResponseHealthyCrop.instructions,
               crop: mockAiResponseHealthyCrop.crop,
             },
           },
+        })
+
+        return assert.containSubset(cropsScans[0], {
+          // For healthy crop, some fields are null
+          disease: null,
+          search_term: null,
+          active_ingredient: null,
+          category: null,
+
+          crop: mockAiResponseHealthyCrop.crop,
+          instructions: mockAiResponseHealthyCrop.instructions,
         })
       }
 
@@ -214,53 +201,25 @@ test.group('Farmer Profiles / Diagnose', (group) => {
         },
       })
 
-      const treatments: ModelObject[] = responseData.treatments
+      const treatments: cropTreatmentResult[] = responseData.treatments
 
-      // Assert likely number of responses (treatments)
-      assert.isAtLeast(treatments.length, 2)
-      assert.isAtMost(treatments.length, 3)
+      // Assert treatment results
+      await assertTreatmentResults({
+        verifiedDealer: agroDealers[1],
+        unVerifiedDealer: agroDealers[0],
+        assert,
+        treatments,
+      })
 
-      for (const data of treatments) {
-        assert.properties(data, [
-          'id',
-          'name',
-          'active_ingredient',
-          'price',
-          'stock_quantity',
-          'unit',
-          'description',
-          'category',
-          'target_problems',
-          'business_name',
-          'business_address',
-          'state',
-          'bank_name',
-          'bank_account_number',
-          'bank_account_name',
-          'phone_number',
-          'rank',
-          'links',
-        ])
-
-        // Assert that the products from the unverified dealer were not returned
-        assert.equal(data.business_name, agroDealers[1].business_name)
-        assert.notEqual(data.business_name, agroDealers[0].business_name)
-
-        // Assert that the product in "Fertilizer" category was not returned
-        assert.equal(data.category, 'Fungicide')
-        assert.notEqual(data.category, 'Fertilizer')
-
-        // Assert the links
-        assert.containSubset(data.links, {
-          create_order: {
-            method: 'POST',
-            href: `/api/v1/products/${data.id}/orders`,
-          },
-        })
-      }
-
-      // Assert that the highest match "Azoxystrobin" is returned first
-      assert.equal(treatments[0].name, 'Azoxystrobin')
+      // Assert the crop scan record
+      assert.containSubset(cropsScans[0], {
+        search_term: mockAiResponseDiseasedCrop.search_term,
+        active_ingredient: mockAiResponseDiseasedCrop.active_ingredient,
+        crop: mockAiResponseDiseasedCrop.crop,
+        disease: mockAiResponseDiseasedCrop.disease,
+        instructions: mockAiResponseDiseasedCrop.instructions,
+        category: mockAiResponseDiseasedCrop.category,
+      })
     })
     .tags(['farmer_profiles', 'diagnose'])
   // .timeout(30000)
