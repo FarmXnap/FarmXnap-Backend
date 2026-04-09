@@ -10,6 +10,7 @@ import router from '@adonisjs/core/services/router'
 import CropScan from '#models/crop_scan'
 import { ProductCategory } from '#models/product'
 import { ModelObject } from '@adonisjs/lucid/types/model'
+import { getTreatmentResults } from '../../helpers/crop_scan_helper.js'
 
 export default class FarmerProfilesController {
   /**
@@ -157,7 +158,7 @@ export default class FarmerProfilesController {
   }
 
   /**
-   * Scan a crop and get diagnosis and treatment.
+   * Scan a crop and get diagnosis and treatment results.
    *
    * `POST /api/v1/farmer_profiles/:farmer_profile_id/diagnose`
    */
@@ -226,7 +227,7 @@ export default class FarmerProfilesController {
       })
     }
 
-    const result = await this.#searchTreatment(aiResult)
+    const result = await getTreatmentResults(aiResult)
 
     return response.ok({
       data: {
@@ -249,97 +250,5 @@ export default class FarmerProfilesController {
             : [],
       },
     })
-  }
-
-  /**
-   * GET /api/v1/farmer_profiles/:farmer_profile_id/crop_scans
-   */
-  public async cropScans({ response, auth }: HttpContext) {
-    const user = auth.user!
-    await user.load('farmerProfile')
-
-    const scans = await CropScan.query()
-      .where('farmer_profile_id', user.farmerProfile!.id)
-      .orderBy('created_at', 'desc')
-
-    return response.ok({ data: scans })
-  }
-
-  /**
-   * GET /api/v1/farmer_profiles/:farmer_profile_id/crop_scans/:id/treatments
-   */
-  public async getTreatments({ params, response }: HttpContext) {
-    const scan = await CropScan.findOrFail(params.id)
-
-    if (!scan.search_term && !scan.active_ingredient) {
-      return response.ok({ data: [] }) // Healthy crops don't need treatments
-    }
-
-    const result = await this.#searchTreatment(scan)
-
-    return response.ok({ data: result?.rows ?? [] })
-  }
-
-  async #searchTreatment(aiDiagnosis: AIDiagnosis | CropScan) {
-    const vectorSearch = `to_tsvector('english', p.name || ' ' || COALESCE(p.description, '') || ' ' || p.target_problems)`
-    const querySearch = `websearch_to_tsquery('english', :searchTerm)`
-    // plainto_tsquery
-    // prefer websearch_to_tsquery to plainto_tsquery
-
-    /**
-     * @todo Improve rank to factor in location proximity
-     */
-    const result = await db.rawQuery(
-      `
-      SELECT
-        p.id,
-        p.name,
-        p.active_ingredient,
-        p.price,
-        p.stock_quantity,
-        p.unit,
-        p.description,
-        p.target_problems,
-        p.category,
-        adp.business_name,
-        adp.business_address,
-        adp.state,
-        adp.bank_name,
-        adp.bank_account_number,
-        adp.bank_account_name,
-        u.phone_number,
-        -- Ranking: full text search is weighted higher than fuzzy similarity
-        (
-          ts_rank(
-            ${vectorSearch},
-            ${querySearch}
-          ) * 2
-          + similarity(p.name, :searchTerm)
-          -- Also boost active ingredient similarity
-          + similarity(p.active_ingredient, :activeIngredient) * 3
-        ) AS rank
-      FROM products p
-        JOIN agro_dealer_profiles adp ON p.agro_dealer_profile_id = adp.id
-        JOIN users u on adp.user_id = u.id
-      WHERE adp.is_verified = true
-        AND p.category ILIKE :category
-        AND (
-          ${vectorSearch} @@ ${querySearch}
-          OR p.name % :searchTerm
-          OR p.target_problems % :searchTerm
-          OR p.active_ingredient % :activeIngredient 
-          OR p.active_ingredient ILIKE :activeIngredientWildcard
-        )
-      ORDER BY rank desc
-      `,
-      {
-        category: aiDiagnosis.category,
-        searchTerm: aiDiagnosis.search_term,
-        activeIngredient: aiDiagnosis.active_ingredient,
-        activeIngredientWildcard: `%${aiDiagnosis.active_ingredient}%`,
-      }
-    )
-
-    return result
   }
 }

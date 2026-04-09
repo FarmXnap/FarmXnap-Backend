@@ -3,34 +3,12 @@ import db from '@adonisjs/lucid/services/db'
 import User from '#models/user'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
-import app from '@adonisjs/core/services/app'
-import sinon from 'sinon'
-import fs from 'node:fs/promises'
-import crypto from 'node:crypto'
-
-const heavyFilePath = app.makePath('tmp', 'tests', 'too_large.jpg')
 
 test.group('Crop Scans / List Crop Scans', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
 
-    return async () => {
-      await db.rollbackGlobalTransaction()
-
-      sinon.restore()
-    }
-  })
-
-  group.setup(async () => {
-    const bigBuffer = crypto.randomBytes(1024 * 1024 * 11) // 11mb file
-    await fs.writeFile(heavyFilePath, bigBuffer)
-  })
-
-  group.teardown(async () => {
-    // Clean up
-    try {
-      await fs.unlink(heavyFilePath)
-    } catch {}
+    return () => db.rollbackGlobalTransaction()
   })
 
   test('should get crop scans for a farmer: {$self}')
@@ -60,9 +38,7 @@ test.group('Crop Scans / List Crop Scans', (group) => {
 
       const tokenValue = token.value!.release()
 
-      const response = await client
-        .get(route('api.v1.farmer_profiles.crop_scans', [farmer.id]))
-        .bearerToken(tokenValue)
+      const response = await client.get(route('api.v1.crop_scans.index')).bearerToken(tokenValue)
 
       response.assertStatus(200)
     })

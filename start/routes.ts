@@ -11,6 +11,10 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
 import { UserRolesEnum } from '#models/user'
 
+/**
+ * @todo: Separate route files
+ */
+
 router
   .group(() => {
     // Resourceful routes for `users`.
@@ -36,24 +40,6 @@ router
       .as('farmer_profiles.diagnose')
       .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
 
-    // Route for farmer to get crop scan history
-    router
-      .get('farmer_profiles/:farmer_profile_id/crop_scans', [
-        () => import('#controllers/farmer_profiles_controller'),
-        'cropScans',
-      ])
-      .as('farmer_profiles.crop_scans')
-      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
-
-    // Route for farmer to get treatment for a crop scan
-    router
-      .get('farmer_profiles/:farmer_profile_id/crop_scans/:id/treatments', [
-        () => import('#controllers/farmer_profiles_controller'),
-        'getTreatments',
-      ])
-      .as('farmer_profiles.crop_scans.treatments')
-      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
-
     // Resourceful routes for `agro_dealer_profiles`.
     router
       .resource(
@@ -72,6 +58,22 @@ router
       ])
       .as('users.agro_dealer_profiles.verify')
       .use(middleware.admin_auth())
+
+    // Resourceful routes for crop scans
+    router
+      .resource('crop_scans', () => import('#controllers/crop_scans_controller'))
+      .apiOnly()
+      .only(['index'])
+      .middleware('index', [middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
+
+    // Route to get treatment results for a crop scan
+    router
+      .get('crop_scans/:crop_scan_id/treatments', [
+        () => import('#controllers/crop_scans_controller'),
+        'indexTreatments',
+      ])
+      .as('crop_scans.treatments')
+      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
 
     // Login routes.
     router
