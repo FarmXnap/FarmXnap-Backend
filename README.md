@@ -3,8 +3,7 @@
 ## Base URL
 
 The base URL for all API requests is:
-
-`https://farmxnap.onrender.com/api/v1`
+`https://farmxnap.onrender.com/api/v1` [!deprecated]
 
 The endpoints are **HATEOAS-compliant** i.e relevant action links are returned in the responses.
 
@@ -811,6 +810,23 @@ Update a product by a verified agro-dealer.
 - **Authorization:** Verified `agrodealer` role
 - **Content-Type:** `application/json`
 
+**Request Body:**
+
+JSON
+
+```json
+{
+  "name": "Mancozeb 80WP",
+  "active_ingredient": "Mancozeb 80WP",
+  "price": 4500,
+  "stock_quantity": 2,
+  "description": "This product targets the following... and should be applied by...", // optional
+  "category": "Fungicide",
+  "unit": "1 kg",
+  "target_problems": "Early blight, Downy mildew" // optional
+}
+```
+
 **Success Response (200 OK):**
 
 ```json
@@ -1046,6 +1062,145 @@ If the image is not of a crop:
 
 ---
 
+### **15. Get crop scan history**
+
+- **Endpoint:** `GET /crop_scans`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` role
+- **Content-Type:** `application/json`
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "data": [
+    {
+      "id": "lcap3onpjxz47st1u857e6p1",
+      "farmer_profile_id": "lbap3onpjxz49st1u857e6p1",
+      "crop": "Maize",
+      "disease": "Eyespot",
+      "created_at": "2026-03-22T14:11:48.959+00:00",
+      "links": {
+        "get_treatments": {
+          "method": "GET",
+          "href": "/api/v1/crop_scans/hgertxs38i5v0nf2g493el7n/treatments"
+        }
+      }
+    },
+    {
+      "id": "lcap3onpjxz47st1u857e6p1",
+      "farmer_profile_id": "lbap3onpjxz49st1u857e6p1",
+      "crop": "Maize",
+      "disease": null, // Healthy crop
+      "created_at": "2026-03-22T14:11:48.959+00:00",
+      "links": {
+        /*No `get_treatments` link*/
+      }
+    }
+  ]
+}
+```
+
+NB: For a healthy crop, the `disease` field is `null` and no `get_treatments` link is returned.
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+403 (Forbidden)
+
+```json
+{
+  "error": "You do not have permission to access this resource."
+}
+```
+
+### **16. Get treatment results for a crop scan**
+
+- **Endpoint:** `GET /crop_scans/:crop_scan_id/treatments`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` role
+- **Content-Type:** `application/json`
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "data": [
+    {
+      "id": "lcap3onpjxz47st1u857e6p1",
+      "name": "Azoxystrobin",
+      "active_ingredient": "Azoxystrobin",
+      "price": "75190.60",
+      "stock_quantity": 24,
+      "unit": "1kg",
+      "description": "Systemic protection for maize leaves against aggressive fungal infections.",
+      "target_problems": "Maize eyespot, rust, rice blast, and powdery mildew.",
+      "category": "Fungicide",
+      "business_name": "Bailey - Schmidt",
+      "business_address": "3098 Newton Road",
+      "state": "Lagos",
+      "bank_name": "Stokes Group",
+      "bank_account_number": "5239701059",
+      "bank_account_name": "Bailey - Schmidt", // Ideally, verified agro-dealers will have verified bank accounts.
+      "phone_number": "28653272469",
+      "rank": 3,
+      "links": {
+        "create_order": {
+          "method": "POST",
+          "href": "/api/v1/products/lcap3onpjxz47st1u857e6p1/orders"
+        }
+      }
+    },
+    {
+      "id": "lbap3onpjxz49st1u857e6p1",
+      "name": "Mancozeb 80WP",
+      "active_ingredient": "Mancozeb 80WP",
+      "price": "74574.84",
+      "stock_quantity": 50,
+      "unit": "1kg",
+      "description": "A protective wettable powder for maize and other cereal crops...",
+      "target_problems": "Maize leaf spot, blight, and rust",
+      "category": "Fungicide",
+      "business_name": "Bailey - Schmidt",
+      "business_address": "3098 Newton Road",
+      "state": "Lagos",
+      "bank_name": "Stokes Group",
+      "bank_account_number": "5239701059",
+      "bank_account_name": "Bailey - Schmidt",
+      "phone_number": "28653272469",
+      "rank": 0.8121841996908188,
+      "links": {
+        "create_order": {
+          "method": "POST",
+          "href": "/api/v1/products/lbap3onpjxz49st1u857e6p1/orders"
+        }
+      }
+    }
+  ]
+}
+```
+
+### **Frontend Implementation Note**
+
+> The same structure for the `treatments` array returned in the diagnose endpoint (`POST /farmer_profiles/:farmer_profile_id/diagnose`) is returned in `data` for this endpoint. Client should also use the `rank` field for UI/UX labelling as mentioned earlier.
+
+> If the crop scan was for a healthy crop, a success response is still returned with an empty data array. This should be unnecessary if the client complies with the server's HATEOAS standard, because the `get_treatments` link is not returned for healthy crop.
+
+```json
+{
+  "data": []
+}
+```
+
+---
+
 ## **Admin Endpoints**
 
 ### **Frontend Implementation Note**
@@ -1163,4 +1318,4 @@ This endpoint is idempotent. If the dealer is already verified, it will return s
 }
 ```
 
-# todo: Update docs with order creation, payment callback and redirect, crop scans, treatments search
+# todo: Update docs with order creation, payment callback and redirect
