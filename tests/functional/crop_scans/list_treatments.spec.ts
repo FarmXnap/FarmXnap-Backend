@@ -19,8 +19,10 @@ test.group('Crop Scans / List Treatments', (group) => {
   })
 
   test('should get crop scan treatment reults: {$self}')
-    .with(['main_assertion', 'not_logged_in', 'not_farmer'] as const)
+    .with(['main_assertion', 'not_logged_in', 'not_farmer', 'healthy_crop_scan'] as const)
     .run(async ({ client, route, assert }, condition) => {
+      const isHealthy = condition === 'healthy_crop_scan'
+
       const farmer = await FarmerProfileFactory.with('user', 1, (userQuery) => {
         userQuery.apply('isFarmer')
       }).create()
@@ -50,7 +52,11 @@ test.group('Crop Scans / List Treatments', (group) => {
         await createProductsForAgroDealer(dealer.id)
       }
 
-      await CropScanFactory.merge({ farmer_profile_id: farmer.id }).createMany(2)
+      const cropScanFactory = CropScanFactory
+      if (isHealthy) {
+        cropScanFactory.apply('isHealthy')
+      }
+      const cropScans = await cropScanFactory.merge({ farmer_profile_id: farmer.id }).createMany(2)
 
       // Create a scan with a disease that is targeted by at least one product. (A crop scan for the `maize_with_spots.jpeg` image.)
       const targetScan = await CropScan.create({
@@ -65,7 +71,7 @@ test.group('Crop Scans / List Treatments', (group) => {
       })
 
       const response = await client
-        .get(route('api.v1.crop_scans.treatments', [targetScan.id]))
+        .get(route('api.v1.crop_scans.treatments', [isHealthy ? cropScans[0].id : targetScan.id]))
         .bearerToken(tokenValue)
 
       if (condition === 'not_logged_in') {
@@ -85,6 +91,10 @@ test.group('Crop Scans / List Treatments', (group) => {
       response.assertStatus(200)
 
       const treatments: cropTreatmentResult[] = response.body().data
+
+      if (isHealthy) {
+        return assert.isEmpty(treatments)
+      }
 
       // Assert treatment results
       await assertTreatmentResults({
