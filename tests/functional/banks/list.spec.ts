@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import { BANK_DATA } from '#database/seeds/bank_data'
 import nock from 'nock'
+import { paystackBaseUrl } from '../../../helpers/utils.js'
 
 test.group('Banks / List', (group) => {
   group.each.setup(async () => {
@@ -12,7 +13,7 @@ test.group('Banks / List', (group) => {
   test('should list banks')
     .run(async ({ client, route }) => {
       // Set up nock
-      nock('https://api.paystack.co').get('/bank?country=nigeria').reply(200, {
+      nock(paystackBaseUrl).get('/bank?country=nigeria').reply(200, {
         status: true,
         message: 'Banks retrieved',
         data: BANK_DATA,

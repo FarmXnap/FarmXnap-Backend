@@ -6,8 +6,8 @@ import db from '@adonisjs/lucid/services/db'
 import AgroDealerProfile from '#models/agro_dealer_profile'
 import { rules } from '#services/validator_rules'
 import router from '@adonisjs/core/services/router'
-import BanksController from './banks_controller.js'
-import { BANK_DATA } from '#database/seeds/bank_data'
+import BankService from '#services/bank_service'
+import logger from '@adonisjs/core/services/logger'
 
 export default class AgroDealerProfilesController {
   /**
@@ -81,13 +81,38 @@ export default class AgroDealerProfilesController {
       return response.badRequest({ error: 'OTP is incorrect.' })
     }
 
-    /// Attempt Interswitch Verification.
-    // Live keys not available so handle gracefully.
-    const verification = await BanksController.verify(bankCode, bankAccountNumber)
+    // Verify bank account number
+    const verification = await BankService.verifyBankAccount(bankCode, bankAccountNumber)
 
-    // Get Bank Name from local data as a fallback if InterSwitch didn't return it
-    const localBank = BANK_DATA.find((b) => b.code === bankCode)
-    const finalBankName = verification?.bankName || localBank?.name || 'UNKNOWN BANK'
+    if (typeof verification === 'string') {
+      return response.badGateway({ error: verification })
+    }
+
+    if (typeof verification === 'object' && 'errorCode' in verification) {
+      if (verification.errorCode === 422) {
+        return response.unprocessableEntity({ errors: [verification.message] })
+      }
+      return response.internalServerError({ error: verification.message })
+    }
+
+    const banks = await BankService.getBanks()
+    const bankName = banks.find((b) => b.code === bankCode)?.name
+
+    if (!bankName) {
+      // At this stage, it is unlikely that the bankName is not resolved
+      const errorMessage = '[AgroDealerProfilesController.store] Unable to resolve bank name.'
+      logger.error(
+        {
+          bankCode,
+          bankAccountNumber,
+          userId: user.id,
+          businessName,
+        },
+        errorMessage
+      )
+
+      throw new Error(errorMessage)
+    }
 
     await db.transaction(async (trx) => {
       await user
@@ -98,9 +123,9 @@ export default class AgroDealerProfilesController {
       await user.related('agroDealerProfile').create(
         {
           bank_code: bankCode,
-          bank_name: finalBankName,
-          bank_account_number: bankAccountNumber,
-          bank_account_name: verification?.accountName || null,
+          bank_name: bankName,
+          bank_account_number: verification.account_number,
+          bank_account_name: verification.account_name,
           business_address: businessAddress,
           business_name: businessName,
           cac_registration_number: cacRegNumber,
