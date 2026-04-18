@@ -180,7 +180,11 @@ JSON
 
 Create a new agro-dealer profile account. The OTP is verified here.
 
-NB: The client is expected to have called the "List Banks" endpoint to populate the bank selection options for the user. The endpoint returns "name", "code" etc.
+### **Frontend Implementation Note**
+
+> The client is expected to have called the "List Banks" endpoint to populate the bank selection options for the user. The endpoint returns "name", "code" etc.
+
+> For better UX, the client should also call the "Verify Bank Account" endpoint as soon as the user inputs their account number, and display the verified account name returned for the user.
 
 - **Endpoint:** `POST /users/:user_id/agro_dealer_profiles`
 - **Auth Required:** No
@@ -199,7 +203,7 @@ JSON
   "state": "My State",
   "lga": "lga",
   "cac_registration_number": "RC-123456",
-  "bank_code": "011", // Supply the code that corresponds to the name the user selects.
+  "bank_code": "011", // Supply the code that corresponds to the bank name the user selects.
   "bank_account_number": "3083813866"
 }
 ```
@@ -302,7 +306,70 @@ JSON
 }
 ```
 
-### **5 Login Request**
+### **5. Verify Bank Account**
+
+Verify a bank account number
+
+- **Endpoint:** `POST /banks/verify`
+- **Auth Required:** No
+- **Content-Type:** `application/json`
+
+**Request Body:**
+
+JSON
+
+```json
+{
+  "bank_code": "011", // Supply the code that corresponds to the bank name the user selects.
+  "bank_account_number": "3083813866"
+}
+```
+
+**Success Response (200 OK):**
+
+JSON
+
+```json
+{
+  "data": {
+    "account_name": "OKEKE DEBORAH UCHECHUKWU",
+    "account_number": "3083813866"
+  }
+}
+```
+
+**Error Responses**
+
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": [
+    "Bank Code is required.",
+    "Bank Account Number is required.",
+    "Bank Account Number must be 10 digits.",
+    "Bank Account Verification failed. Ensure the account number and bank are correct."
+  ]
+}
+```
+
+500 (Internal Server Error)
+
+```json
+{
+  "error": "We could not verify your bank account. Please try again later."
+}
+```
+
+502 (Bad Gateway)
+
+```json
+{
+  "error": "We could not verify your bank account. Please try again later."
+}
+```
+
+### **6 Login Request**
 
 Request an OTP for an existing user to log back in.
 
@@ -357,7 +424,7 @@ JSON
 }
 ```
 
-### **6. Login Verify**
+### **7. Login Verify**
 
 Verify the OTP and receive a fresh session token.
 
@@ -412,7 +479,7 @@ JSON
 }
 ```
 
-### **7. Logout**
+### **8. Logout**
 
 Invalidate the current session token.
 
@@ -447,7 +514,7 @@ JSON
 
 ---
 
-### **8. Show a Farmer Profile**
+### **9. Show a Farmer Profile**
 
 Show a farmer profile.
 
@@ -505,7 +572,7 @@ Show a farmer profile.
 }
 ```
 
-### **9. Show an AgroDealer Profile**
+### **10. Show an AgroDealer Profile**
 
 Show an agro-dealer profile.
 
@@ -569,7 +636,7 @@ Show an agro-dealer profile.
 
 ---
 
-### **10. List Products by A Verified Agro-dealer**
+### **11. List Products by A Verified Agro-dealer**
 
 Fetch a list of products by a verified agro-dealer.
 
@@ -636,7 +703,7 @@ Fetch a list of products by a verified agro-dealer.
 }
 ```
 
-### **11. Create a Product by A Verified Agro-dealer**
+### **12. Create a Product by A Verified Agro-dealer**
 
 Create a product.
 
@@ -732,7 +799,7 @@ JSON
 }
 ```
 
-### **12. Show Product by A Verified Agro-dealer**
+### **13. Show Product by A Verified Agro-dealer**
 
 Show a product by a verified agro-dealer.
 
@@ -801,7 +868,7 @@ Show a product by a verified agro-dealer.
 }
 ```
 
-### **13. Update Product by A Verified Agro-dealer**
+### **14. Update Product by A Verified Agro-dealer**
 
 Update a product by a verified agro-dealer.
 
@@ -911,7 +978,7 @@ JSON
 
 ---
 
-### **14. Scan an image and get diagnosis and treatment results**
+### **15. Scan an image and get diagnosis and treatment results**
 
 - **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
 - **Auth Required:** Yes
@@ -950,7 +1017,7 @@ JSON
         "state": "Lagos",
         "bank_name": "Stokes Group",
         "bank_account_number": "5239701059",
-        "bank_account_name": "Bailey - Schmidt", // Ideally, verified agro-dealers will have verified bank accounts.
+        "bank_account_name": "Bailey - Schmidt",
         "phone_number": "28653272469",
         "rank": 3,
         "links": {
@@ -1062,7 +1129,7 @@ If the image is not of a crop:
 
 ---
 
-### **15. Get crop scan history**
+### **16. Get crop scan history**
 
 - **Endpoint:** `GET /crop_scans`
 - **Auth Required:** Yes
@@ -1121,7 +1188,7 @@ NB: For a healthy crop, the `disease` field is `null` and no `get_treatments` li
 }
 ```
 
-### **16. Get treatment results for a crop scan**
+### **17. Get treatment results for a crop scan**
 
 - **Endpoint:** `GET /crop_scans/:crop_scan_id/treatments`
 - **Auth Required:** Yes
@@ -1148,7 +1215,7 @@ NB: For a healthy crop, the `disease` field is `null` and no `get_treatments` li
       "state": "Lagos",
       "bank_name": "Stokes Group",
       "bank_account_number": "5239701059",
-      "bank_account_name": "Bailey - Schmidt", // Ideally, verified agro-dealers will have verified bank accounts.
+      "bank_account_name": "Bailey - Schmidt",
       "phone_number": "28653272469",
       "rank": 3,
       "links": {
