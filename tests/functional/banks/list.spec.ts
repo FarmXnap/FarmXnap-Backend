@@ -1,11 +1,27 @@
 import { test } from '@japa/runner'
 import { BANK_DATA } from '#database/seeds/bank_data'
+import nock from 'nock'
+import { paystackBaseUrl } from '../../../helpers/utils.js'
 
-test.group('Banks / List', () => {
-  // No database call
+test.group('Banks / List', (group) => {
+  group.each.setup(async () => {
+    // No database call
+
+    return nock.cleanAll()
+  })
 
   test('should list banks')
     .run(async ({ client, route }) => {
+      // Set up nock
+      nock(paystackBaseUrl).get('/bank?country=nigeria').reply(200, {
+        status: true,
+        message: 'Banks retrieved',
+        data: BANK_DATA,
+      })
+
+      // Enabling this will disable the interception and make a real request
+      // nock.recorder.rec()
+
       const response = await client.get(route('api.v1.banks.index'))
 
       response.assertStatus(200)

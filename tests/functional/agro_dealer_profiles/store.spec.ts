@@ -5,12 +5,17 @@ import User, { UserRolesEnum } from '#models/user'
 import OTP from '#models/otp'
 import { cuid } from '@adonisjs/core/helpers'
 import { BANK_DATA } from '#database/seeds/bank_data'
+import sinon from 'sinon'
+import BankService from '#services/bank_service'
 
 test.group('AgroDealer Profiles / Store', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
 
-    return () => db.rollbackGlobalTransaction()
+    return async () => {
+      sinon.restore()
+      await db.rollbackGlobalTransaction()
+    }
   })
 
   test('should create an agro-dealer profile: {$self}')
@@ -51,6 +56,16 @@ test.group('AgroDealer Profiles / Store', (group) => {
             ? '12345678901'
             : faker.lorem.word({ length: { min: 10, max: 10 } }),
         transaction_pin: condition === 'transaction_pin_not_appropriate_length' ? '123' : '1234',
+      }
+
+      const accountName = faker.person.fullName()
+
+      if (condition === 'main_assertion') {
+        sinon.stub(BankService, 'verifyBankAccount').resolves({
+          account_number: payload.bank_account_number,
+          account_name: accountName,
+          bank_id: bank.id,
+        })
       }
 
       const response = await client
@@ -126,7 +141,7 @@ test.group('AgroDealer Profiles / Store', (group) => {
         bank_account_number: payload.bank_account_number,
         bank_code: payload.bank_code,
         bank_name: bank.name,
-        bank_account_name: null,
+        bank_account_name: accountName,
         cac_registration_number: payload.cac_registration_number,
         state: payload.state,
         user_id: user!.id,
@@ -134,5 +149,4 @@ test.group('AgroDealer Profiles / Store', (group) => {
       })
     })
     .tags(['agro_dealers', 'create_agro_dealer'])
-    .timeout(30000)
 })

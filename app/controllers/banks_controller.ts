@@ -1,118 +1,61 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import env from '#start/env'
-import { BANK_DATA, BankData, BankVerificationData } from '#database/seeds/bank_data'
-import { interswitchBankListAndVerificationBaseUrl } from '../../helpers/utils.js'
-import logger from '@adonisjs/core/services/logger'
+import BankService from '#services/bank_service'
+import { rules } from '#services/validator_rules'
+import { schema } from '@adonisjs/validator'
 
 export default class BanksController {
   /**
    * List banks.
    *
    * `GET /api/v1/banks`
-   *
-   * Provide fallback data in case of InterSwtich API failure:
-   * - No live keys currently available
    */
   public async index({ response }: HttpContext) {
-    let bankListResponse: Response | null = null
-
-    try {
-      bankListResponse = await fetch(
-        `${interswitchBankListAndVerificationBaseUrl}/marketplace-routing/api/v1/verify/identity/account-number/bank-list`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.get('INTERSWITCH_TOKEN')}`,
-          },
-          signal: AbortSignal.timeout(5000), // Don't let a hanging Interswitch server block the app
-        }
-      )
-
-      const contentType = bankListResponse.headers.get('content-type')
-
-      if (bankListResponse.ok && contentType?.includes('application/json')) {
-        const banksList = (await bankListResponse?.json()) as {
-          code?: string
-          message?: string
-          data?: BankData
-        }
-
-        if (banksList?.code === '200' && Array.isArray(banksList?.data) && banksList.data.length) {
-          logger.info('InterSwitch Bank List successful.')
-
-          return response.ok({ data: banksList.data })
-        }
-      } else {
-        logger.warn(
-          {
-            status: bankListResponse?.status,
-            statusText: bankListResponse?.statusText,
-          },
-          'InterSwitch Bank List unsuccessful. Falling back to local data.'
-        )
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        logger.warn('Interswitch Bank List timed out. Falling back to local data.')
-      } else {
-        logger.error({ error }, 'Interswitch Bank List failed. Falling back to local data.')
-      }
-    }
-
-    return response.ok({ data: BANK_DATA })
+    return response.ok({ data: await BankService.getBanks() })
   }
 
   /**
-   * Verify a bank account with InterSwitch
+   * Verify bank account.
+   *
+   * `POST /api/v1/banks/verify`
    */
-  static async verify(bankCode: string, bankAccountNumber: string) {
-    let response: Response | null = null
+  public async verify({ request, response }: HttpContext) {
+    const stringRules = [rules.trim(), rules.stripTags()]
 
-    try {
-      response = await fetch(
-        `${interswitchBankListAndVerificationBaseUrl}/marketplace-routing/api/v1/verify/identity/account-number/resolve`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.get('INTERSWITCH_TOKEN')}`,
-          },
-          body: JSON.stringify({ accountNumber: bankAccountNumber, bankCode }),
-          signal: AbortSignal.timeout(7000), // Verification can be slightly slower than listing
-        }
-      )
+    const { bank_code: bankCode, bank_account_number: bankAccountNumber } = await request.validate({
+      schema: schema.create({
+        bank_code: schema.string(stringRules),
+        bank_account_number: schema.string([
+          ...stringRules,
+          rules.minLength(10),
+          rules.maxLength(10),
+        ]),
+      }),
+      messages: {
+        'bank_code.required': 'Bank Code is required.',
+        'bank_account_number.required': 'Bank Account Number is required.',
+        'bank_account_number.minLength': 'Bank Account Number must be 10 digits.',
+        'bank_account_number.maxLength': 'Bank Account Number must be 10 digits.',
+      },
+    })
 
-      const contentType = response.headers.get('content-type')
+    const verification = await BankService.verifyBankAccount(bankCode, bankAccountNumber)
 
-      if (response.ok && contentType?.includes('application/json')) {
-        const result = (await response.json()) as BankVerificationData
-
-        if (result?.success && result?.data?.bankDetails?.accountName) {
-          logger.info('InterSwitch Bank Verification successful.')
-
-          return {
-            accountName: result.data.bankDetails.accountName,
-            bankName: result.data.bankDetails.bankName,
-          }
-        }
-      } else {
-        logger.warn(
-          {
-            status: response?.status,
-            statusText: response?.statusText,
-          },
-          'InterSwitch Bank Verification unsuccessful.'
-        )
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        logger.warn('Interswitch Bank Verification timed out.')
-      } else {
-        logger.error({ error }, 'Interswitch Bank Verification failed.')
-      }
+    if (typeof verification === 'string') {
+      return response.badGateway({ error: verification })
     }
 
-    return null // Return null if anything goes wrong
+    if (typeof verification === 'object' && 'errorCode' in verification) {
+      if (verification.errorCode === 422) {
+        return response.unprocessableEntity({ errors: [verification.message] })
+      }
+      return response.internalServerError({ error: verification.message })
+    }
+
+    return response.ok({
+      data: {
+        account_name: verification.account_name,
+        account_number: verification.account_number,
+      },
+    })
   }
 }
