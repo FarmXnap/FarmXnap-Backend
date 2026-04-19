@@ -7,128 +7,13 @@
 |
 */
 
-import router from '@adonisjs/core/services/router'
-import { middleware } from './kernel.js'
-import { UserRolesEnum } from '#models/user'
-
-/**
- * @todo: Separate route files
- */
-
-router
-  .group(() => {
-    // Resourceful routes for `users`.
-    router
-      .resource('users', () => import('#controllers/users_controller'))
-      .apiOnly()
-      .only(['store', 'index'])
-      .middleware('index', middleware.admin_auth())
-
-    // Resourceful routes for `farmer_profiles`.
-    router
-      .resource('users.farmer_profiles', () => import('#controllers/farmer_profiles_controller'))
-      .apiOnly()
-      .only(['store', 'show'])
-      .middleware('show', [middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
-
-    // Route for farmer to scan a crop and get treatment results.
-    router
-      .post('farmer_profiles/:farmer_profile_id/diagnose', [
-        () => import('#controllers/farmer_profiles_controller'),
-        'diagnose',
-      ])
-      .as('farmer_profiles.diagnose')
-      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
-
-    // Resourceful routes for `agro_dealer_profiles`.
-    router
-      .resource(
-        'users.agro_dealer_profiles',
-        () => import('#controllers/agro_dealer_profiles_controller')
-      )
-      .apiOnly()
-      .only(['store', 'show'])
-      .middleware('show', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
-
-    // Route for admin to verify an agro-dealer
-    router
-      .patch('users/:user_id/agro_dealer_profiles/:id/verify', [
-        () => import('#controllers/agro_dealer_profiles_controller'),
-        'verify',
-      ])
-      .as('users.agro_dealer_profiles.verify')
-      .use(middleware.admin_auth())
-
-    // Resourceful routes for crop scans
-    router
-      .resource('crop_scans', () => import('#controllers/crop_scans_controller'))
-      .apiOnly()
-      .only(['index'])
-      .middleware('index', [middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
-
-    // Route to get treatment results for a crop scan
-    router
-      .get('crop_scans/:crop_scan_id/treatments', [
-        () => import('#controllers/crop_scans_controller'),
-        'indexTreatments',
-      ])
-      .as('crop_scans.treatments')
-      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
-
-    // Login routes.
-    router
-      .post('auth/login_request', [() => import('#controllers/auth_controller'), 'loginRequest'])
-      .as('login_request')
-
-    router
-      .post('auth/login_verify', [() => import('#controllers/auth_controller'), 'loginVerify'])
-      .as('login_verify')
-
-    // Logout route.
-    router
-      .post('auth/logout', [() => import('#controllers/auth_controller'), 'logout'])
-      .as('logout')
-      .use(middleware.auth())
-
-    // Product routes
-    router
-      .resource('products', () => import('#controllers/products_controller'))
-      .apiOnly()
-      .only(['store', 'index', 'show', 'update'])
-      .middleware('index', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
-      .middleware('store', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
-      .middleware('show', [middleware.auth(), middleware.role({ role: UserRolesEnum.AgroDealer })])
-      .middleware('update', [
-        middleware.auth(),
-        middleware.role({ role: UserRolesEnum.AgroDealer }),
-      ])
-
-    // Order routes
-    router
-      .resource('products.orders', () => import('#controllers/orders_controller'))
-      .apiOnly()
-      .only(['store', 'index'])
-      .middleware('store', [middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
-
-    // Callback to redirect to after payment
-    router
-      .post('payments/callback', [() => import('#controllers/payments_controller'), 'callback'])
-      .as('payments.callback')
-
-    // Webhook
-    router
-      .post('webhooks/interswitch', [
-        () => import('#controllers/webhooks_controller'),
-        'interswitch',
-      ])
-      .as('webhooks.interswitch')
-
-    // Route for admin to list banks
-    router.get('banks', [() => import('#controllers/banks_controller'), 'index']).as('banks.index')
-    // Route for admin to verify bank account
-    router
-      .post('banks/verify', [() => import('#controllers/banks_controller'), 'verify'])
-      .as('banks.verify')
-  })
-  .prefix('api/v1')
-  .as('api.v1')
+import('./routes/api/v1/user_routes.js')
+import('./routes/api/v1/agro_dealer_profile_routes.js')
+import('./routes/api/v1/farmer_profile_routes.js')
+import('./routes/api/v1/authentication_routes.js')
+import('./routes/api/v1/bank_routes.js')
+import('./routes/api/v1/crop_scan_routes.js')
+import('./routes/api/v1/product_routes.js')
+import('./routes/api/v1/order_routes.js')
+import('./routes/api/v1/payment_routes.js')
+import('./routes/api/v1/webhook_routes.js')
