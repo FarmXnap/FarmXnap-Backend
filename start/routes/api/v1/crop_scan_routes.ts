@@ -9,7 +9,6 @@ router
       .resource('crop_scans', () => import('#controllers/crop_scans_controller'))
       .apiOnly()
       .only(['index'])
-      .middleware('index', [middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
 
     // Route to get treatment results for a crop scan
     router
@@ -18,7 +17,7 @@ router
         'indexTreatments',
       ])
       .as('crop_scans.treatments')
-      .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
   })
   .prefix('api/v1')
   .as('api.v1')
+  .use([middleware.auth(), middleware.role({ role: UserRolesEnum.Farmer })])
