@@ -42,7 +42,6 @@
     "@japa/plugin-adonisjs": "^4.0.0",
     "@japa/runner": "^4.2.0",
     "@swc/core": "1.11.24",
-    "@types/adm-zip": "^0.5.7",
     "@types/luxon": "^3.7.1",
     "@types/node": "^22.15.18",
     "@types/sinon": "^21.0.0",
@@ -68,8 +67,6 @@
     "@aws-sdk/s3-request-presigner": "^3.981.0",
     "@google/generative-ai": "^0.24.1",
     "@vinejs/vine": "^3.0.1",
-    "adm-zip": "^0.5.16",
-    "file-type": "^21.3.0",
     "luxon": "^3.7.2",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2"
