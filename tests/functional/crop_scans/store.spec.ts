@@ -22,7 +22,7 @@ import {
 
 const heavyFilePath = app.makePath('tmp', 'tests', 'too_large.jpg')
 
-test.group('Farmer Profiles / Diagnose', (group) => {
+test.group('Crop Scans / Store', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
 
@@ -100,7 +100,7 @@ test.group('Farmer Profiles / Diagnose', (group) => {
       }
 
       const response = await client
-        .post(route('api.v1.farmer_profiles.diagnose', [farmer.id]))
+        .post(route('api.v1.crop_scans.store'))
         .file(
           condition === 'image_not_provided' ? '' : 'image',
           condition === 'image_size_exceeded'
@@ -221,6 +221,6 @@ test.group('Farmer Profiles / Diagnose', (group) => {
         category: mockAiResponseDiseasedCrop.category,
       })
     })
-    .tags(['farmer_profiles', 'diagnose'])
+    .tags(['crop_scans', 'create_crop_scan', 'diagnose'])
   // .timeout(30000)
 })

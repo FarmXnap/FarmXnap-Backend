@@ -980,7 +980,7 @@ JSON
 
 ### **15. Scan an image and get diagnosis and treatment results**
 
-- **Endpoint:** `POST /farmer_profiles/:farmer_profile_id/diagnose`
+- **Endpoint:** `POST /crop_scans`
 - **Auth Required:** Yes
 - **Authorization:** `farmer` role
 - **Content-Type:** `multipart/form-data`
@@ -1256,7 +1256,7 @@ NB: For a healthy crop, the `disease` field is `null` and no `get_treatments` li
 
 ### **Frontend Implementation Note**
 
-> The same structure for the `treatments` array returned in the diagnose endpoint (`POST /farmer_profiles/:farmer_profile_id/diagnose`) is returned in `data` for this endpoint. Client should also use the `rank` field for UI/UX labelling as mentioned earlier.
+> The same structure for the `treatments` array returned in the crop scan & diagnose endpoint (`POST /crop_scans`) is returned in `data` for this endpoint. Client should also use the `rank` field for UI/UX labelling as mentioned earlier.
 
 > If the crop scan was for a healthy crop, a success response is still returned with an empty data array. This should be unnecessary if the client complies with the server's HATEOAS standard, because the `get_treatments` link is not returned for healthy crop.
 

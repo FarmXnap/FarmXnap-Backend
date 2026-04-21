@@ -8,7 +8,7 @@ router
     router
       .resource('crop_scans', () => import('#controllers/crop_scans_controller'))
       .apiOnly()
-      .only(['index'])
+      .only(['index', 'store'])
 
     // Route to get treatment results for a crop scan
     router
