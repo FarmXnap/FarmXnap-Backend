@@ -6,7 +6,7 @@ services:
     volumes:
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./certbot/www:/var/www/certbot:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
+      - ${SSL_PATH}:/etc/letsencrypt:ro
     depends_on:
       - app
 
