@@ -22,4 +22,5 @@ jobs:
             cd ~/FarmXnap-Backend
             git pull origin main
             docker compose up --build -d
+            docker compose exec -T app node build/ace migration:run --force
             docker system prune -f
