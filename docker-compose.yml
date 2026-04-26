@@ -6,11 +6,14 @@ services:
       - '443:443'
     volumes:
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./infra/nginx/params:/etc/nginx/params:ro
       - ./certbot/www:/var/www/certbot:ro
       - ${SSL_PATH}:/etc/letsencrypt:ro
     depends_on:
       - app
+      - app-staging
 
+  # PRODUCTION
   app:
     build: .
     restart: always
@@ -33,5 +36,29 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # STAGING
+  app-staging:
+    build: .
+    restart: always
+    env_file: .env
+    depends_on:
+      - db-staging
+      - redis-staging
+
+  redis-staging:
+    image: redis:alpine
+    restart: always
+
+  db-staging:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_DB=${DB_DATABASE}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+
 volumes:
   postgres_data:
+  postgres_data_staging:
