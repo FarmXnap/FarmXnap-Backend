@@ -1,0 +1,16 @@
+name: Staging Deploy
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  call-reusable-deploy:
+    uses: ./.github/workflows/reusable_deploy.yml
+    with:
+      branch: dev
+      folder: staging
+      services: app-staging redis-staging db-staging
+      app_name: app-staging
+    secrets: inherit

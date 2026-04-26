@@ -1,0 +1,16 @@
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  call-reusable-deploy:
+    uses: ./.github/workflows/reusable_deploy.yml
+    with:
+      branch: main
+      folder: production
+      services: app redis db nginx
+      app_name: app
+    secrets: inherit
