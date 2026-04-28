@@ -13,6 +13,9 @@ on:
       app_name:
         required: true
         type: string
+      profile:
+        required: true
+        type: string
     secrets:
       REMOTE_HOST:
         required: true
@@ -37,6 +40,6 @@ jobs:
           script: |
             cd ~/farmxnap/${{inputs.folder}}
             git pull origin ${{inputs.branch}}
-            docker compose up --build -d ${{inputs.services}}
-            docker compose exec -T ${{inputs.app_name}} node build/ace migration:run --force
+            docker compose --profile ${{inputs.profile}} up --build -d
+            docker compose --profile ${{inputs.profile}} exec -T ${{inputs.app_name}} node build/ace migration:run --force
             docker system prune -f

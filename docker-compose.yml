@@ -11,20 +11,31 @@ services:
       - ${SSL_PATH}:/etc/letsencrypt:ro
     depends_on:
       - app
-      - app-staging
+    networks:
+      - farmxnap-shared-network
+    profiles:
+      - production
 
   # PRODUCTION
   app:
     build: .
     restart: always
     env_file: .env
+    networks:
+      - farmxnap-shared-network
     depends_on:
       - db
       - redis
+    profiles:
+      - production
 
   redis:
     image: redis:alpine
     restart: always
+    networks:
+      - farmxnap-shared-network
+    profiles:
+      - production
 
   db:
     image: postgres:15-alpine
@@ -35,19 +46,31 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - farmxnap-shared-network
+    profiles:
+      - production
 
   # STAGING
   app-staging:
     build: .
     restart: always
     env_file: .env
+    networks:
+      - farmxnap-shared-network
     depends_on:
       - db-staging
       - redis-staging
+    profiles:
+      - staging
 
   redis-staging:
     image: redis:alpine
     restart: always
+    networks:
+      - farmxnap-shared-network
+    profiles:
+      - staging
 
   db-staging:
     image: postgres:15-alpine
@@ -58,7 +81,14 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data_staging:/var/lib/postgresql/data
+    networks:
+      - farmxnap-shared-network
+    profiles:
+      - staging
 
 volumes:
   postgres_data:
   postgres_data_staging:
+
+networks:
+  farmxnap-shared-network:
