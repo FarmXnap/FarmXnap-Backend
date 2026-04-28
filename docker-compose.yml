@@ -92,3 +92,4 @@ volumes:
 
 networks:
   farmxnap-shared-network:
+    name: farmxnap-shared-network
