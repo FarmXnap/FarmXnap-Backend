@@ -13,4 +13,5 @@ jobs:
       folder: production
       services: app redis db nginx
       app_name: app
+      profile: production
     secrets: inherit

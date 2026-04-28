@@ -13,4 +13,5 @@ jobs:
       folder: staging
       services: app-staging redis-staging db-staging
       app_name: app-staging
+      profile: staging
     secrets: inherit
