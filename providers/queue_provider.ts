@@ -1,3 +1,4 @@
+import DatabaseBackupService from '#services/database_backup_service'
 import env from '#start/env'
 import logger from '@adonisjs/core/services/logger'
 import type { ApplicationService } from '@adonisjs/core/types'
@@ -49,9 +50,9 @@ export default class QueueProvider {
               '[Queue Provider] Database Backup job picked up by worker.'
             )
 
-            /**
-             * @todo: call the backup service here
-             */
+            // Call the database backup service
+            const dbBackupService = await this.app.container.make(DatabaseBackupService)
+            await dbBackupService.run()
           }
         } catch (error) {
           logger.error(
