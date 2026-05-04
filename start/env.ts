@@ -26,11 +26,11 @@ export default await Env.create(new URL('../', import.meta.url), {
   | Variables for configuring database connection
   |----------------------------------------------------------
   */
-  DB_HOST: Env.schema.string.optional(),
-  DB_PORT: Env.schema.number.optional(),
-  DB_USER: Env.schema.string.optional(),
-  DB_PASSWORD: Env.schema.string.optional(),
-  DB_DATABASE: Env.schema.string.optional(),
+  DB_HOST: Env.schema.string(),
+  DB_PORT: Env.schema.number(),
+  DB_USER: Env.schema.string(),
+  DB_PASSWORD: Env.schema.string(),
+  DB_DATABASE: Env.schema.string(),
   DATABASE_URL: Env.schema.string.optional(),
   ADMIN_SECRET_KEY: Env.schema.string(),
 
@@ -45,6 +45,9 @@ export default await Env.create(new URL('../', import.meta.url), {
   AWS_REGION: Env.schema.string(),
   S3_BUCKET: Env.schema.string(),
   S3_ENDPOINT: Env.schema.string(),
+  DB_BACKUP_AWS_ACCESS_KEY_ID: Env.schema.string(),
+  DB_BACKUP_AWS_SECRET_ACCESS_KEY: Env.schema.string(),
+  DB_BACKUP_S3_BUCKET: Env.schema.string(),
   GEMINI_API_KEY: Env.schema.string(),
   INTERSWITCH_MERCHANT_CODE: Env.schema.string(),
   INTERSWITCH_PAY_ITEM_ID: Env.schema.string(),
