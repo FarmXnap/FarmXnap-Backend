@@ -77,6 +77,12 @@ export default class DatabaseBackupService {
       })
     })
 
+    /**
+     * NB: We use '@aws-sdk/lib-storage' instead of drive.putStream() because
+     * pg_dump output is a stream of unknown length. Standard S3 PutObject
+     * requests require a Content-Length header, which is unavailable here.
+     * The Upload manager handles buffering, ensuring memory-efficiency without needing to load the database dump into memory.
+     */
     const upload = new Upload({
       client: s3Client,
       params: {
