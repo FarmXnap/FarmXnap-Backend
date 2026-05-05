@@ -16,7 +16,7 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache postgresql-client
+RUN apk add --no-cache postgresql15-client
 
 # Copy only the compiled code from the builder stage to save space
 COPY --from=builder /app/build ./build
