@@ -29,7 +29,7 @@ export default class DatabaseBackupService {
       },
     })
 
-    const fileName = `${env.get('NODE_ENV') /**Different folders per environment in the bucket */}/db-backup-${DateTime.now().toFormat('yyyy-MM-dd-HHmm')}.dump`
+    const fileName = `${env.get('APP_ENV') || env.get('NODE_ENV') /**Different folders per environment in the bucket */}/db-backup-${DateTime.now().toFormat('yyyy-MM-dd-HHmm-ss')}.dump`
 
     logger.info({ fileName }, '[DatabaseBackupService.run] Starting database backup...')
 
