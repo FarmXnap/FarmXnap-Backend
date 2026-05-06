@@ -4,7 +4,7 @@ import { schema } from '@adonisjs/validator'
 import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import AgroDealerProfile from '#models/agro_dealer_profile'
-import { rules } from '#services/validator_rules'
+import { rules } from '#helpers/validator_rules'
 import router from '@adonisjs/core/services/router'
 import BankService from '#services/bank_service'
 

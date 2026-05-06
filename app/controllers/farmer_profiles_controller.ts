@@ -3,7 +3,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { schema } from '@adonisjs/validator'
 import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
-import { rules } from '#services/validator_rules'
+import { rules } from '#helpers/validator_rules'
 import router from '@adonisjs/core/services/router'
 
 export default class FarmerProfilesController {

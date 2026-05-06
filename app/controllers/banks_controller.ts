@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import BankService from '#services/bank_service'
-import { rules } from '#services/validator_rules'
+import { rules } from '#helpers/validator_rules'
 import { schema } from '@adonisjs/validator'
 
 export default class BanksController {
