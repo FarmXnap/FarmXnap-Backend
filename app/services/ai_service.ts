@@ -50,7 +50,7 @@ export default class AiService {
 
       return JSON.parse(cleanedJson)
     } catch (error) {
-      logger.error({ error }, 'AI Error ')
+      logger.error({ err: error }, 'AI Error ')
       throw new Error('Diagnosis service currently unavailable.')
     }
   }

@@ -67,14 +67,14 @@ export default class BankService {
           )
         } else {
           logger.error(
-            { error },
+            { err: error },
             '[BankService.getBanks] PayStack Bank List failed. Falling back to local data.'
           )
         }
       } else {
         // Handle any weird case where something was thrown that isn't an Error object
         logger.error(
-          { error },
+          { err: error },
           '[BankService.getBanks] An unexpected error occurred. Falling back to local data.'
         )
       }
@@ -156,13 +156,13 @@ export default class BankService {
           logger.warn('[BankService.verifyBank] PayStack Bank Account Verification timed out.')
         } else {
           logger.error(
-            { error },
+            { err: error },
             '[BankService.verifyBank] PayStack Bank Account Verification failed.'
           )
         }
       } else {
         // Handle any weird case where something was thrown that isn't an Error object
-        logger.error({ error }, '[BankService.verifyBank] An unexpected error occurred.')
+        logger.error({ err: error }, '[BankService.verifyBank] An unexpected error occurred.')
       }
 
       return generalErrorMessage
