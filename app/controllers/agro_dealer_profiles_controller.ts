@@ -7,7 +7,6 @@ import AgroDealerProfile from '#models/agro_dealer_profile'
 import { rules } from '#services/validator_rules'
 import router from '@adonisjs/core/services/router'
 import BankService from '#services/bank_service'
-import logger from '@adonisjs/core/services/logger'
 
 export default class AgroDealerProfilesController {
   /**
@@ -15,7 +14,7 @@ export default class AgroDealerProfilesController {
    *
    * `POST /api/v1/users/:user_id/agro_dealer_profiles`
    */
-  public async store({ request, response, params }: HttpContext) {
+  public async store({ request, response, params, logger }: HttpContext) {
     const user = await User.query()
       .select(['id', 'role'])
       .preload('OTP', (otpQuery) => {

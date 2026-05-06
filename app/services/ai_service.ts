@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import env from '#start/env'
-import logger from '@adonisjs/core/services/logger'
 import { productCategories } from '#models/product'
+import BaseService from './base_service.js'
 
 const genAI = new GoogleGenerativeAI(env.get('GEMINI_API_KEY'))
 
-export default class AiService {
+export default class AiService extends BaseService {
   public static async diagnose(imageBuffer: Buffer, mimeType: string): Promise<AIDiagnosis> {
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
@@ -50,7 +50,7 @@ export default class AiService {
 
       return JSON.parse(cleanedJson)
     } catch (error) {
-      logger.error({ err: error }, 'AI Error ')
+      this.logger.error({ err: error }, 'AI Error ')
       throw new Error('Diagnosis service currently unavailable.')
     }
   }

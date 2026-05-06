@@ -1,10 +1,10 @@
 import { BANK_DATA, BankData } from '#database/seeds/bank_data'
 import env from '#start/env'
-import logger from '@adonisjs/core/services/logger'
 import redis from '@adonisjs/redis/services/main'
 import { paystackBaseUrl } from '../../helpers/utils.js'
+import BaseService from './base_service.js'
 
-export default class BankService {
+export default class BankService extends BaseService {
   static #CACHE_KEY = 'paystack:bank_list'
 
   public static async getBanks() {
@@ -14,7 +14,7 @@ export default class BankService {
      * 1. Get from cache
      */
     if (cached) {
-      logger.info('[BankService.getBanks] Getting Bank List from cache.')
+      this.logger.info('[BankService.getBanks] Getting Bank List from cache.')
 
       return JSON.parse(cached) as BankData
     }
@@ -39,7 +39,7 @@ export default class BankService {
       }
 
       if (data.status && Array.isArray(data.data)) {
-        logger.info('[BankService.getBanks] PayStack Bank List successful.')
+        this.logger.info('[BankService.getBanks] PayStack Bank List successful.')
 
         // Update cache
         await redis.set(
@@ -52,7 +52,7 @@ export default class BankService {
         return data.data
       }
 
-      logger.warn(
+      this.logger.warn(
         {
           status: response.status,
           statusText: response.statusText,
@@ -62,18 +62,18 @@ export default class BankService {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          logger.warn(
+          this.logger.warn(
             '[BankService.getBanks] PayStack Bank List timed out. Falling back to local data.'
           )
         } else {
-          logger.error(
+          this.logger.error(
             { err: error },
             '[BankService.getBanks] PayStack Bank List failed. Falling back to local data.'
           )
         }
       } else {
         // Handle any weird case where something was thrown that isn't an Error object
-        logger.error(
+        this.logger.error(
           { err: error },
           '[BankService.getBanks] An unexpected error occurred. Falling back to local data.'
         )
@@ -109,7 +109,7 @@ export default class BankService {
       }
 
       if (data.status && data.data) {
-        logger.info('[BankService.verifyBank] PayStack Bank Account Verification successful.')
+        this.logger.info('[BankService.verifyBank] PayStack Bank Account Verification successful.')
 
         return data.data
       }
@@ -118,7 +118,7 @@ export default class BankService {
         const message =
           'Bank Account Verification failed. Ensure the account number and bank are correct.'
 
-        logger.warn({ bankCode, bankAccountNumber }, `[BankService.verifyBank] ${message}`)
+        this.logger.warn({ bankCode, bankAccountNumber }, `[BankService.verifyBank] ${message}`)
 
         return {
           errorCode: response.status,
@@ -127,7 +127,7 @@ export default class BankService {
       }
 
       if (response.status === 401) {
-        logger.error(
+        this.logger.error(
           {
             statusText: response.statusText,
             message: data.message,
@@ -141,7 +141,7 @@ export default class BankService {
         }
       }
 
-      logger.warn(
+      this.logger.warn(
         {
           status: response.status,
           statusText: response.statusText,
@@ -153,16 +153,16 @@ export default class BankService {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          logger.warn('[BankService.verifyBank] PayStack Bank Account Verification timed out.')
+          this.logger.warn('[BankService.verifyBank] PayStack Bank Account Verification timed out.')
         } else {
-          logger.error(
+          this.logger.error(
             { err: error },
             '[BankService.verifyBank] PayStack Bank Account Verification failed.'
           )
         }
       } else {
         // Handle any weird case where something was thrown that isn't an Error object
-        logger.error({ err: error }, '[BankService.verifyBank] An unexpected error occurred.')
+        this.logger.error({ err: error }, '[BankService.verifyBank] An unexpected error occurred.')
       }
 
       return generalErrorMessage
