@@ -1,5 +1,4 @@
 import env from '#start/env'
-import logger from '@adonisjs/core/services/logger'
 import { S3Client } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import { DateTime } from 'luxon'
@@ -7,8 +6,9 @@ import { spawn } from 'node:child_process'
 import path from 'node:path'
 import os from 'node:os'
 import { unlink, writeFile } from 'node:fs/promises'
+import BaseService from './base_service.js'
 
-export default class DatabaseBackupService {
+export default class DatabaseBackupService extends BaseService {
   public async run() {
     const user = env.get('DB_USER')
     const host = env.get('DB_HOST')
@@ -31,7 +31,7 @@ export default class DatabaseBackupService {
 
     const fileName = `${env.get('APP_ENV') || env.get('NODE_ENV') /**Different folders per environment in the bucket */}/db-backup-${DateTime.now().toFormat('yyyy-MM-dd-HHmm-ss')}.dump`
 
-    logger.info({ fileName }, '[DatabaseBackupService.run] Starting database backup...')
+    this.logger.info({ fileName }, '[DatabaseBackupService.run] Starting database backup...')
 
     const backupProcess = spawn(
       'pg_dump',
@@ -56,7 +56,7 @@ export default class DatabaseBackupService {
     })
 
     backupProcess.stderr.on('error', (err) => {
-      logger.error(
+      this.logger.error(
         { err },
         '[DatabaseBackupService.run] The backup process stderr stream encountered an error.'
       )
@@ -97,9 +97,9 @@ export default class DatabaseBackupService {
       // Sync the S3 upload completion and pg_dump process exit
       await Promise.all([upload.done(), backupProcessExit])
 
-      logger.info({ fileName }, '[DatabaseBackupService.run] Database backup successful.')
+      this.logger.info({ fileName }, '[DatabaseBackupService.run] Database backup successful.')
     } catch (error) {
-      logger.error(
+      this.logger.error(
         { err: error, pgError: errorOutput, fileName },
         '[DatabaseBackupService.run] Database backup failed.'
       )
@@ -112,7 +112,10 @@ export default class DatabaseBackupService {
          * after some days is set in S3.
          */
       } catch (abortError) {
-        logger.warn({ err: abortError }, '[DatabaseBackupService.run] Failed to abort S3 upload.')
+        this.logger.warn(
+          { err: abortError },
+          '[DatabaseBackupService.run] Failed to abort S3 upload.'
+        )
       }
 
       throw error // Re-throw error so that the queue knows it failed
@@ -120,7 +123,7 @@ export default class DatabaseBackupService {
       try {
         await unlink(pgPassPath)
       } catch (e) {
-        logger.warn(
+        this.logger.warn(
           { err: e, pgPassPath },
           '[DatabaseBackupService.run] Failed to delete temporary .pgpass file.'
         )

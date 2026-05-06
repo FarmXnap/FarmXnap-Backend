@@ -2,7 +2,6 @@
 import Order, { OrderStatusEnum as OrderStatusesEnum } from '#models/order'
 import env from '#start/env'
 import { HttpContext } from '@adonisjs/core/http'
-import logger from '@adonisjs/core/services/logger'
 import crypto from 'node:crypto'
 
 export default class WebhooksController {
@@ -11,7 +10,7 @@ export default class WebhooksController {
    *
    * `POST /api/v1/webhooks/interswitch`
    */
-  public async interswitch({ request, response }: HttpContext) {
+  public async interswitch({ request, response, logger }: HttpContext) {
     const signature = request.header('X-Interswitch-Signature')
 
     const secret = env.get('INTERSWITCH_SECRET_KEY')

@@ -2,7 +2,6 @@ import { HttpContext } from '@adonisjs/core/http'
 import Order, { OrderStatusEnum } from '#models/order'
 import { rules, schema } from '@adonisjs/validator'
 import env from '#start/env'
-import logger from '@adonisjs/core/services/logger'
 import { interswitchInquiryBaseUrl } from '../../helpers/utils.js'
 
 export default class PaymentsController {
@@ -11,7 +10,7 @@ export default class PaymentsController {
    *
    * `POST /api/v1/payments/callback`
    */
-  public async callback({ request, response }: HttpContext) {
+  public async callback({ request, response, logger }: HttpContext) {
     logger.info(request.body(), '[Payments.Callback] Request body')
 
     const { txnRef } = await request.validate({

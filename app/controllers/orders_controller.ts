@@ -4,7 +4,6 @@ import crypto from 'node:crypto'
 import Order, { OrderStatusEnum } from '#models/order'
 import env from '#start/env'
 import { callbackUrl, nairaISOCode } from '../../helpers/utils.js'
-import logger from '@adonisjs/core/services/logger'
 
 export default class OrdersController {
   /**
@@ -12,7 +11,7 @@ export default class OrdersController {
    *
    * `POST /api/v1/products/:product_id/orders`
    */
-  public async store({ response, auth, params }: HttpContext) {
+  public async store({ response, auth, params, logger }: HttpContext) {
     const user = auth.user!
     await user.load('farmerProfile') // Middleware ensures the user is a farmer
 

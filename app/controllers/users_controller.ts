@@ -4,7 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import { schema } from '@adonisjs/validator'
 import { generateOtp } from '../../helpers/utils.js'
 import router from '@adonisjs/core/services/router'
-import { rules } from '#services/validator_rules'
+import { rules } from '#helpers/validator_rules'
 
 export default class UsersController {
   /**

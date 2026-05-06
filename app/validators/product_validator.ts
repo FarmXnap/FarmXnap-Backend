@@ -1,6 +1,6 @@
 import { schema } from '@adonisjs/validator'
 import { HttpContext } from '@adonisjs/core/http'
-import { rules } from '#services/validator_rules'
+import { rules } from '#helpers/validator_rules'
 import { productCategories } from '#models/product'
 
 const stringRules = [rules.trim(), rules.stripTags()]
