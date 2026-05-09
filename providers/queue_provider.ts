@@ -37,6 +37,11 @@ export default class QueueProvider {
       },
     })
 
+    // Run only in production and staging.
+    if (!this.app.inProduction) {
+      return
+    }
+
     const dbBackupsJobName = 'daily-db-backups'
 
     // Create the worker
