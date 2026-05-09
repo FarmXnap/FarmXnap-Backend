@@ -37,6 +37,10 @@ export default class QueueProvider {
       },
     })
 
+    if (!this.app.inProduction) {
+      return
+    }
+
     const dbBackupsJobName = 'daily-db-backups'
 
     // Create the worker
