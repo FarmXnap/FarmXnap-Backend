@@ -36,7 +36,8 @@ test.group('Farmer Profiles / Store', (group) => {
         otp: condition === 'otp_incorrect' ? '000000' : otpCode,
         email: faker.internet.email(),
         password: faker.lorem.word({ length: { min: 8, max: 10 } }),
-        full_name: faker.person.firstName(),
+        first_name: faker.person.firstName(),
+        last_name: faker.person.lastName(),
         state: faker.location.state(),
         lga: faker.location.county(),
         address: faker.location.streetAddress(),
@@ -104,7 +105,9 @@ test.group('Farmer Profiles / Store', (group) => {
       assert.exists(response.body().data.token)
 
       assert.containSubset(user!.farmerProfile, {
-        full_name: payload.full_name,
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        full_name: `${payload.first_name} ${payload.last_name}`,
         state: payload.state,
         lga: payload.lga,
         primary_crop: payload.primary_crop,

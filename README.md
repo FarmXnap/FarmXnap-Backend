@@ -102,7 +102,8 @@ JSON
 {
   "otp": "345097",
   "transaction_pin": "1234",
-  "full_name": "Deborah Okeke",
+  "first_name": "Deborah",
+  "last_name": "Okeke",
   "state": "My State",
   "lga": "lga",
   "address": "1, Carter Street, Lagos",
@@ -538,6 +539,11 @@ Show a farmer profile.
       "lga": "Gusau LG",
       "address": "321 Salvatore Path",
       "primary_crop": "Maize",
+      "bvn": null,
+      "bank_name": null,
+      "bank_account_number": null,
+      "bank_account_name": null,
+      "is_verified": false,
       "created_at": "2026-03-26T19:16:39.247+00:00",
       "updated_at": "2026-03-26T19:16:39.247+00:00"
     }

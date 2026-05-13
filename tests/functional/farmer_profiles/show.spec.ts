@@ -72,6 +72,8 @@ test.group('Farmer Profiles / Show', (group) => {
 
       response.assertStatus(200)
 
+      await targetFarmer.refresh() // Refresh to hydrate the full_name generated column
+
       response.assertBodyContains({
         data: {
           id: targetFarmer.user.id,
@@ -85,6 +87,11 @@ test.group('Farmer Profiles / Show', (group) => {
             lga: targetFarmer.lga,
             address: targetFarmer.address,
             primary_crop: targetFarmer.primary_crop,
+            bvn: targetFarmer.bvn,
+            bank_name: targetFarmer.bank_name,
+            bank_account_number: targetFarmer.bank_account_number,
+            bank_account_name: targetFarmer.bank_account_name,
+            is_verified: targetFarmer.is_verified,
             created_at: targetFarmer.created_at.toISO(),
             updated_at: targetFarmer.updated_at.toISO(),
           },

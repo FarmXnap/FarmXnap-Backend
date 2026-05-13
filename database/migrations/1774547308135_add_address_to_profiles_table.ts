@@ -28,6 +28,8 @@ export default class extends BaseSchema {
       await this.schema.alterTable('agro_dealer_profiles', (table) => {
         table.string('lga').notNullable().alter()
       })
+
+      // In future, prefer db.rawQuery to using the schema in a defer block. See `1778588369287_add_bvn_bank_details_to_farmer_profiles_table.ts`
     })
   }
 
