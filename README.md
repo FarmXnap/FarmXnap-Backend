@@ -103,7 +103,6 @@ JSON
   "otp": "345097",
   "transaction_pin": "1234",
   "full_name": "Deborah Okeke",
-  "phone_number": "+2348012345678",
   "state": "My State",
   "lga": "lga",
   "address": "1, Carter Street, Lagos",
