@@ -1,13 +1,17 @@
 import { test } from '@japa/runner'
-import BankService from '#services/bank_service'
 import sinon from 'sinon'
 import { faker } from '@faker-js/faker'
+import app from '@adonisjs/core/services/app'
+import BasePaymentService from '#services/payments/base_payment_service'
 
 test.group('Banks / Verify Bank Account', (group) => {
   group.each.setup(async () => {
     // No database call
 
-    return () => sinon.restore()
+    return () => {
+      sinon.restore()
+      app.container.restore(BasePaymentService)
+    }
   })
 
   test('should verify a bank account: {$self}')
@@ -47,7 +51,9 @@ test.group('Banks / Verify Bank Account', (group) => {
 
       if (pastInitialValidation) {
         // Stub the Bank verification service and mock the responses
-        sinon.stub(BankService, 'verifyBankAccount').resolves(
+        const stub = sinon.createStubInstance(BasePaymentService)
+
+        stub.verifyBankAccount.resolves(
           condition === 'main_assertion'
             ? {
                 account_number: payload.bank_account_number!,
@@ -65,6 +71,7 @@ test.group('Banks / Verify Bank Account', (group) => {
                   message: 'We could not verify your bank account. Please try again later.',
                 }
         )
+        app.container.swap(BasePaymentService, () => stub)
       }
 
       const response = await client.post(route('api.v1.banks.verify')).json(payload)

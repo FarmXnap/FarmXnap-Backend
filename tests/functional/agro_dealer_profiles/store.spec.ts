@@ -5,15 +5,22 @@ import User, { UserRolesEnum } from '#models/user'
 import OTP from '#models/otp'
 import { cuid } from '@adonisjs/core/helpers'
 import { BANK_DATA } from '#database/seeds/bank_data'
-import sinon from 'sinon'
-import BankService from '#services/bank_service'
+import sinon, { SinonStubbedInstance } from 'sinon'
+import BasePaymentService from '#services/payments/base_payment_service'
+import app from '@adonisjs/core/services/app'
 
 test.group('AgroDealer Profiles / Store', (group) => {
+  let stub: SinonStubbedInstance<BasePaymentService>
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
 
+    stub = sinon.createStubInstance(BasePaymentService)
+    stub.getBanks.resolves(BANK_DATA)
+    app.container.swap(BasePaymentService, () => stub)
+
     return async () => {
       sinon.restore()
+      app.container.restore(BasePaymentService)
       await db.rollbackGlobalTransaction()
     }
   })
@@ -61,7 +68,7 @@ test.group('AgroDealer Profiles / Store', (group) => {
       const accountName = faker.person.fullName()
 
       if (condition === 'main_assertion') {
-        sinon.stub(BankService, 'verifyBankAccount').resolves({
+        stub.verifyBankAccount.resolves({
           account_number: payload.bank_account_number,
           account_name: accountName,
           bank_id: bank.id,

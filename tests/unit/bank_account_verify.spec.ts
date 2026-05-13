@@ -1,9 +1,9 @@
 import { test } from '@japa/runner'
 import nock from 'nock'
-import { paystackBaseUrl } from '../../helpers/utils.js'
-import BankService from '#services/bank_service'
 import { BANK_DATA } from '#database/seeds/bank_data'
 import env from '#start/env'
+import PaystackProvider from '#services/payments/paystack_provider'
+import { paystackBaseUrl } from '#helpers/payment_helper'
 
 test.group('Bank Service / Verify Bank Account', (group) => {
   const existingPayStackSecretKey = env.get('PAYSTACK_SECRET_KEY')
@@ -84,7 +84,7 @@ test.group('Bank Service / Verify Bank Account', (group) => {
       // Enabling this will disable the interception and make a real request
       // nock.recorder.rec()
 
-      const result = await BankService.verifyBankAccount(bankCode, accountNumber)
+      const result = await new PaystackProvider().verifyBankAccount(bankCode, accountNumber)
 
       switch (condition) {
         case 'main_assertion':

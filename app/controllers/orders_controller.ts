@@ -3,7 +3,7 @@ import Product from '#models/product'
 import crypto from 'node:crypto'
 import Order, { OrderStatusEnum } from '#models/order'
 import env from '#start/env'
-import { callbackUrl, nairaISOCode } from '../../helpers/utils.js'
+import { callbackUrl, nairaISOCode } from '#helpers/payment_helper'
 
 export default class OrdersController {
   /**

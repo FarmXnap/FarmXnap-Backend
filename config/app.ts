@@ -38,3 +38,5 @@ export const http = defineConfig({
     sameSite: 'lax',
   },
 })
+
+export const appUrl = env.get('APP_URL')

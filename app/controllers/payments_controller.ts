@@ -2,7 +2,7 @@ import { HttpContext } from '@adonisjs/core/http'
 import Order, { OrderStatusEnum } from '#models/order'
 import { rules, schema } from '@adonisjs/validator'
 import env from '#start/env'
-import { interswitchInquiryBaseUrl } from '../../helpers/utils.js'
+import { interswitchInquiryBaseUrl } from '#helpers/payment_helper'
 
 export default class PaymentsController {
   /**

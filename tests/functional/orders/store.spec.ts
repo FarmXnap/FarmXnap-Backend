@@ -4,8 +4,8 @@ import User from '#models/user'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { ProductFactory } from '#database/factories/product_factory'
-import { callbackUrl, nairaISOCode } from '../../../helpers/utils.js'
 import env from '#start/env'
+import { callbackUrl, nairaISOCode } from '#helpers/payment_helper'
 
 test.group('Orders / Store', (group) => {
   group.each.setup(async () => {
