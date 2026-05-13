@@ -598,7 +598,7 @@ Show an agro-dealer profile.
       "lga": "Nnewi-North",
       "bank_name": "Feeney, Bernier and Kshlerin",
       "bank_account_number": "6415761219",
-      "bank_account_name": null,
+      "bank_account_name": "James Hudson",
       "is_verified": true,
       "created_at": "2026-03-26T21:44:31.318+00:00",
       "updated_at": "2026-03-26T21:44:31.318+00:00"
