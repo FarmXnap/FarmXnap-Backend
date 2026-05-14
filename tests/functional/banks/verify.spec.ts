@@ -43,13 +43,13 @@ test.group('Banks / Verify Bank Account', (group) => {
       const accountName = faker.person.fullName()
       const bankId = faker.number.int()
 
-      const pastInitialValidation =
+      const hasPassedInitialValidation =
         condition === 'main_assertion' ||
         condition === 'invalid_bank_account' ||
         condition === 'invalid_authorization' ||
         condition === 'unauthorized'
 
-      if (pastInitialValidation) {
+      if (hasPassedInitialValidation) {
         // Stub the Bank verification service and mock the responses
         const stub = sinon.createStubInstance(BasePaymentService)
 
@@ -66,17 +66,14 @@ test.group('Banks / Verify Bank Account', (group) => {
                   message:
                     'Bank Account Verification failed. Ensure the account number and bank are correct.',
                 }
-              : {
-                  errorCode: 401,
-                  message: 'We could not verify your bank account. Please try again later.',
-                }
+              : 'We could not verify your bank account. Please try again later.'
         )
         app.container.swap(BasePaymentService, () => stub)
       }
 
       const response = await client.post(route('api.v1.banks.verify')).json(payload)
 
-      if (!pastInitialValidation || condition === 'invalid_bank_account') {
+      if (!hasPassedInitialValidation || condition === 'invalid_bank_account') {
         response.assertStatus(422)
 
         return response.assertBodyContains({
@@ -93,7 +90,7 @@ test.group('Banks / Verify Bank Account', (group) => {
       }
 
       if (condition === 'unauthorized' || condition === 'invalid_authorization') {
-        response.assertStatus(500)
+        response.assertStatus(502)
 
         return response.assertBodyContains({
           error: 'We could not verify your bank account. Please try again later.',

@@ -5,7 +5,7 @@ import env from '#start/env'
 import PaystackProvider from '#services/payments/paystack_provider'
 import { paystackBaseUrl } from '#helpers/payment_helper'
 
-test.group('Bank Service / Verify Bank Account', (group) => {
+test.group('Payment Service / Verify Bank Account', (group) => {
   const existingPayStackSecretKey = env.get('PAYSTACK_SECRET_KEY')
 
   group.setup(() => {
@@ -97,10 +97,7 @@ test.group('Bank Service / Verify Bank Account', (group) => {
 
         case 'invalid_authorization':
         case 'unauthorized':
-          assert.containSubset(result, {
-            errorCode: 401,
-            message: 'Unauthorized or Invalid authorization',
-          })
+          assert.equal(result, 'We could not verify your bank account. Please try again later.')
           break
 
         case 'invalid_bank_account':

@@ -145,20 +145,16 @@ export default abstract class BasePaymentService extends BaseService {
           },
           `[PaymentService.verifyBank -> ${this.providerName}] Bank Account Verification unauthorized.`
         )
-
-        return {
-          errorCode: response.status,
-          message: 'Unauthorized or Invalid authorization',
-        }
+      } else {
+        this.logger.error(
+          {
+            status: response.status,
+            statusText: response.statusText,
+            message: data?.message,
+          },
+          `[PaymentService.verifyBank -> ${this.providerName}] Bank Account Verification unsuccessful.`
+        )
       }
-
-      this.logger.warn(
-        {
-          status: response.status,
-          statusText: response.statusText,
-        },
-        `[PaymentService.verifyBank -> ${this.providerName}] Bank Account Verification unsuccessful.`
-      )
 
       return generalErrorMessage
     } catch (error) {

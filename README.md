@@ -353,14 +353,6 @@ JSON
 }
 ```
 
-500 (Internal Server Error)
-
-```json
-{
-  "error": "We could not verify your bank account. Please try again later."
-}
-```
-
 502 (Bad Gateway)
 
 ```json

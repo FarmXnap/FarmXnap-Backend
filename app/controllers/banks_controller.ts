@@ -52,7 +52,8 @@ export default class BanksController {
       if (verification.errorCode === 422) {
         return response.unprocessableEntity({ errors: [verification.message] })
       }
-      return response.internalServerError({ error: verification.message })
+      // NB: If `verifyBankAccount` returns an object with `errorCode`, the errorCode is always 422. This branch is only here to resolve type error.
+      return response.internalServerError({ error: 'An unexpected error occurred.' })
     }
 
     return response.ok({
