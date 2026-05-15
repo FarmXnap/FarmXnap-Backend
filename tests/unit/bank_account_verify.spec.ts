@@ -4,6 +4,7 @@ import { BANK_DATA } from '#database/seeds/bank_data'
 import env from '#start/env'
 import PaystackProvider from '#services/payments/paystack_provider'
 import { paystackBaseUrl } from '#helpers/payment_helper'
+import PaymentException from '#exceptions/payment_exception'
 
 test.group('Payment Service / Verify Bank Account', (group) => {
   const existingPayStackSecretKey = env.get('PAYSTACK_SECRET_KEY')
@@ -84,11 +85,11 @@ test.group('Payment Service / Verify Bank Account', (group) => {
       // Enabling this will disable the interception and make a real request
       // nock.recorder.rec()
 
-      const result = await new PaystackProvider().verifyBankAccount(bankCode, accountNumber)
+      const promise = async () => new PaystackProvider().verifyBankAccount(bankCode, accountNumber)
 
       switch (condition) {
         case 'main_assertion':
-          assert.containSubset(result, {
+          assert.containSubset(await promise(), {
             account_number: accountNumber,
             account_name: accountName,
             bank_id: bankID,
@@ -97,21 +98,31 @@ test.group('Payment Service / Verify Bank Account', (group) => {
 
         case 'invalid_authorization':
         case 'unauthorized':
-          assert.equal(result, 'We could not verify your bank account. Please try again later.')
+          await assert.rejects(
+            promise,
+            PaymentException,
+            'We could not verify your bank account. Please try again later.'
+          )
           break
 
         case 'invalid_bank_account':
-          assert.containSubset(result, {
-            errorCode: 422,
-            message:
-              'Bank Account Verification failed. Ensure the account number and bank are correct.',
-          })
+          try {
+            await promise()
+            assert.fail('Should have thrown validation exception')
+          } catch (error: any) {
+            assert.containSubset(error, {
+              status: 422,
+              code: 'E_VALIDATION_EXCEPTION',
+              messages:
+                'Bank Account Verification failed. Ensure the account number and bank are correct.',
+            })
+          }
           break
 
         default:
           throw new Error('Invalid condition')
       }
     })
-    .tags(['banks', 'bank_service', 'verify_bank_account'])
+    .tags(['banks', 'payment_service', 'verify_bank_account'])
     .timeout(30000)
 })

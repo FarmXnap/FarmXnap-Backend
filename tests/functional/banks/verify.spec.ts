@@ -3,6 +3,8 @@ import sinon from 'sinon'
 import { faker } from '@faker-js/faker'
 import app from '@adonisjs/core/services/app'
 import BasePaymentService from '#services/payments/base_payment_service'
+import PaymentException from '#exceptions/payment_exception'
+import { ValidationException } from '@adonisjs/validator'
 
 test.group('Banks / Verify Bank Account', (group) => {
   group.each.setup(async () => {
@@ -53,21 +55,25 @@ test.group('Banks / Verify Bank Account', (group) => {
         // Stub the Bank verification service and mock the responses
         const stub = sinon.createStubInstance(BasePaymentService)
 
-        stub.verifyBankAccount.resolves(
-          condition === 'main_assertion'
-            ? {
-                account_number: payload.bank_account_number!,
-                account_name: accountName,
-                bank_id: bankId,
-              }
-            : condition === 'invalid_bank_account'
-              ? {
-                  errorCode: 422,
-                  message:
-                    'Bank Account Verification failed. Ensure the account number and bank are correct.',
-                }
-              : 'We could not verify your bank account. Please try again later.'
-        )
+        if (condition === 'main_assertion') {
+          stub.verifyBankAccount.resolves({
+            account_number: payload.bank_account_number!,
+            account_name: accountName,
+            bank_id: bankId,
+          })
+        } else if (condition === 'invalid_bank_account') {
+          stub.verifyBankAccount.rejects(
+            new ValidationException(
+              false,
+              'Bank Account Verification failed. Ensure the account number and bank are correct.'
+            )
+          )
+        } else {
+          stub.verifyBankAccount.rejects(
+            new PaymentException('We could not verify your bank account. Please try again later.')
+          )
+        }
+
         app.container.swap(BasePaymentService, () => stub)
       }
 

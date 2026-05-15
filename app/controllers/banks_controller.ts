@@ -44,18 +44,6 @@ export default class BanksController {
 
     const verification = await this.paymentService.verifyBankAccount(bankCode, bankAccountNumber)
 
-    if (typeof verification === 'string') {
-      return response.badGateway({ error: verification })
-    }
-
-    if (typeof verification === 'object' && 'errorCode' in verification) {
-      if (verification.errorCode === 422) {
-        return response.unprocessableEntity({ errors: [verification.message] })
-      }
-      // NB: If `verifyBankAccount` returns an object with `errorCode`, the errorCode is always 422. This branch is only here to resolve type error.
-      return response.internalServerError({ error: 'An unexpected error occurred.' })
-    }
-
     return response.ok({
       data: {
         account_name: verification.account_name,

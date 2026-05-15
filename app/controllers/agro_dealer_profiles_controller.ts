@@ -88,18 +88,6 @@ export default class AgroDealerProfilesController {
     // Verify bank account number
     const verification = await paymentService.verifyBankAccount(bankCode, bankAccountNumber)
 
-    if (typeof verification === 'string') {
-      return response.badGateway({ error: verification })
-    }
-
-    if (typeof verification === 'object' && 'errorCode' in verification) {
-      if (verification.errorCode === 422) {
-        return response.unprocessableEntity({ errors: [verification.message] })
-      }
-      // NB: If `verifyBankAccount` returns an object with `errorCode`, the errorCode is always 422. This branch is only here to resolve type error.
-      return response.internalServerError({ error: 'An unexpected error occurred.' })
-    }
-
     const banks = await paymentService.getBanks()
     const bankName = banks.find((b) => b.code === bankCode)?.name
 
