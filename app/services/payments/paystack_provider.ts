@@ -1,9 +1,9 @@
-import { paystackBaseUrl } from '#helpers/payment_helper'
+import { PaymentProviderName, paystackBaseUrl } from '#helpers/payment_helper'
 import env from '#start/env'
 import BasePaymentService from './base_payment_service.js'
 
 export default class PaystackProvider extends BasePaymentService {
-  protected providerName: string = 'Paystack'
+  protected providerName: PaymentProviderName = 'paystack'
 
   #baseUrl: string = paystackBaseUrl
 
@@ -14,4 +14,12 @@ export default class PaystackProvider extends BasePaymentService {
   protected resolveVerifyBankAccountEndpoint(bankCode: string, bankAccountNumber: string): string {
     return `${this.#baseUrl}/bank/resolve?account_number=${bankAccountNumber}&bank_code=${bankCode}`
   }
+
+  protected initializeWalletTopupEndpoint: string = `${this.#baseUrl}/transaction/initialize`
+
+  protected resolveVerifyWalletTopupEndpoint(reference: string): string {
+    return `${this.#baseUrl}/transaction/verify/${reference}`
+  }
+
+  protected paymentCallbackUrl: string = env.get('PAYSTACK_PAYMENT_CALLBACK_URL')
 }

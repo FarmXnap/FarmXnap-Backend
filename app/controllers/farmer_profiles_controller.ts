@@ -5,6 +5,7 @@ import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import { rules } from '#helpers/validator_rules'
 import router from '@adonisjs/core/services/router'
+import Wallet, { WalletOwnerTypesEnum } from '#models/wallet'
 
 export default class FarmerProfilesController {
   /**
@@ -88,11 +89,19 @@ export default class FarmerProfilesController {
         },
         { client: trx }
       )
+
+      await user.load('farmerProfile')
+
+      await Wallet.create(
+        {
+          owner_type: WalletOwnerTypesEnum.Farmer,
+          owner_id: user.farmerProfile.id,
+        },
+        { client: trx }
+      )
     })
 
     const token = await User.accessTokens.create(user)
-
-    await user.load('farmerProfile')
 
     return response.created({
       message: 'You have successfully registered as a farmer.',
@@ -111,6 +120,9 @@ export default class FarmerProfilesController {
               user.farmerProfile.id,
             ]),
           },
+          /**
+           * @todo: link to topup wallet or show wallet bal
+           */
         },
       },
     })

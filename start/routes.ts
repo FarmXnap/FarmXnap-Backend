@@ -18,6 +18,7 @@ import '#start/routes/api/v1/product_routes'
 import '#start/routes/api/v1/order_routes'
 import '#start/routes/api/v1/payment_routes'
 import '#start/routes/api/v1/webhook_routes'
+import '#start/routes/api/v1/wallet_routes'
 
 router
   .get('health', async ({ response }) => {

@@ -1,0 +1,229 @@
+import type { HttpContext } from '@adonisjs/core/http'
+import { schema } from '@adonisjs/validator'
+import BasePaymentService from '#services/payments/base_payment_service'
+import { inject } from '@adonisjs/core'
+import { appUrl } from '#config/app'
+import {
+  convertAmountToMainUnit,
+  convertAmountToMinorUnit,
+  PaymentProvidersEnum,
+} from '#helpers/payment_helper'
+import db from '@adonisjs/lucid/services/db'
+import Transaction, {
+  TransactionCategoriesEnum,
+  TransactionStatusesEnum,
+  TransactionTypesEnum,
+} from '#models/transaction'
+import { randomBytes } from 'node:crypto'
+import { rules } from '#helpers/validator_rules'
+import Wallet from '#models/wallet'
+import { PaymentProviderTransactionStatus } from '../../contracts/app.js'
+
+@inject()
+export default class WalletsController {
+  constructor(protected paymentService: BasePaymentService) {}
+
+  /**
+   * Initialize wallet topup.
+   *
+   * `POST /api/v1/wallets/topup/initialize`
+   */
+  public async initializeTopup({ request, response, auth }: HttpContext) {
+    const user = auth.user!
+
+    const { amount } = await request.validate({
+      schema: schema.create({
+        amount: schema.number(),
+      }),
+      messages: {
+        'amount.required': 'Amount is required.',
+      },
+    })
+
+    await Promise.all([user.load('farmerProfile'), user.load('agroDealerProfile')])
+
+    const ownerId = user.farmerProfile?.id || user.agroDealerProfile?.id
+
+    if (!ownerId) {
+      return response.badRequest({ error: 'No profile found for the user.' })
+    }
+
+    const walletId = (await db.from('wallets').select('id')?.where('owner_id', ownerId).first()).id
+
+    if (!walletId) {
+      return response.notFound({ error: 'No wallet found for the user.' })
+    }
+
+    const email = user.email || `${user.role}.${user.phone_number}@${new URL(appUrl).hostname}`
+
+    const ref = `FXP-${randomBytes(4).toString('hex').toUpperCase()}-${Date.now()}`
+
+    const amountInMinorUnit = convertAmountToMinorUnit(amount)
+
+    const transaction = await Transaction.create({
+      category: TransactionCategoriesEnum.Topup,
+      type: TransactionTypesEnum.Credit,
+      status: TransactionStatusesEnum.Pending,
+      reference: ref,
+      wallet_id: walletId,
+      amount: amountInMinorUnit,
+    })
+
+    const { data, paymentProviderName } = await this.paymentService.initializeWalletTopup({
+      email,
+      amount: amountInMinorUnit,
+      walletId,
+      reference: ref,
+    })
+
+    await transaction.merge({ provider: paymentProviderName }).save()
+
+    const { access_code: accessCode, authorization_url: authorizationUrl, reference } = data
+
+    return response.ok({
+      message: 'Wallet topup initialized successfully.',
+      data: {
+        access_code: accessCode,
+        authorization_url: authorizationUrl,
+        reference,
+      },
+    })
+  }
+
+  /**
+   * Verify wallet topup.
+   *
+   * `GET /api/v1/wallets/topup/verify`
+   */
+  public async verifyTopup({ request, response, auth, logger }: HttpContext) {
+    const user = auth.user!
+
+    const { reference } = await request.validate({
+      schema: schema.create({
+        reference: schema.string([rules.trim(), rules.stripTags()]),
+      }),
+      messages: {
+        'reference.required': 'Reference is required.',
+      },
+      data: request.qs(),
+    })
+
+    await Promise.all([user.load('farmerProfile'), user.load('agroDealerProfile')])
+
+    const ownerId = user.farmerProfile?.id || user.agroDealerProfile?.id
+
+    if (!ownerId) {
+      return response.badRequest({ error: 'No profile found for the user.' })
+    }
+
+    const wallet = await Wallet.query()
+      .select(['id', 'balance'])
+      .where({ owner_id: ownerId })
+      .first()
+
+    if (!wallet) {
+      return response.notFound({ error: 'No wallet found for the user.' })
+    }
+
+    const { response: providerResponse, paymentProviderName } =
+      await this.paymentService.verifyWalletTopup({
+        reference,
+      })
+
+    const transaction = await Transaction.query()
+      .select(['id', 'reference', 'status', 'amount'])
+      .where({ reference })
+      .first()
+
+    if (!transaction) {
+      const errorMessage = 'Transaction not found for the reference.'
+
+      logger.error(
+        { paymentProviderName, reference },
+        `[WalletsController.verifyTopup -> ${paymentProviderName}] ${errorMessage}`
+      )
+
+      return response.notFound({ error: errorMessage })
+    }
+
+    // Ensure this operation is idempotent
+    if (transaction.status === TransactionStatusesEnum.Completed) {
+      return response.ok({ message: 'Wallet topup already completed.' })
+    }
+
+    const providerResponseAmount = Number(providerResponse.data.amount)
+    const expectedAmount = Number(transaction.amount)
+
+    if (providerResponseAmount !== expectedAmount) {
+      logger.error(
+        { paymentProviderName, providerResponseAmount, expectedAmount, reference },
+        `[WalletsController.verifyTopup -> ${paymentProviderName}] Amount mismatch detected!`
+      )
+
+      return response.badRequest({
+        error: 'Transaction verification failed due to amount mismatch.',
+      })
+    }
+
+    const providerResponseDataStatus = providerResponse.data.status
+
+    if (providerResponseDataStatus === 'success') {
+      await db.transaction(async (trx) => {
+        await transaction
+          .useTransaction(trx)
+          .merge({ status: TransactionStatusesEnum.Completed })
+          .save()
+
+        await wallet
+          .useTransaction(trx)
+          .merge({ balance: Number(wallet.balance) + expectedAmount })
+          .save()
+
+        logger.info(
+          { paymentProviderName, reference, walletId: wallet.id, amount: expectedAmount },
+          '[WalletsController.verifyTopup] Wallet credited successfully via verification endpoint.'
+        )
+
+        /**@todo: try catch here */
+      })
+    } else if (
+      (['failed', 'abandoned', 'reversed'] as PaymentProviderTransactionStatus[]).includes(
+        providerResponseDataStatus
+      )
+    ) {
+      await transaction.merge({ status: TransactionStatusesEnum.Failed }).save()
+
+      logger.warn(
+        {
+          paymentProviderName,
+          reference,
+          walletId: wallet.id,
+          amount: expectedAmount,
+          providerResponseDataStatus,
+        },
+        '[WalletsController.verifyTopup] Transaction marked as failed.'
+      )
+    } else {
+      logger.info(
+        {
+          paymentProviderName,
+          reference,
+          walletId: wallet.id,
+          amount: expectedAmount,
+          providerResponseDataStatus,
+        },
+        '[WalletsController.verifyTopup] Transaction still processing at gateway.'
+      )
+    }
+
+    await transaction.refresh()
+
+    return response.ok({
+      message: `Wallet topup processed with status: ${transaction.status}.`,
+      data: {
+        status: transaction.status,
+        amount: convertAmountToMainUnit(Number(transaction.amount)),
+      },
+    })
+  }
+}

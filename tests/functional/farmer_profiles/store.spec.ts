@@ -4,6 +4,7 @@ import { faker } from '@faker-js/faker'
 import User, { UserRolesEnum } from '#models/user'
 import OTP from '#models/otp'
 import { cuid } from '@adonisjs/core/helpers'
+import Wallet, { WalletOwnerTypesEnum } from '#models/wallet'
 
 test.group('Farmer Profiles / Store', (group) => {
   group.each.setup(async () => {
@@ -113,6 +114,17 @@ test.group('Farmer Profiles / Store', (group) => {
         primary_crop: payload.primary_crop,
         user_id: user!.id,
         address: payload.address,
+      })
+
+      // Assert that wallet was created for the farmer
+      const wallet = await Wallet.query()
+        .where({ owner_type: WalletOwnerTypesEnum.Farmer, owner_id: user!.farmerProfile.id })
+        .first()
+
+      assert.exists(wallet)
+      assert.containSubset(wallet, {
+        balance: String(0),
+        locked_balance: String(0),
       })
     })
     .tags(['farmer_profiles', 'create_farmer_profile'])
