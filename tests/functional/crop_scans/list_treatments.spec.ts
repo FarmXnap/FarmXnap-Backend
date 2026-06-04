@@ -8,8 +8,8 @@ import { CropScanFactory } from '#database/factories/crop_scan_factory'
 import {
   assertTreatmentResults,
   createProductsForAgroDealer,
-} from '../../../helpers/test_helper.js'
-import { cropTreatmentResult } from '../../../helpers/crop_scan_helper.js'
+} from '../../../app/helpers/test_helper.js'
+import { cropTreatmentResult } from '../../../app/helpers/crop_scan_helper.js'
 
 test.group('Crop Scans / List Treatments', (group) => {
   group.each.setup(async () => {

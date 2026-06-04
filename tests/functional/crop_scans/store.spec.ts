@@ -13,12 +13,12 @@ import AiService, {
 } from '#services/ai_service'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
-import { cropTreatmentResult } from '../../../helpers/crop_scan_helper.js'
+import { cropTreatmentResult } from '../../../app/helpers/crop_scan_helper.js'
 import CropScan from '#models/crop_scan'
 import {
   assertTreatmentResults,
   createProductsForAgroDealer,
-} from '../../../helpers/test_helper.js'
+} from '../../../app/helpers/test_helper.js'
 
 const heavyFilePath = app.makePath('tmp', 'tests', 'too_large.jpg')
 
