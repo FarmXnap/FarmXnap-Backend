@@ -77,7 +77,7 @@ export default abstract class BasePaymentService extends BaseService {
         `[PaymentService.getBanks -> ${this.providerName}] Bank List unsuccessful. Falling back to local data.`
       )
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'TimeoutError') {
         this.logger.warn(
           `[PaymentService.getBanks -> ${this.providerName}] Bank List timed out. Falling back to local data.`
         )
@@ -111,7 +111,7 @@ export default abstract class BasePaymentService extends BaseService {
     } catch (error) {
       this.logger.error({ err: error }, `[PaymentService.verifyBank -> ${this.providerName}].`)
 
-      const isTimeoutError = error instanceof Error && error.name === 'AbortError'
+      const isTimeoutError = error instanceof Error && error.name === 'TimeoutError'
 
       throw new PaymentException(
         isTimeoutError ? 'Bank Account Verification timed out.' : 'Internal server error',
@@ -195,7 +195,7 @@ export default abstract class BasePaymentService extends BaseService {
         `[PaymentService.initializeWalletTopup -> ${this.providerName}].`
       )
 
-      const isTimeoutError = error instanceof Error && error.name === 'AbortError'
+      const isTimeoutError = error instanceof Error && error.name === 'TimeoutError'
 
       throw new PaymentException(
         isTimeoutError ? 'Wallet Topup Initialization timed out.' : 'Internal server error',
@@ -252,7 +252,7 @@ export default abstract class BasePaymentService extends BaseService {
         `[PaymentService.verifyWalletTopup -> ${this.providerName}].`
       )
 
-      const isTimeoutError = error instanceof Error && error.name === 'AbortError'
+      const isTimeoutError = error instanceof Error && error.name === 'TimeoutError'
 
       throw new PaymentException(
         isTimeoutError ? 'Wallet Topup Verification timed out.' : 'Internal server error',
