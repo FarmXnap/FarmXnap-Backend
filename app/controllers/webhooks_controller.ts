@@ -1,10 +1,52 @@
 // app/controllers/webhooks_controller.ts
 import Order, { OrderStatusEnum as OrderStatusesEnum } from '#models/order'
+import QueueProvider from '#providers/queue_provider'
+import BasePaymentService from '#services/payments/base_payment_service'
 import env from '#start/env'
+import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 import crypto from 'node:crypto'
 
 export default class WebhooksController {
+  /**
+   * Endpoint for Payment WebHooks.
+   *
+   * `POST /api/v1/webhooks/payments/:provider`
+   *  e.g `/api/v1/webhooks/payments/paystack`
+   */
+  @inject()
+  public async payments(
+    { request, response, logger, params }: HttpContext,
+    paymentService: BasePaymentService,
+    queueProvider: QueueProvider
+  ) {
+    const payload = request.body()
+
+    logger.info(
+      {
+        provider: params.provider,
+        url: request.url(),
+        body: payload,
+        qs: request.qs(),
+        method: request.method(),
+      },
+      '[WebHooks.payments] New webhook received.'
+    )
+
+    const isSignatureValid = paymentService.verifyWebhookSignature(request)
+
+    if (!isSignatureValid) {
+      return response.status(401).send('')
+    }
+
+    // Process the webhook payload in a background job
+    const paymentsQueue = queueProvider.getPaymentsQueue()
+
+    await paymentsQueue.add(queueProvider.processPaymentWebhookJobName, { payload })
+
+    return response.status(200).send('')
+  }
+
   /**
    * Endpoint for InterSwitch WebHooks.
    *

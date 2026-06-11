@@ -4,7 +4,14 @@ import { naira_ISO_4217_Code, PaymentProviderName } from '#helpers/payment_helpe
 import BaseService from '#services/base_service'
 import redis from '@adonisjs/redis/services/main'
 import { ValidationException } from '@adonisjs/validator'
-import { PaymentProviderVerifyTransactionResponse } from '../../../contracts/app.js'
+import {
+  PaymentProviderChargeSuccessWebhookPayload,
+  PaymentProviderVerifyTransactionResponse,
+} from '../../../contracts/app.js'
+import { HttpContext } from '@adonisjs/core/http'
+import crypto from 'node:crypto'
+import db from '@adonisjs/lucid/services/db'
+import Transaction, { TransactionStatusesEnum } from '#models/transaction'
 
 export default abstract class BasePaymentService extends BaseService {
   protected abstract providerName: PaymentProviderName
@@ -21,6 +28,10 @@ export default abstract class BasePaymentService extends BaseService {
   protected abstract paymentCallbackUrl: string
 
   protected abstract secretKey: string
+
+  protected abstract webhookSignatureHeaderKey: string
+
+  protected abstract webhookHashingAlgorithm: string
 
   get #cacheKey() {
     return `${this.providerName.toLowerCase()}:bank_list`
@@ -157,6 +168,10 @@ export default abstract class BasePaymentService extends BaseService {
     throw new PaymentException(generalErrorMessage)
   }
 
+  /**
+   * @todo Make `initializeWalletTopup`, `verifyWalletTopup`, etc. abstract and move their implementation to the child classes. Return a unified provider-agnostic response structure from them.
+   */
+
   public async initializeWalletTopup({
     email,
     amount,
@@ -282,6 +297,114 @@ export default abstract class BasePaymentService extends BaseService {
     )
 
     return { response: data, paymentProviderName: this.providerName }
+  }
+
+  public verifyWebhookSignature(request: HttpContext['request']): boolean {
+    const signature = request.header(this.webhookSignatureHeaderKey)
+
+    const rawBody = request.raw()
+
+    if (!rawBody || !signature) {
+      this.logger.error(
+        `[PaymentService.verifyWebhookSignature -> ${this.providerName}] No Raw Body or Signature provided!`
+      )
+
+      return false
+    }
+
+    this.logger.info(
+      { rawBody },
+      `[PaymentService.verifyWebhookSignature -> ${this.providerName}] Raw Body.`
+    )
+
+    const computedHash = crypto
+      .createHmac(this.webhookHashingAlgorithm, this.secretKey)
+      .update(rawBody)
+      .digest('hex')
+
+    if (computedHash !== signature.toLowerCase()) {
+      this.logger.error(
+        `[PaymentService.verifyWebhookSignature -> ${this.providerName}] Webhook signature mismatch!`
+      )
+
+      return false
+    }
+
+    return true
+  }
+
+  public async processWebhookPayload(payload: PaymentProviderChargeSuccessWebhookPayload) {
+    if (payload.event !== 'charge.success') {
+      this.logger.warn(
+        { payload },
+        `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Unkonwn webhook event received. Ignoring.`
+      )
+      return
+    }
+
+    const reference = payload.data.reference
+    const webhookResponseAmount = Number(payload.data.amount)
+
+    await db.transaction(async (trx) => {
+      const transaction = await Transaction.query({ client: trx })
+        .where({ reference })
+        .forUpdate() // Lock row to prevent race conditions
+        .first()
+
+      if (!transaction) {
+        this.logger.error(
+          { reference },
+          `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Transaction reference not found.`
+        )
+
+        throw new PaymentException(`Transaction not found for reference ${reference}.`)
+      }
+
+      if (transaction.status === TransactionStatusesEnum.Completed) {
+        this.logger.warn(
+          { transaction: transaction.serialize() },
+          `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Transaction already completed.`
+        )
+        return
+      }
+
+      const expectedAmount = Number(transaction.amount)
+
+      if (webhookResponseAmount !== expectedAmount) {
+        this.logger.error(
+          { webhookResponseAmount, expectedAmount, reference },
+          `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Mismatch detected between webhook amount and transaction amount!`
+        )
+
+        await transaction
+          .useTransaction(trx)
+          .merge({ status: TransactionStatusesEnum.Failed })
+          .save()
+
+        throw new PaymentException(`Transaction aborted due to webhook amount mismatch.`)
+      }
+
+      await transaction
+        .useTransaction(trx)
+        .merge({ status: TransactionStatusesEnum.Completed })
+        .save()
+
+      // The db `increment` automatically handles row-level write lock on the wallet
+      await trx
+        .from('wallets')
+        .where({ id: transaction.wallet_id })
+        .increment('balance', expectedAmount)
+
+      this.logger.info(
+        {
+          reference,
+          transactionId: transaction.id,
+          walletId: transaction.wallet_id,
+          expectedAmount,
+        },
+        `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Wallet balance incremented and Transaction updated successfully.`
+      )
+    })
   }
 
   /**

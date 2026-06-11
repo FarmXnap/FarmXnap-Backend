@@ -130,54 +130,64 @@ export default class WalletsController {
         reference,
       })
 
-    const transaction = await Transaction.query()
-      .select(['id', 'reference', 'status', 'amount'])
-      .where({ reference })
-      .first()
+    const result = await db.transaction(async (trx) => {
+      const transaction = await Transaction.query({ client: trx })
+        .select(['id', 'reference', 'status', 'amount'])
+        .where({ reference })
+        .forUpdate() // Lock row to prevent race conditions
+        .first()
 
-    if (!transaction) {
-      const errorMessage = 'Transaction not found for the reference.'
+      if (!transaction) {
+        const errorMessage = 'Transaction not found for the reference.'
 
-      logger.error(
-        { paymentProviderName, reference },
-        `[WalletsController.verifyTopup -> ${paymentProviderName}] ${errorMessage}`
-      )
+        logger.error(
+          { paymentProviderName, reference },
+          `[WalletsController.verifyTopup -> ${paymentProviderName}] ${errorMessage}`
+        )
 
-      return response.notFound({ error: errorMessage })
-    }
+        return { errorMessage, statusCode: 404 }
+      }
 
-    // Ensure this operation is idempotent
-    if (transaction.status === TransactionStatusesEnum.Completed) {
-      return response.ok({ message: 'Wallet topup already completed.' })
-    }
+      // Ensure this operation is idempotent
+      if (transaction.status === TransactionStatusesEnum.Completed) {
+        return { successMessage: 'Wallet topup already completed.', statusCode: 200 }
+      }
 
-    const providerResponseAmount = Number(providerResponse.data.amount)
-    const expectedAmount = Number(transaction.amount)
+      const providerResponseAmount = Number(providerResponse.data.amount)
+      const expectedAmount = Number(transaction.amount)
 
-    if (providerResponseAmount !== expectedAmount) {
-      logger.error(
-        { paymentProviderName, providerResponseAmount, expectedAmount, reference },
-        `[WalletsController.verifyTopup -> ${paymentProviderName}] Amount mismatch detected!`
-      )
+      if (providerResponseAmount !== expectedAmount) {
+        logger.error(
+          { paymentProviderName, providerResponseAmount, expectedAmount, reference },
+          `[WalletsController.verifyTopup -> ${paymentProviderName}] Amount mismatch detected!`
+        )
 
-      return response.badRequest({
-        error: 'Transaction verification failed due to amount mismatch.',
-      })
-    }
+        return {
+          errorMessage: 'Transaction verification failed due to amount mismatch.',
+          statusCode: 400,
+        }
+      }
 
-    const providerResponseDataStatus = providerResponse.data.status
+      const providerResponseDataStatus = providerResponse.data.status
 
-    if (providerResponseDataStatus === 'success') {
-      await db.transaction(async (trx) => {
+      if (providerResponseDataStatus === 'success') {
         await transaction
           .useTransaction(trx)
           .merge({ status: TransactionStatusesEnum.Completed })
           .save()
 
-        await wallet
-          .useTransaction(trx)
-          .merge({ balance: Number(wallet.balance) + expectedAmount })
-          .save()
+        // await wallet
+        //   .useTransaction(trx)
+        //   // // Lock row to prevent race conditions
+        //   .lockForUpdate(async (freshWalletInstance) => {
+        //     await freshWalletInstance
+        //       .merge({ balance: Number(freshWalletInstance.balance) + expectedAmount })
+        //       .save()
+        //   })
+        // OR
+
+        // The db `increment` automatically handles row-level write lock on the wallet
+        await trx.from('wallets').where({ id: wallet.id }).increment('balance', expectedAmount)
 
         logger.info(
           { paymentProviderName, reference, walletId: wallet.id, amount: expectedAmount },
@@ -185,38 +195,50 @@ export default class WalletsController {
         )
 
         /**@todo: try catch here */
-      })
-    } else if (
-      (['failed', 'abandoned', 'reversed'] as PaymentProviderTransactionStatus[]).includes(
-        providerResponseDataStatus
-      )
-    ) {
-      await transaction.merge({ status: TransactionStatusesEnum.Failed }).save()
+      } else if (
+        (['failed', 'abandoned', 'reversed'] as PaymentProviderTransactionStatus[]).includes(
+          providerResponseDataStatus
+        )
+      ) {
+        await transaction.merge({ status: TransactionStatusesEnum.Failed }).save()
 
-      logger.warn(
-        {
-          paymentProviderName,
-          reference,
-          walletId: wallet.id,
-          amount: expectedAmount,
-          providerResponseDataStatus,
-        },
-        '[WalletsController.verifyTopup] Transaction marked as failed.'
-      )
-    } else {
-      logger.info(
-        {
-          paymentProviderName,
-          reference,
-          walletId: wallet.id,
-          amount: expectedAmount,
-          providerResponseDataStatus,
-        },
-        '[WalletsController.verifyTopup] Transaction still processing at gateway.'
-      )
+        logger.warn(
+          {
+            paymentProviderName,
+            reference,
+            walletId: wallet.id,
+            amount: expectedAmount,
+            providerResponseDataStatus,
+          },
+          '[WalletsController.verifyTopup] Transaction marked as failed.'
+        )
+      } else {
+        logger.info(
+          {
+            paymentProviderName,
+            reference,
+            walletId: wallet.id,
+            amount: expectedAmount,
+            providerResponseDataStatus,
+          },
+          '[WalletsController.verifyTopup] Transaction still processing at gateway.'
+        )
+      }
+
+      await transaction.refresh()
+
+      return transaction
+    })
+
+    if ('errorMessage' in result) {
+      return response.status(result.statusCode).json({ error: result.errorMessage })
     }
 
-    await transaction.refresh()
+    if ('successMessage' in result) {
+      return response.status(result.statusCode).json({ message: result.successMessage })
+    }
+
+    const transaction = result
 
     return response.ok({
       message: `Wallet topup processed with status: ${transaction.status}.`,
