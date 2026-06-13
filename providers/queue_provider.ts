@@ -176,6 +176,6 @@ export default class QueueProvider {
     await this.#backupsQueue?.close()
 
     await this.#paymentsWorker?.close()
-    await this.#backupsWorker?.close()
+    await this.#paymentsQueue?.close()
   }
 }
