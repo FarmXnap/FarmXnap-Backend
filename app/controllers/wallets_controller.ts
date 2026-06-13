@@ -3,11 +3,7 @@ import { schema } from '@adonisjs/validator'
 import BasePaymentService from '#services/payments/base_payment_service'
 import { inject } from '@adonisjs/core'
 import { appUrl } from '#config/app'
-import {
-  convertAmountToMainUnit,
-  convertAmountToMinorUnit,
-  PaymentProvidersEnum,
-} from '#helpers/payment_helper'
+import { convertAmountToMainUnit, convertAmountToMinorUnit } from '#helpers/payment_helper'
 import db from '@adonisjs/lucid/services/db'
 import Transaction, {
   TransactionCategoriesEnum,
@@ -17,7 +13,7 @@ import Transaction, {
 import { randomBytes } from 'node:crypto'
 import { rules } from '#helpers/validator_rules'
 import Wallet from '#models/wallet'
-import { PaymentProviderTransactionStatus } from '../../contracts/app.js'
+import { PaymentProviderTransactionStatus } from '#types/payment'
 
 @inject()
 export default class WalletsController {

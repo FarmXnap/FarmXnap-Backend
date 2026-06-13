@@ -1,9 +1,8 @@
-import DatabaseBackupService from '#services/database_backup_service'
-import BasePaymentService from '#services/payments/base_payment_service'
-import env from '#start/env'
-import logger from '@adonisjs/core/services/logger'
 import type { ApplicationService } from '@adonisjs/core/types'
-import { Queue, Worker, Job } from 'bullmq'
+import { Queue, Worker } from 'bullmq'
+import PaymentsWorker from '../app/workers/payments_worker.js'
+import BackupsWorker from '../app/workers/backups_worker.js'
+import { QueueName } from '#types/queue'
 
 /**
  * @todo: CLean up this file by moving the different workers for backups, payments etc. to separate files and importing here.
@@ -12,13 +11,12 @@ import { Queue, Worker, Job } from 'bullmq'
 export default class QueueProvider {
   constructor(protected app: ApplicationService) {}
 
-  #backupsWorker?: Worker
-  #backupsQueue?: Queue
+  #activeWorkers: Worker[] = []
+  #activeQueues: Queue[] = []
 
-  #paymentsWorker?: Worker
-  #paymentsQueue?: Queue
+  // public readonly processPaymentWebhookJobName = 'process-payment-webhook'
 
-  public readonly processPaymentWebhookJobName = 'process-payment-webhook'
+  #queueRegistry: Map<QueueName, Queue> = new Map()
 
   /**
    * Register bindings to the container
@@ -29,125 +27,24 @@ export default class QueueProvider {
    * The container bindings have booted
    */
   async boot() {
-    const connection = { host: env.get('REDIS_HOST'), port: env.get('REDIS_PORT') }
+    const workersToBoot = [PaymentsWorker, BackupsWorker]
 
-    // -----------------------------
-    // PAYMENTS QUEUE
-    // -----------------------------
-    // Create the queue
-    const paymentsQueueName = 'payments'
-    this.#paymentsQueue = new Queue(paymentsQueueName, {
-      connection,
-      defaultJobOptions: {
-        attempts: 5,
-        backoff: {
-          // Wait 5s, 10s, 20s, 40s...
-          type: 'exponential',
-          delay: 5000,
-        },
-        removeOnComplete: { count: 100 },
-        removeOnFail: { count: 500 },
-      },
-    })
+    for (const workerClass of workersToBoot) {
+      const workerInstance = await this.app.container.make(workerClass)
 
-    // Create the worker
-    this.#paymentsWorker = new Worker(
-      paymentsQueueName,
-      async (job: Job) => {
-        try {
-          if (job.name === this.processPaymentWebhookJobName) {
-            const { payload } = job.data
+      const result = await workerInstance.boot()
 
-            logger.info(
-              { jobId: job.id, jobName: job.name },
-              '[Queue Provider] Payment Webhook job picked up by worker.'
-            )
-
-            // Call the database backup service
-            const paymentService = await this.app.container.make(BasePaymentService)
-            await paymentService.processWebhookPayload(payload)
-          }
-        } catch (error) {
-          logger.error(
-            { err: error, jobId: job.id, jobName: job.name },
-            `[Queue Provider] Payment webhook job failed.`
-          )
-          throw error // Re-throw error for retry attempt.
+      if (result) {
+        if (result.worker) {
+          this.#activeWorkers.push(result.worker)
         }
-      },
-      { connection }
-    )
+        if (result.queueName && result.queue) {
+          this.#queueRegistry.set(result.queueName, result.queue)
 
-    this.#paymentsWorker.on('error', (error) => {
-      logger.error({ err: error }, '[Queue Provider] Payments worker error.')
-    })
-    // Add the job to the queue in the controller.
-
-    // -----------------------------
-    // BACKUPS QUEUE
-    // -----------------------------
-    // Create the queue
-    const backupsQueueName = 'backups'
-    this.#backupsQueue = new Queue(backupsQueueName, {
-      connection,
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          // Wait 2s, 4s, 8s...
-          type: 'exponential',
-          delay: 2000,
-        },
-        removeOnComplete: { count: 10 },
-        removeOnFail: { count: 50 },
-      },
-    })
-
-    // Run only in production and staging.
-    if (!this.app.inProduction) {
-      return
-    }
-
-    const dbBackupsJobName = 'daily-db-backups'
-
-    // Create the worker
-    this.#backupsWorker = new Worker(
-      backupsQueueName,
-      async (job: Job) => {
-        try {
-          if (job.name === dbBackupsJobName) {
-            logger.info(
-              { jobId: job.id, jobName: job.name },
-              '[Queue Provider] Database Backup job picked up by worker.'
-            )
-
-            // Call the database backup service
-            const dbBackupService = await this.app.container.make(DatabaseBackupService)
-            await dbBackupService.run()
-          }
-        } catch (error) {
-          logger.error(
-            { err: error, jobId: job.id, jobName: job.name },
-            `[Queue Provider] Backup job failed.`
-          )
-          throw error // Re-throw error for retry attempt.
+          this.#activeQueues.push(result.queue)
         }
-      },
-      { connection }
-    )
-
-    this.#backupsWorker.on('error', (error) => {
-      logger.error({ err: error }, '[Queue Provider] Backups worker error.')
-    })
-
-    // Add a job to the queue
-    await this.#backupsQueue.add(
-      dbBackupsJobName,
-      {},
-      {
-        repeat: { pattern: '0 0 * * *' /** Every day at midnight (server time) */ },
-        jobId: dbBackupsJobName,
       }
-    )
+    }
   }
 
   /**
@@ -160,22 +57,23 @@ export default class QueueProvider {
    */
   async ready() {}
 
-  public getPaymentsQueue(): Queue {
-    if (!this.#paymentsQueue) {
-      throw new Error('Payments queue has not been initialized.')
+  public getQueue(queueName: QueueName): Queue {
+    const queue = this.#queueRegistry.get(queueName)
+    if (!queue) {
+      throw new Error(`Queue "${queueName}" has not been initialized.`)
     }
-
-    return this.#paymentsQueue
+    return queue
   }
 
   /**
    * Preparing to shutdown the app
    */
   async shutdown() {
-    await this.#backupsWorker?.close()
-    await this.#backupsQueue?.close()
-
-    await this.#paymentsWorker?.close()
-    await this.#paymentsQueue?.close()
+    for (const activeWorker of this.#activeWorkers) {
+      await activeWorker?.close()
+    }
+    for (const activeQueue of this.#activeQueues) {
+      await activeQueue?.close()
+    }
   }
 }

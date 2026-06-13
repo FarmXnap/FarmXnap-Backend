@@ -7,7 +7,7 @@ import { ValidationException } from '@adonisjs/validator'
 import {
   PaymentProviderChargeSuccessWebhookPayload,
   PaymentProviderVerifyTransactionResponse,
-} from '../../../contracts/app.js'
+} from '#types/payment'
 import { HttpContext } from '@adonisjs/core/http'
 import crypto from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'

@@ -6,6 +6,7 @@ import env from '#start/env'
 import { inject } from '@adonisjs/core'
 import { HttpContext } from '@adonisjs/core/http'
 import crypto from 'node:crypto'
+import PaymentsWorker from '../workers/payments_worker.js'
 
 export default class WebhooksController {
   /**
@@ -40,9 +41,9 @@ export default class WebhooksController {
     }
 
     // Process the webhook payload in a background job
-    const paymentsQueue = queueProvider.getPaymentsQueue()
+    const paymentsQueue = queueProvider.getQueue('payments')
 
-    await paymentsQueue.add(queueProvider.processPaymentWebhookJobName, { payload })
+    await paymentsQueue.add(PaymentsWorker.processPaymentWebhookJobName, { payload })
 
     return response.status(200).send('')
   }
