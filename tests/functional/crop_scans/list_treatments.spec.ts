@@ -1,6 +1,5 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import User from '#models/user'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
 import CropScan from '#models/crop_scan'
@@ -8,6 +7,7 @@ import { CropScanFactory } from '#database/factories/crop_scan_factory'
 import {
   assertTreatmentResults,
   createProductsForAgroDealer,
+  generateLoginToken,
 } from '../../../app/helpers/test_helper.js'
 import { cropTreatmentResult } from '../../../app/helpers/crop_scan_helper.js'
 
@@ -40,12 +40,10 @@ test.group('Crop Scans / List Treatments', (group) => {
 
       let tokenValue = ''
       if (condition !== 'not_logged_in') {
-        // Simulate login
-        const token = await User.accessTokens.create(
-          condition === 'not_farmer' ? agroDealers[0].user : farmer.user
-        )
-
-        tokenValue = token.value!.release()
+        tokenValue = await generateLoginToken({
+          assert,
+          user: condition === 'not_farmer' ? agroDealers[0].user : farmer.user,
+        })
       }
 
       for (const dealer of agroDealers) {

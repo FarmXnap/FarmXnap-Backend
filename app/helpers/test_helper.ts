@@ -2,6 +2,23 @@ import { ProductFactory } from '#database/factories/product_factory'
 import { TestContext } from '@japa/runner/core'
 import { cropTreatmentResult } from './crop_scan_helper.js'
 import AgroDealerProfile from '#models/agro_dealer_profile'
+import User from '#models/user'
+
+/**
+ * Simulate login.
+ */
+export async function generateLoginToken({
+  assert,
+  user,
+}: {
+  assert?: TestContext['assert']
+  user: User
+}) {
+  const token = await User.accessTokens.create(user)
+  assert?.lengthOf(await User.accessTokens.all(user), 1)
+
+  return token.value!.release()
+}
 
 export async function createProductsForAgroDealer(dealerId: string) {
   await ProductFactory.merge({

@@ -1,9 +1,9 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import User from '#models/user'
 import { cuid } from '@adonisjs/core/helpers'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
+import { generateLoginToken } from '#helpers/test_helper'
 
 test.group('AgroDealer Profiles / Show', (group) => {
   group.each.setup(async () => {
@@ -34,12 +34,9 @@ test.group('AgroDealer Profiles / Show', (group) => {
 
       let tokenValue = ''
       if (condition !== 'not_logged_in') {
-        // Simulate login
-        const token = await User.accessTokens.create(
-          condition === 'not_agro_dealer' ? farmer.user : targetDealer.user
-        )
-
-        tokenValue = token.value!.release()
+        tokenValue = await generateLoginToken({
+          user: condition === 'not_agro_dealer' ? farmer.user : targetDealer.user,
+        })
       }
 
       const response = await client

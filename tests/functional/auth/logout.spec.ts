@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import User, { UserRolesEnum } from '#models/user'
+import { generateLoginToken } from '#helpers/test_helper'
 
 test.group('Auth / Logout', (group) => {
   group.each.setup(async () => {
@@ -16,11 +17,10 @@ test.group('Auth / Logout', (group) => {
 
       let tokenValue = ''
       if (condition === 'main_assertion') {
-        // Simulate login
-        const token = await User.accessTokens.create(user)
-        assert.lengthOf(await User.accessTokens.all(user), 1)
-
-        tokenValue = token.value!.release()
+        tokenValue = await generateLoginToken({
+          assert,
+          user,
+        })
       }
 
       const response = await client.post(route('api.v1.logout')).bearerToken(tokenValue)
