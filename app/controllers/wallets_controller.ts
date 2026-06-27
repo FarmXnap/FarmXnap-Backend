@@ -192,7 +192,7 @@ export default class WalletsController {
 
         /**@todo: try catch here */
       } else if (
-        (['failed', 'abandoned', 'reversed'] as PaymentProviderTransactionStatus[]).includes(
+        (['failed', 'reversed'] as PaymentProviderTransactionStatus[]).includes(
           providerResponseDataStatus
         )
       ) {
