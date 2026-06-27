@@ -14,6 +14,7 @@ import { randomBytes } from 'node:crypto'
 import { rules } from '#helpers/validator_rules'
 import Wallet from '#models/wallet'
 import { PaymentProviderTransactionStatus } from '#types/payment'
+import app from '@adonisjs/core/services/app'
 
 @inject()
 export default class WalletsController {
@@ -50,7 +51,9 @@ export default class WalletsController {
       return response.notFound({ error: 'No wallet found for the user.' })
     }
 
-    const email = user.email || `${user.role}.${user.phone_number}@${new URL(appUrl).hostname}`
+    const email =
+      user.email ||
+      `${user.role}.${user.phone_number}@${app.inTest || app.inDev ? 'localhost.com' : new URL(appUrl).hostname}`
 
     const ref = `FXP-${randomBytes(4).toString('hex').toUpperCase()}-${Date.now()}`
 
