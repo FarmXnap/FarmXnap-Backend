@@ -194,13 +194,17 @@ export default class WalletsController {
         )
 
         /**@todo: try catch here */
-      } else if (
-        (['failed', 'reversed'] as PaymentProviderTransactionStatus[]).includes(
-          providerResponseDataStatus
-        )
-      ) {
-        await transaction.merge({ status: TransactionStatusesEnum.Failed }).save()
-
+      } else {
+        /**
+         * CRITICAL: Do not explicitly mark the transaction as failed even if the provider response is 'failed'.
+         * Because the provider may allow for retry on the interface.
+         *
+         * Use a background job to mark as failed any transaction that
+         * is pending for more than 24 hours.
+         */
+        /**
+         * @todo
+         */
         logger.warn(
           {
             paymentProviderName,
@@ -209,18 +213,7 @@ export default class WalletsController {
             amount: expectedAmount,
             providerResponseDataStatus,
           },
-          '[WalletsController.verifyTopup] Transaction marked as failed.'
-        )
-      } else {
-        logger.info(
-          {
-            paymentProviderName,
-            reference,
-            walletId: wallet.id,
-            amount: expectedAmount,
-            providerResponseDataStatus,
-          },
-          '[WalletsController.verifyTopup] Transaction still processing at gateway.'
+          '[WalletsController.verifyTopup] Transaction not successful yet.'
         )
       }
 
