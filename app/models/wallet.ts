@@ -1,6 +1,8 @@
 import { DateTime } from 'luxon'
-import { BaseModel, beforeCreate, column } from '@adonisjs/lucid/orm'
+import { BaseModel, beforeCreate, column, hasMany } from '@adonisjs/lucid/orm'
 import { cuid } from '@adonisjs/core/helpers'
+import Transaction from './transaction.js'
+import type { HasMany } from '@adonisjs/lucid/types/relations'
 
 export default class Wallet extends BaseModel {
   public static selfAssignPrimaryKey = true
@@ -28,6 +30,9 @@ export default class Wallet extends BaseModel {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updated_at: DateTime
+
+  @hasMany(() => Transaction, { foreignKey: 'wallet_id' })
+  declare transactions: HasMany<typeof Transaction>
 
   @beforeCreate()
   public static assignCuid(order: Wallet) {

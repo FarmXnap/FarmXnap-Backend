@@ -12,6 +12,7 @@ import { HttpContext } from '@adonisjs/core/http'
 import crypto from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import Transaction, { TransactionStatusesEnum } from '#models/transaction'
+import app from '@adonisjs/core/services/app'
 
 export default abstract class BasePaymentService extends BaseService {
   protected abstract providerName: PaymentProviderName
@@ -185,12 +186,19 @@ export default abstract class BasePaymentService extends BaseService {
   }) {
     let response: Response
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.secretKey}`,
+      }
+
+      // Only override encoding behaviour for local debugging/testing
+      if (app.inTest || app.inDev) {
+        headers['accept-encoding'] = 'identity'
+      }
+
       response = await fetch(this.initializeWalletTopupEndpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.secretKey}`,
-        },
+        headers,
         body: JSON.stringify({
           email,
           amount,

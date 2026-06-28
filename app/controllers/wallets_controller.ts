@@ -13,7 +13,6 @@ import Transaction, {
 import { randomBytes } from 'node:crypto'
 import { rules } from '#helpers/validator_rules'
 import Wallet from '#models/wallet'
-import { PaymentProviderTransactionStatus } from '#types/payment'
 import app from '@adonisjs/core/services/app'
 
 @inject()
@@ -28,12 +27,13 @@ export default class WalletsController {
   public async initializeTopup({ request, response, auth }: HttpContext) {
     const user = auth.user!
 
-    const { amount } = await request.validate({
+    const { amount: amountInMainUnit } = await request.validate({
       schema: schema.create({
         amount: schema.number(),
       }),
       messages: {
         'amount.required': 'Amount is required.',
+        'amount.number': 'Amount must be a number.',
       },
     })
 
@@ -45,7 +45,7 @@ export default class WalletsController {
       return response.badRequest({ error: 'No profile found for the user.' })
     }
 
-    const walletId = (await db.from('wallets').select('id')?.where('owner_id', ownerId).first()).id
+    const walletId = (await Wallet.query().select('id').where('owner_id', ownerId).first())?.id
 
     if (!walletId) {
       return response.notFound({ error: 'No wallet found for the user.' })
@@ -57,7 +57,7 @@ export default class WalletsController {
 
     const ref = `FXP-${randomBytes(4).toString('hex').toUpperCase()}-${Date.now()}`
 
-    const amountInMinorUnit = convertAmountToMinorUnit(amount)
+    const amountInMinorUnit = convertAmountToMinorUnit(amountInMainUnit)
 
     const transaction = await Transaction.create({
       category: TransactionCategoriesEnum.Topup,

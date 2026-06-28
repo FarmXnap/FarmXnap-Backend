@@ -14,8 +14,6 @@ export default class QueueProvider {
   #activeWorkers: Worker[] = []
   #activeQueues: Queue[] = []
 
-  // public readonly processPaymentWebhookJobName = 'process-payment-webhook'
-
   #queueRegistry: Map<QueueName, Queue> = new Map()
 
   /**
