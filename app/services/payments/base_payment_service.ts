@@ -243,6 +243,7 @@ export default abstract class BasePaymentService extends BaseService {
           statusText: response.statusText,
           message: data?.message,
           walletId,
+          reference,
         },
         `[PaymentService.initializeWalletTopup -> ${this.providerName}].`
       )
@@ -251,7 +252,7 @@ export default abstract class BasePaymentService extends BaseService {
     }
 
     this.logger.info(
-      { walletId },
+      { walletId, reference },
       `[PaymentService.initializeWalletTopup -> ${this.providerName}] Wallet Topup initialization successful.`
     )
 
