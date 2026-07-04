@@ -1,5 +1,6 @@
 import { appUrl } from '#config/app'
 import env from '#start/env'
+import { randomBytes } from 'node:crypto'
 
 export const nairaISOCode = '566'
 
@@ -20,6 +21,10 @@ export function convertAmountToMinorUnit(amount: number) {
 
 export function convertAmountToMainUnit(amount: number) {
   return amount / 100
+}
+
+export function generatePaymentReference() {
+  return `FXP-${randomBytes(4).toString('hex').toUpperCase()}-${Date.now()}`
 }
 
 export const PaymentProvidersEnum = {

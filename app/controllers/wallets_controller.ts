@@ -3,14 +3,17 @@ import { schema } from '@adonisjs/validator'
 import BasePaymentService from '#services/payments/base_payment_service'
 import { inject } from '@adonisjs/core'
 import { appUrl } from '#config/app'
-import { convertAmountToMainUnit, convertAmountToMinorUnit } from '#helpers/payment_helper'
+import {
+  convertAmountToMainUnit,
+  convertAmountToMinorUnit,
+  generatePaymentReference,
+} from '#helpers/payment_helper'
 import db from '@adonisjs/lucid/services/db'
 import Transaction, {
   TransactionCategoriesEnum,
   TransactionStatusesEnum,
   TransactionTypesEnum,
 } from '#models/transaction'
-import { randomBytes } from 'node:crypto'
 import { rules } from '#helpers/validator_rules'
 import Wallet from '#models/wallet'
 import app from '@adonisjs/core/services/app'
@@ -55,7 +58,7 @@ export default class WalletsController {
       user.email ||
       `${user.role}.${user.phone_number}@${app.inTest || app.inDev ? 'localhost.com' : new URL(appUrl).hostname}`
 
-    const ref = `FXP-${randomBytes(4).toString('hex').toUpperCase()}-${Date.now()}`
+    const ref = generatePaymentReference()
 
     const amountInMinorUnit = convertAmountToMinorUnit(amountInMainUnit)
 
