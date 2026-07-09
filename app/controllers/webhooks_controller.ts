@@ -49,6 +49,9 @@ export default class WebhooksController {
   }
 
   /**
+   * @todo: Drop this `interswitch` controller method
+   */
+  /**
    * Endpoint for InterSwitch WebHooks.
    *
    * `POST /api/v1/webhooks/interswitch`

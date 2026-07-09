@@ -4,10 +4,6 @@ import PaymentsWorker from '../app/workers/payments_worker.js'
 import BackupsWorker from '../app/workers/backups_worker.js'
 import { QueueName } from '#types/queue'
 
-/**
- * @todo: CLean up this file by moving the different workers for backups, payments etc. to separate files and importing here.
- */
-
 export default class QueueProvider {
   constructor(protected app: ApplicationService) {}
 
