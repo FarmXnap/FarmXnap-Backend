@@ -15,7 +15,9 @@ export default class QueueProvider {
   /**
    * Register bindings to the container
    */
-  register() {}
+  register() {
+    this.app.container.singleton(QueueProvider, () => this)
+  }
 
   /**
    * The container bindings have booted
