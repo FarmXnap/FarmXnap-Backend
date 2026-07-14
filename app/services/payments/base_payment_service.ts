@@ -361,12 +361,10 @@ export default abstract class BasePaymentService extends BaseService {
         .first()
 
       if (!transaction) {
-        this.logger.error(
+        return this.logger.error(
           { reference },
           `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Transaction reference not found.`
         )
-
-        throw new PaymentException(`Transaction not found for reference ${reference}.`)
       }
 
       if (transaction.status === TransactionStatusesEnum.Completed) {
@@ -390,7 +388,10 @@ export default abstract class BasePaymentService extends BaseService {
           .merge({ status: TransactionStatusesEnum.Failed })
           .save()
 
-        throw new PaymentException(`Transaction aborted due to webhook amount mismatch.`)
+        // Don't throw an exception to avoid job retries
+        return this.logger.error(
+          `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Transaction aborted due to webhook amount mismatch.`
+        )
       }
 
       await transaction
