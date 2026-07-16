@@ -22,12 +22,12 @@ import testUtils from '@adonisjs/core/services/test_utils'
 
 test.group('Webhooks / Wallet Topup', async (group) => {
   group.each.teardown(async () => {
-    // Truncate the db since we are not using a global transaction (because the test runner and the background job run in separate processes)
-    testUtils.db().truncate()
-
     // Clear existing jobs in Redis queue
     const queueProvider = await app.container.make(QueueProvider)
     await queueProvider.getQueue('payments').obliterate({ force: true })
+
+    // Truncate the db since we are not using a global transaction (because the test runner and the background job run in separate processes)
+    await testUtils.db().truncate()
   })
 
   test('should handle charge.success webhook and topup wallet: {$self}')
