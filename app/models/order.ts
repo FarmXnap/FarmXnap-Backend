@@ -21,6 +21,9 @@ export default class Order extends BaseModel {
   @column()
   declare agro_dealer_profile_id: string
 
+  /**
+   * @todo: on products and orders tables, migrate amount-related columns from decimal to bigint
+   */
   @column()
   declare total_amount: string
 
