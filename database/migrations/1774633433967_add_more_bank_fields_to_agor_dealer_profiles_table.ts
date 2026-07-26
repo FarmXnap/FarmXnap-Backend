@@ -47,6 +47,7 @@ export default class extends BaseSchema {
       await db.schema.alterTable(this.tableName, (table) => {
         table.string('bank_code').notNullable().alter()
       })
+      // In future, prefer db.rawQuery to using the schema in a defer block. See `1778588369287_add_bvn_bank_details_to_farmer_profiles_table.ts`
     })
   }
 

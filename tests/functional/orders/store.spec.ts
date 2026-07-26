@@ -1,11 +1,11 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import User from '#models/user'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { ProductFactory } from '#database/factories/product_factory'
-import { callbackUrl, nairaISOCode } from '../../../helpers/utils.js'
 import env from '#start/env'
+import { callbackUrl, nairaISOCode } from '#helpers/payment_helper'
+import { generateLoginToken } from '#helpers/test_helper'
 
 test.group('Orders / Store', (group) => {
   group.each.setup(async () => {
@@ -30,12 +30,10 @@ test.group('Orders / Store', (group) => {
 
       let tokenValue = ''
       if (condition !== 'not_logged_in') {
-        // Simulate login
-        const token = await User.accessTokens.create(
-          condition === 'not_farmer' ? agroDealer.user : farmer.user
-        )
-
-        tokenValue = token.value!.release()
+        tokenValue = await generateLoginToken({
+          user: condition === 'not_farmer' ? agroDealer.user : farmer.user,
+          assert,
+        })
       }
 
       const products = await ProductFactory.merge({

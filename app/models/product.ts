@@ -19,6 +19,9 @@ export default class Product extends BaseModel {
   @column()
   declare active_ingredient: string
 
+  /**
+   * @todo: on products and orders tables, migrate amount-related columns from decimal to bigint
+   */
   @column()
   declare price: string
 

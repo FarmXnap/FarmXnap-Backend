@@ -2,6 +2,25 @@ import { ProductFactory } from '#database/factories/product_factory'
 import { TestContext } from '@japa/runner/core'
 import { cropTreatmentResult } from './crop_scan_helper.js'
 import AgroDealerProfile from '#models/agro_dealer_profile'
+import User from '#models/user'
+import db from '@adonisjs/lucid/services/db'
+import app from '@adonisjs/core/services/app'
+
+/**
+ * Simulate login.
+ */
+export async function generateLoginToken({
+  assert,
+  user,
+}: {
+  assert?: TestContext['assert']
+  user: User
+}) {
+  const token = await User.accessTokens.create(user)
+  assert?.lengthOf(await User.accessTokens.all(user), 1)
+
+  return token.value!.release()
+}
 
 export async function createProductsForAgroDealer(dealerId: string) {
   await ProductFactory.merge({
@@ -99,4 +118,29 @@ export async function assertTreatmentResults({
 
   // Assert that the highest match "Azoxystrobin" is returned first
   assert.equal(treatments[0].name, 'Azoxystrobin')
+}
+
+/**
+ * CAUTION: Truncate all tables.
+ * Excludes migration and schema lock tables.
+ */
+export async function truncateDBTablesInTest() {
+  if (!app.inTest) {
+    throw new Error('Db table truncation function should only be called in tests!')
+  }
+
+  const tables = await db.connection().getAllTables(['public'])
+
+  // Exclude migration and schema lock tables
+  const tablesToTruncate = tables.filter(
+    (table) => !['adonis_schema', 'adonis_schema_versions'].includes(table)
+  )
+
+  if (!tablesToTruncate.length) {
+    return
+  }
+
+  const joinedTableNames = tablesToTruncate.map((t) => `"${t}"`).join(', ')
+
+  await db.rawQuery(`TRUNCATE TABLE ${joinedTableNames} RESTART IDENTITY CASCADE;`)
 }

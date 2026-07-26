@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import CropScan from '#models/crop_scan'
-import { getCropTreatmentResults } from '../../helpers/crop_scan_helper.js'
+import { getCropTreatmentResults } from '../helpers/crop_scan_helper.js'
 import router from '@adonisjs/core/services/router'
 import fs from 'node:fs/promises'
 import AiService, { AIDiagnosis } from '#services/ai_service'

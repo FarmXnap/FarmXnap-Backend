@@ -12,7 +12,7 @@ export const AgroDealerProfileFactory = factory
       bank_account_number: randomInt(1_000_000_000, 10_000_000_000).toString(),
       bank_code: bank.code,
       bank_name: bank.name,
-      bank_account_name: null,
+      bank_account_name: faker.person.fullName(),
       business_address: faker.location.streetAddress(),
       state: faker.location.state(),
       lga: faker.location.county(),

@@ -1,9 +1,9 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import User from '#models/user'
 import { cuid } from '@adonisjs/core/helpers'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
+import { generateLoginToken } from '#helpers/test_helper'
 
 test.group('Farmer Profiles / Show', (group) => {
   group.each.setup(async () => {
@@ -32,13 +32,11 @@ test.group('Farmer Profiles / Show', (group) => {
 
       let tokenValue = ''
       if (condition !== 'not_logged_in') {
-        // Simulate login
-        const token = await User.accessTokens.create(
-          condition === 'not_farmer' ? agroDealer.user : targetFarmer.user
-        )
-
-        tokenValue = token.value!.release()
+        tokenValue = await generateLoginToken({
+          user: condition === 'not_farmer' ? agroDealer.user : targetFarmer.user,
+        })
       }
+
       const response = await client
         .get(
           route('api.v1.users.farmer_profiles.show', [
@@ -72,6 +70,8 @@ test.group('Farmer Profiles / Show', (group) => {
 
       response.assertStatus(200)
 
+      await targetFarmer.refresh() // Refresh to hydrate the full_name generated column
+
       response.assertBodyContains({
         data: {
           id: targetFarmer.user.id,
@@ -85,6 +85,11 @@ test.group('Farmer Profiles / Show', (group) => {
             lga: targetFarmer.lga,
             address: targetFarmer.address,
             primary_crop: targetFarmer.primary_crop,
+            bvn: targetFarmer.bvn,
+            bank_name: targetFarmer.bank_name,
+            bank_account_number: targetFarmer.bank_account_number,
+            bank_account_name: targetFarmer.bank_account_name,
+            is_verified: targetFarmer.is_verified,
             created_at: targetFarmer.created_at.toISO(),
             updated_at: targetFarmer.updated_at.toISO(),
           },

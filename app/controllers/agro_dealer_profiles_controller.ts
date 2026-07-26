@@ -6,7 +6,8 @@ import db from '@adonisjs/lucid/services/db'
 import AgroDealerProfile from '#models/agro_dealer_profile'
 import { rules } from '#helpers/validator_rules'
 import router from '@adonisjs/core/services/router'
-import BankService from '#services/bank_service'
+import BasePaymentService from '#services/payments/base_payment_service'
+import { inject } from '@adonisjs/core'
 
 export default class AgroDealerProfilesController {
   /**
@@ -14,7 +15,11 @@ export default class AgroDealerProfilesController {
    *
    * `POST /api/v1/users/:user_id/agro_dealer_profiles`
    */
-  public async store({ request, response, params, logger }: HttpContext) {
+  @inject()
+  public async store(
+    { request, response, params, logger }: HttpContext,
+    paymentService: BasePaymentService
+  ) {
     const user = await User.query()
       .select(['id', 'role'])
       .preload('OTP', (otpQuery) => {
@@ -81,20 +86,9 @@ export default class AgroDealerProfilesController {
     }
 
     // Verify bank account number
-    const verification = await BankService.verifyBankAccount(bankCode, bankAccountNumber)
+    const verification = await paymentService.verifyBankAccount(bankCode, bankAccountNumber)
 
-    if (typeof verification === 'string') {
-      return response.badGateway({ error: verification })
-    }
-
-    if (typeof verification === 'object' && 'errorCode' in verification) {
-      if (verification.errorCode === 422) {
-        return response.unprocessableEntity({ errors: [verification.message] })
-      }
-      return response.internalServerError({ error: verification.message })
-    }
-
-    const banks = await BankService.getBanks()
+    const banks = await paymentService.getBanks()
     const bankName = banks.find((b) => b.code === bankCode)?.name
 
     if (!bankName) {

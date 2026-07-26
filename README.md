@@ -102,8 +102,8 @@ JSON
 {
   "otp": "345097",
   "transaction_pin": "1234",
-  "full_name": "Deborah Okeke",
-  "phone_number": "+2348012345678",
+  "first_name": "Deborah",
+  "last_name": "Okeke",
   "state": "My State",
   "lga": "lga",
   "address": "1, Carter Street, Lagos",
@@ -353,14 +353,6 @@ JSON
 }
 ```
 
-500 (Internal Server Error)
-
-```json
-{
-  "error": "We could not verify your bank account. Please try again later."
-}
-```
-
 502 (Bad Gateway)
 
 ```json
@@ -539,6 +531,11 @@ Show a farmer profile.
       "lga": "Gusau LG",
       "address": "321 Salvatore Path",
       "primary_crop": "Maize",
+      "bvn": null,
+      "bank_name": null,
+      "bank_account_number": null,
+      "bank_account_name": null,
+      "is_verified": false,
       "created_at": "2026-03-26T19:16:39.247+00:00",
       "updated_at": "2026-03-26T19:16:39.247+00:00"
     }
@@ -599,7 +596,7 @@ Show an agro-dealer profile.
       "lga": "Nnewi-North",
       "bank_name": "Feeney, Bernier and Kshlerin",
       "bank_account_number": "6415761219",
-      "bank_account_name": null,
+      "bank_account_name": "James Hudson",
       "is_verified": true,
       "created_at": "2026-03-26T21:44:31.318+00:00",
       "updated_at": "2026-03-26T21:44:31.318+00:00"

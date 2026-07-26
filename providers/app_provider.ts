@@ -1,3 +1,5 @@
+import BasePaymentService from '#services/payments/base_payment_service'
+import env from '#start/env'
 import type { ApplicationService } from '@adonisjs/core/types'
 import { BaseModel, SnakeCaseNamingStrategy } from '@adonisjs/lucid/orm'
 
@@ -7,7 +9,18 @@ export default class AppProvider {
   /**
    * Register bindings to the container
    */
-  register() {}
+  register() {
+    this.app.container.bind(BasePaymentService, async () => {
+      const paystackProvider = (await import('#services/payments/paystack_provider')).default
+
+      return env.get('PAYMENT_PROVIDER').toLowerCase() === 'paystack'
+        ? new paystackProvider()
+        : /**
+           * @todo: Replace this with Flutterwave when implemented.
+           */
+          new paystackProvider()
+    })
+  }
 
   /**
    * The container bindings have booted

@@ -5,6 +5,7 @@ import hash from '@adonisjs/core/services/hash'
 import db from '@adonisjs/lucid/services/db'
 import { rules } from '#helpers/validator_rules'
 import router from '@adonisjs/core/services/router'
+import Wallet, { WalletOwnerTypesEnum } from '#models/wallet'
 
 export default class FarmerProfilesController {
   /**
@@ -31,7 +32,8 @@ export default class FarmerProfilesController {
 
     const {
       otp,
-      full_name: fullName,
+      first_name: firstName,
+      last_name: lastName,
       state,
       lga,
       address,
@@ -40,7 +42,8 @@ export default class FarmerProfilesController {
     } = await request.validate({
       schema: schema.create({
         otp: schema.string(stringRules),
-        full_name: schema.string(stringRules),
+        first_name: schema.string(stringRules),
+        last_name: schema.string(stringRules),
         state: schema.string(stringRules),
         lga: schema.string(stringRules),
         address: schema.string(stringRules),
@@ -50,7 +53,8 @@ export default class FarmerProfilesController {
       messages: {
         'otp.required': 'OTP is required.',
 
-        'full_name.required': 'Full Name is required.',
+        'first_name.required': 'First Name is required.',
+        'last_name.required': 'Last Name is required.',
         'state.required': 'State is required.',
         'lga.required': 'LGA is required.',
         'address.required': 'Address is required.',
@@ -76,7 +80,8 @@ export default class FarmerProfilesController {
 
       await user.related('farmerProfile').create(
         {
-          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
           state,
           lga,
           address,
@@ -84,11 +89,19 @@ export default class FarmerProfilesController {
         },
         { client: trx }
       )
+
+      await user.load('farmerProfile')
+
+      await Wallet.create(
+        {
+          owner_type: WalletOwnerTypesEnum.Farmer,
+          owner_id: user.farmerProfile.id,
+        },
+        { client: trx }
+      )
     })
 
     const token = await User.accessTokens.create(user)
-
-    await user.load('farmerProfile')
 
     return response.created({
       message: 'You have successfully registered as a farmer.',
@@ -107,6 +120,9 @@ export default class FarmerProfilesController {
               user.farmerProfile.id,
             ]),
           },
+          /**
+           * @todo: link to topup wallet or show wallet bal
+           */
         },
       },
     })
@@ -129,6 +145,11 @@ export default class FarmerProfilesController {
         'lga',
         'address',
         'primary_crop',
+        'bvn',
+        'bank_name',
+        'bank_account_number',
+        'bank_account_name',
+        'is_verified',
         'created_at',
         'updated_at',
       ])

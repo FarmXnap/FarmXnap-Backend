@@ -1,13 +1,19 @@
 import { test } from '@japa/runner'
-import BankService from '#services/bank_service'
 import sinon from 'sinon'
 import { faker } from '@faker-js/faker'
+import app from '@adonisjs/core/services/app'
+import BasePaymentService from '#services/payments/base_payment_service'
+import PaymentException from '#exceptions/payment_exception'
+import { ValidationException } from '@adonisjs/validator'
 
 test.group('Banks / Verify Bank Account', (group) => {
   group.each.setup(async () => {
     // No database call
 
-    return () => sinon.restore()
+    return () => {
+      sinon.restore()
+      app.container.restore(BasePaymentService)
+    }
   })
 
   test('should verify a bank account: {$self}')
@@ -39,37 +45,41 @@ test.group('Banks / Verify Bank Account', (group) => {
       const accountName = faker.person.fullName()
       const bankId = faker.number.int()
 
-      const pastInitialValidation =
+      const hasPassedInitialValidation =
         condition === 'main_assertion' ||
         condition === 'invalid_bank_account' ||
         condition === 'invalid_authorization' ||
         condition === 'unauthorized'
 
-      if (pastInitialValidation) {
+      if (hasPassedInitialValidation) {
         // Stub the Bank verification service and mock the responses
-        sinon.stub(BankService, 'verifyBankAccount').resolves(
-          condition === 'main_assertion'
-            ? {
-                account_number: payload.bank_account_number!,
-                account_name: accountName,
-                bank_id: bankId,
-              }
-            : condition === 'invalid_bank_account'
-              ? {
-                  errorCode: 422,
-                  message:
-                    'Bank Account Verification failed. Ensure the account number and bank are correct.',
-                }
-              : {
-                  errorCode: 401,
-                  message: 'We could not verify your bank account. Please try again later.',
-                }
-        )
+        const stub = sinon.createStubInstance(BasePaymentService)
+
+        if (condition === 'main_assertion') {
+          stub.verifyBankAccount.resolves({
+            account_number: payload.bank_account_number!,
+            account_name: accountName,
+            bank_id: bankId,
+          })
+        } else if (condition === 'invalid_bank_account') {
+          stub.verifyBankAccount.rejects(
+            new ValidationException(
+              false,
+              'Bank Account Verification failed. Ensure the account number and bank are correct.'
+            )
+          )
+        } else {
+          stub.verifyBankAccount.rejects(
+            new PaymentException('We could not verify your bank account. Please try again later.')
+          )
+        }
+
+        app.container.swap(BasePaymentService, () => stub)
       }
 
       const response = await client.post(route('api.v1.banks.verify')).json(payload)
 
-      if (!pastInitialValidation || condition === 'invalid_bank_account') {
+      if (!hasPassedInitialValidation || condition === 'invalid_bank_account') {
         response.assertStatus(422)
 
         return response.assertBodyContains({
@@ -86,7 +96,7 @@ test.group('Banks / Verify Bank Account', (group) => {
       }
 
       if (condition === 'unauthorized' || condition === 'invalid_authorization') {
-        response.assertStatus(500)
+        response.assertStatus(502)
 
         return response.assertBodyContains({
           error: 'We could not verify your bank account. Please try again later.',

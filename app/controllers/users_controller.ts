@@ -2,7 +2,7 @@ import User, { UserRolesEnum } from '#models/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import db from '@adonisjs/lucid/services/db'
 import { schema } from '@adonisjs/validator'
-import { generateOtp } from '../../helpers/utils.js'
+import { generateOtp } from '../helpers/utils.js'
 import router from '@adonisjs/core/services/router'
 import { rules } from '#helpers/validator_rules'
 

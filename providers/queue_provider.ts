@@ -1,88 +1,47 @@
-import DatabaseBackupService from '#services/database_backup_service'
-import env from '#start/env'
-import logger from '@adonisjs/core/services/logger'
 import type { ApplicationService } from '@adonisjs/core/types'
-import { Queue, Worker, Job } from 'bullmq'
+import { Queue, Worker } from 'bullmq'
+import PaymentsWorker from '../app/workers/payments_worker.js'
+import BackupsWorker from '../app/workers/backups_worker.js'
+import { QueueName } from '#types/queue'
 
 export default class QueueProvider {
   constructor(protected app: ApplicationService) {}
 
-  #worker?: Worker
-  #backupsQueue?: Queue
+  #activeWorkers: Worker[] = []
+  #activeQueues: Queue[] = []
+
+  #queueRegistry: Map<QueueName, Queue> = new Map()
 
   /**
    * Register bindings to the container
    */
-  register() {}
+  register() {
+    this.app.container.singleton(QueueProvider, () => this)
+  }
 
   /**
    * The container bindings have booted
    */
   async boot() {
-    const connection = { host: env.get('REDIS_HOST'), port: env.get('REDIS_PORT') }
+    const workersToBoot = [PaymentsWorker, BackupsWorker]
 
-    // Create the queue
-    const backupsQueueName = 'backups'
-    this.#backupsQueue = new Queue(backupsQueueName, {
-      connection,
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          // Wait 2s, 4s, 8s...
-          type: 'exponential',
-          delay: 2000,
-        },
-        removeOnComplete: { count: 10 },
-        removeOnFail: { count: 50 },
-      },
-    })
+    for (const workerClass of workersToBoot) {
+      const workerInstance = await this.app.container.make(workerClass)
 
-    // Run only in production and staging.
-    if (!this.app.inProduction) {
-      return
-    }
+      const result = await workerInstance.boot()
 
-    const dbBackupsJobName = 'daily-db-backups'
-
-    // Create the worker
-    this.#worker = new Worker(
-      backupsQueueName,
-      async (job: Job) => {
-        try {
-          if (job.name === dbBackupsJobName) {
-            logger.info(
-              { jobId: job.id, jobName: job.name },
-              '[Queue Provider] Database Backup job picked up by worker.'
-            )
-
-            // Call the database backup service
-            const dbBackupService = await this.app.container.make(DatabaseBackupService)
-            await dbBackupService.run()
-          }
-        } catch (error) {
-          logger.error(
-            { err: error, jobId: job.id, jobName: job.name },
-            `[Queue Provider] Job failed.`
-          )
-          throw error // Re-throw error for retry attempt.
+      if (result) {
+        if (result.worker) {
+          this.#activeWorkers.push(result.worker)
         }
-      },
-      { connection }
-    )
-
-    this.#worker.on('error', (error) => {
-      logger.error({ err: error }, '[Queue Provider] Worker error.')
-    })
-
-    // Add a job to the queue
-    await this.#backupsQueue.add(
-      dbBackupsJobName,
-      {},
-      {
-        repeat: { pattern: '0 0 * * *' /** Every day at midnight (server time) */ },
-        jobId: dbBackupsJobName,
+        if (result.queue) {
+          this.#activeQueues.push(result.queue)
+        }
+        if (result.queueName && result.queue) {
+          this.#queueRegistry.set(result.queueName, result.queue)
+        }
       }
-    )
+    }
   }
 
   /**
@@ -95,11 +54,23 @@ export default class QueueProvider {
    */
   async ready() {}
 
+  public getQueue(queueName: QueueName): Queue {
+    const queue = this.#queueRegistry.get(queueName)
+    if (!queue) {
+      throw new Error(`Queue "${queueName}" has not been initialized.`)
+    }
+    return queue
+  }
+
   /**
    * Preparing to shutdown the app
    */
   async shutdown() {
-    await this.#worker?.close()
-    await this.#backupsQueue?.close()
+    for (const activeWorker of this.#activeWorkers) {
+      await activeWorker?.close()
+    }
+    for (const activeQueue of this.#activeQueues) {
+      await activeQueue?.close()
+    }
   }
 }

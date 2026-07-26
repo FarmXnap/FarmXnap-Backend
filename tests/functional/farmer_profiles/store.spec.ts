@@ -4,6 +4,7 @@ import { faker } from '@faker-js/faker'
 import User, { UserRolesEnum } from '#models/user'
 import OTP from '#models/otp'
 import { cuid } from '@adonisjs/core/helpers'
+import Wallet, { WalletOwnerTypesEnum } from '#models/wallet'
 
 test.group('Farmer Profiles / Store', (group) => {
   group.each.setup(async () => {
@@ -36,7 +37,8 @@ test.group('Farmer Profiles / Store', (group) => {
         otp: condition === 'otp_incorrect' ? '000000' : otpCode,
         email: faker.internet.email(),
         password: faker.lorem.word({ length: { min: 8, max: 10 } }),
-        full_name: faker.person.firstName(),
+        first_name: faker.person.firstName(),
+        last_name: faker.person.lastName(),
         state: faker.location.state(),
         lga: faker.location.county(),
         address: faker.location.streetAddress(),
@@ -104,12 +106,25 @@ test.group('Farmer Profiles / Store', (group) => {
       assert.exists(response.body().data.token)
 
       assert.containSubset(user!.farmerProfile, {
-        full_name: payload.full_name,
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        full_name: `${payload.first_name} ${payload.last_name}`,
         state: payload.state,
         lga: payload.lga,
         primary_crop: payload.primary_crop,
         user_id: user!.id,
         address: payload.address,
+      })
+
+      // Assert that wallet was created for the farmer
+      const wallet = await Wallet.query()
+        .where({ owner_type: WalletOwnerTypesEnum.Farmer, owner_id: user!.farmerProfile.id })
+        .first()
+
+      assert.exists(wallet)
+      assert.containSubset(wallet, {
+        balance: String(0),
+        locked_balance: String(0),
       })
     })
     .tags(['farmer_profiles', 'create_farmer_profile'])

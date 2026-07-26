@@ -14,6 +14,7 @@ import { Env } from '@adonisjs/core/env'
 const environments = ['development', 'production', 'test'] as const
 
 export default await Env.create(new URL('../', import.meta.url), {
+  APP_URL: Env.schema.string({ format: 'url' }),
   NODE_ENV: Env.schema.enum(environments),
   APP_ENV: Env.schema.enum.optional([...environments, 'staging'] as const),
   PORT: Env.schema.number(),
@@ -53,8 +54,11 @@ export default await Env.create(new URL('../', import.meta.url), {
   INTERSWITCH_PAY_ITEM_ID: Env.schema.string(),
   INTERSWITCH_SECRET_KEY: Env.schema.string(),
   PAYSTACK_SECRET_KEY: Env.schema.string(),
+  PAYSTACK_PAYMENT_CALLBACK_URL: Env.schema.string({ format: 'url' }),
   REDIS_HOST: Env.schema.string({ format: 'host' }),
   REDIS_PORT: Env.schema.number(),
   REDIS_PASSWORD: Env.schema.string.optional(),
   REDIS_DB: Env.schema.number(),
+
+  PAYMENT_PROVIDER: Env.schema.enum(['Paystack', 'Flutterwave']),
 })

@@ -1,6 +1,5 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import User from '#models/user'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
 import app from '@adonisjs/core/services/app'
@@ -13,12 +12,13 @@ import AiService, {
 } from '#services/ai_service'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
-import { cropTreatmentResult } from '../../../helpers/crop_scan_helper.js'
+import { cropTreatmentResult } from '../../../app/helpers/crop_scan_helper.js'
 import CropScan from '#models/crop_scan'
 import {
   assertTreatmentResults,
   createProductsForAgroDealer,
-} from '../../../helpers/test_helper.js'
+  generateLoginToken,
+} from '../../../app/helpers/test_helper.js'
 
 const heavyFilePath = app.makePath('tmp', 'tests', 'too_large.jpg')
 
@@ -91,12 +91,10 @@ test.group('Crop Scans / Store', (group) => {
 
       let tokenValue = ''
       if (condition !== 'not_logged_in') {
-        // Simulate login
-        const token = await User.accessTokens.create(
-          condition === 'not_farmer' ? agroDealers[0].user : farmer.user
-        )
-
-        tokenValue = token.value!.release()
+        tokenValue = await generateLoginToken({
+          assert,
+          user: condition === 'not_farmer' ? agroDealers[0].user : farmer.user,
+        })
       }
 
       const response = await client

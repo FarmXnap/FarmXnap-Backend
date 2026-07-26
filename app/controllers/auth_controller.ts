@@ -2,7 +2,7 @@ import User from '#models/user'
 import { HttpContext } from '@adonisjs/core/http'
 import hash from '@adonisjs/core/services/hash'
 import { schema } from '@adonisjs/validator'
-import { generateOtp } from '../../helpers/utils.js'
+import { generateOtp } from '../helpers/utils.js'
 import router from '@adonisjs/core/services/router'
 import { rules } from '#helpers/validator_rules'
 

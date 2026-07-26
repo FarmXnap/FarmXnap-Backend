@@ -1,10 +1,10 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
-import User from '#models/user'
 import { FarmerProfileFactory } from '#database/factories/farmer_profile_factory'
 import { AgroDealerProfileFactory } from '#database/factories/agro_dealer_profile_factory'
 import { CropScanFactory } from '#database/factories/crop_scan_factory'
 import CropScan from '#models/crop_scan'
+import { generateLoginToken } from '#helpers/test_helper'
 
 test.group('Crop Scans / List Crop Scans', (group) => {
   group.each.setup(async () => {
@@ -32,12 +32,10 @@ test.group('Crop Scans / List Crop Scans', (group) => {
 
       let tokenValue = ''
       if (condition !== 'not_logged_in') {
-        // Simulate login
-        const token = await User.accessTokens.create(
-          condition === 'not_farmer' ? agroDealer.user : farmer.user
-        )
-
-        tokenValue = token.value!.release()
+        tokenValue = await generateLoginToken({
+          assert,
+          user: condition === 'not_farmer' ? agroDealer.user : farmer.user,
+        })
       }
 
       // Create crop scans for both farmers to assert that only the scans for the logged-in farmer are returned

@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 import { BANK_DATA } from '#database/seeds/bank_data'
 import nock from 'nock'
-import { paystackBaseUrl } from '../../../helpers/utils.js'
+import { paystackBaseUrl } from '#helpers/payment_helper'
 
 test.group('Banks / List', (group) => {
   group.each.setup(async () => {

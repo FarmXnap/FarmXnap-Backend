@@ -56,6 +56,38 @@ new Ignitor(APP_ROOT, { importer: IMPORTER })
     })
   })
   .run(() => run())
+  /**
+   * For debugging hanging terminal after running tests.
+   */
+  // .run(async () => {
+  //   await run()
+
+  //   setTimeout(() => {
+  //     // @ts-ignore
+  //     const handles = process._getActiveHandles()
+  //     const sockets = handles.filter((h: any) => h?.constructor?.name === 'Socket')
+  //     const timers = handles.filter(
+  //       (h: any) => h?.constructor?.name === 'Timeout' || h?.constructor?.name === 'Interval'
+  //     )
+
+  //     if (sockets.length === 0 && timers.length === 0) return
+
+  //     console.log(
+  //       `\n[TEST LEAK] ${sockets.length} Socket(s), ${timers.length} Timer(s) still open:\n`
+  //     )
+
+  //     sockets.forEach((s: any, i: number) => {
+  //       const remotePort = s.remotePort || s._peername?.port || 'N/A'
+  //       const host = s.remoteAddress || s._peername?.address || 'localhost'
+  //       console.log(`  🔌 Socket #${i + 1} -> ${host}:${remotePort} (Local Port: ${s.localPort})`)
+  //     })
+
+  //     timers.forEach((t: any, i: number) => {
+  //       console.log(`Timer #${i + 1}  -> Delay: ${t._idleTimeout}ms`)
+  //       console.log('')
+  //     })
+  //   }, 1000)
+  // })
   .catch((error) => {
     process.exitCode = 1
     prettyPrintError(error)

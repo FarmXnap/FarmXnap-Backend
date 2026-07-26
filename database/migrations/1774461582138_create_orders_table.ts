@@ -32,6 +32,9 @@ export default class extends BaseSchema {
         .onUpdate('CASCADE')
         .index()
 
+      /**
+       * @todo: on products and orders tables, migrate amount-related columns from decimal to bigint
+       */
       table.decimal('total_amount', 12, 2).comment('Amount the farmer pays.') // What the farmer pays
       table.decimal('commission_amount', 12, 2).comment('FarmXnap commission.') // Our cut (e.g. 5%)
       table.decimal('payout_amount', 12, 2).comment('What the dealer gets.') // What the dealer gets (Total - Commission)

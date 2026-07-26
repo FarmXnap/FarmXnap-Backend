@@ -17,6 +17,9 @@ export default class extends BaseSchema {
 
       table.string('name').notNullable()
       table.string('active_ingredient').notNullable()
+      /**
+       * @todo: on products and orders tables, migrate amount-related columns from decimal to bigint
+       */
       table.decimal('price', 12, 2).notNullable()
       table.integer('stock_quantity').unsigned().defaultTo(0)
       table.text('description').nullable()

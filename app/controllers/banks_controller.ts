@@ -1,16 +1,20 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import BankService from '#services/bank_service'
 import { rules } from '#helpers/validator_rules'
 import { schema } from '@adonisjs/validator'
+import { inject } from '@adonisjs/core'
+import BasePaymentService from '#services/payments/base_payment_service'
 
+@inject()
 export default class BanksController {
+  constructor(protected paymentService: BasePaymentService) {}
+
   /**
    * List banks.
    *
    * `GET /api/v1/banks`
    */
   public async index({ response }: HttpContext) {
-    return response.ok({ data: await BankService.getBanks() })
+    return response.ok({ data: await this.paymentService.getBanks() })
   }
 
   /**
@@ -38,18 +42,7 @@ export default class BanksController {
       },
     })
 
-    const verification = await BankService.verifyBankAccount(bankCode, bankAccountNumber)
-
-    if (typeof verification === 'string') {
-      return response.badGateway({ error: verification })
-    }
-
-    if (typeof verification === 'object' && 'errorCode' in verification) {
-      if (verification.errorCode === 422) {
-        return response.unprocessableEntity({ errors: [verification.message] })
-      }
-      return response.internalServerError({ error: verification.message })
-    }
+    const verification = await this.paymentService.verifyBankAccount(bankCode, bankAccountNumber)
 
     return response.ok({
       data: {
