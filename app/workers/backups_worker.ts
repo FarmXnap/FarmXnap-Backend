@@ -1,11 +1,11 @@
 import DatabaseBackupService from '#services/database_backup_service'
 import env from '#start/env'
-import { QueueName } from '#types/queue'
+import { AppWorker, QueueName, WorkerBootResult } from '#types/queue'
 import app from '@adonisjs/core/services/app'
 import logger from '@adonisjs/core/services/logger'
 import { Queue, Worker, Job } from 'bullmq'
 
-export default class BackupsWorker {
+export default class BackupsWorker implements AppWorker {
   #worker?: Worker
   #queue?: Queue
   #queueName: QueueName = 'backups'
@@ -18,7 +18,7 @@ export default class BackupsWorker {
   /**
    * The container bindings have booted
    */
-  async boot() {
+  async boot(): Promise<WorkerBootResult> {
     const connection = { host: env.get('REDIS_HOST'), port: env.get('REDIS_PORT') }
 
     // Create the queue
@@ -39,7 +39,7 @@ export default class BackupsWorker {
 
     // Run only in production and staging.
     if (!app.inProduction) {
-      return { queue: this.#queue, worker: undefined }
+      return { queueName: this.#queueName, queue: this.#queue, worker: undefined }
     }
 
     const dbBackupsJobName = 'daily-db-backups'

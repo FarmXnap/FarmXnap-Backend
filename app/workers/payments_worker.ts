@@ -1,11 +1,11 @@
 import BasePaymentService from '#services/payments/base_payment_service'
 import env from '#start/env'
-import { QueueName } from '#types/queue'
+import { AppWorker, QueueName, WorkerBootResult } from '#types/queue'
 import app from '@adonisjs/core/services/app'
 import logger from '@adonisjs/core/services/logger'
 import { Queue, Worker, Job } from 'bullmq'
 
-export default class PaymentsWorker {
+export default class PaymentsWorker implements AppWorker {
   #worker?: Worker
   #queue?: Queue
   #queueName: QueueName = 'payments'
@@ -20,7 +20,7 @@ export default class PaymentsWorker {
   /**
    * The container bindings have booted
    */
-  async boot() {
+  async boot(): Promise<WorkerBootResult> {
     const connection = { host: env.get('REDIS_HOST'), port: env.get('REDIS_PORT') }
 
     // Create the queue

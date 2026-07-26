@@ -34,10 +34,11 @@ export default class QueueProvider {
         if (result.worker) {
           this.#activeWorkers.push(result.worker)
         }
+        if (result.queue) {
+          this.#activeQueues.push(result.queue)
+        }
         if (result.queueName && result.queue) {
           this.#queueRegistry.set(result.queueName, result.queue)
-
-          this.#activeQueues.push(result.queue)
         }
       }
     }
