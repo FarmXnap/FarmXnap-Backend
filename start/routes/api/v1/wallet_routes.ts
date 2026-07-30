@@ -15,8 +15,13 @@ router
           .as('verify')
       })
       .prefix('wallets/topup')
-      .as('wallets.topup')
+      .as('topup')
+
+    // View wallet balance route
+    router
+      .get('wallets/me', [() => import('#controllers/wallets_controller'), 'viewWalletBalance'])
+      .as('view_wallet_balance')
   })
   .prefix('api/v1')
-  .as('api.v1')
+  .as('api.v1.wallets')
   .middleware([middleware.auth()])

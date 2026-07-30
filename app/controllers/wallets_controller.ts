@@ -7,6 +7,7 @@ import {
   convertAmountToMainUnit,
   convertAmountToMinorUnit,
   generatePaymentReference,
+  naira_ISO_4217_Code,
 } from '#helpers/payment_helper'
 import db from '@adonisjs/lucid/services/db'
 import Transaction, {
@@ -17,6 +18,8 @@ import Transaction, {
 import { rules } from '#helpers/validator_rules'
 import Wallet from '#models/wallet'
 import app from '@adonisjs/core/services/app'
+import User, { UserRolesEnum } from '#models/user'
+import { AccessToken } from '@adonisjs/auth/access_tokens'
 
 @inject()
 export default class WalletsController {
@@ -40,9 +43,7 @@ export default class WalletsController {
       },
     })
 
-    await Promise.all([user.load('farmerProfile'), user.load('agroDealerProfile')])
-
-    const ownerId = user.farmerProfile?.id || user.agroDealerProfile?.id
+    const ownerId = await getOwnerId(user)
 
     if (!ownerId) {
       return response.badRequest({ error: 'No profile found for the user.' })
@@ -98,8 +99,6 @@ export default class WalletsController {
    * `GET /api/v1/wallets/topup/verify`
    */
   public async verifyTopup({ request, response, auth, logger }: HttpContext) {
-    const user = auth.user!
-
     const { reference } = await request.validate({
       schema: schema.create({
         reference: schema.string([rules.trim(), rules.stripTags()]),
@@ -110,9 +109,7 @@ export default class WalletsController {
       data: request.qs(),
     })
 
-    await Promise.all([user.load('farmerProfile'), user.load('agroDealerProfile')])
-
-    const ownerId = user.farmerProfile?.id || user.agroDealerProfile?.id
+    const ownerId = await getOwnerId(auth.user!)
 
     if (!ownerId) {
       return response.badRequest({ error: 'No profile found for the user.' })
@@ -242,5 +239,59 @@ export default class WalletsController {
         amount: convertAmountToMainUnit(Number(transaction.amount)),
       },
     })
+  }
+
+  /**
+   * View wallet balance.
+   *
+   * `GET /api/v1/wallets/me`
+   */
+  public async viewWalletBalance({ response, auth }: HttpContext) {
+    const ownerId = await getOwnerId(auth.user!)
+
+    if (!ownerId) {
+      return response.badRequest({ error: 'No profile found for the user.' })
+    }
+
+    const wallet = await Wallet.query()
+      .select(['id', 'balance', 'locked_balance'])
+      .where({ owner_id: ownerId })
+      .first()
+
+    if (!wallet) {
+      return response.notFound({ error: 'No wallet found for the user.' })
+    }
+
+    return response.ok({
+      message: 'Wallet balance retrieved successfully.',
+      data: {
+        id: wallet.id,
+        currency: naira_ISO_4217_Code,
+        balance: convertAmountToMainUnit(Number(wallet.balance)),
+        locked_balance: convertAmountToMainUnit(Number(wallet.locked_balance)),
+        available_balance: convertAmountToMainUnit(wallet.availableBalance),
+      },
+    })
+  }
+}
+
+async function getOwnerId(
+  user: User & {
+    currentAccessToken: AccessToken
+  }
+) {
+  if (user.role === UserRolesEnum.Farmer) {
+    await user.load('farmerProfile', (farmerProfileQuery) => {
+      farmerProfileQuery.select('id')
+    })
+
+    return user.farmerProfile?.id
+  }
+  if (user.role === UserRolesEnum.AgroDealer) {
+    await user.load('agroDealerProfile', (agroDealerProfileQuery) => {
+      agroDealerProfileQuery.select('id')
+    })
+
+    return user.agroDealerProfile?.id
   }
 }
