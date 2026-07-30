@@ -52,7 +52,7 @@ export default class PaymentsWorker implements AppWorker {
               '[Queue Provider] Payment Webhook job picked up by worker.'
             )
 
-            // Call the database backup service
+            // Call the payment service
             const paymentService = await app.container.make(BasePaymentService)
             await paymentService.processWebhookPayload(payload)
           }
