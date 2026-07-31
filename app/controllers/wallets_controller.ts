@@ -149,7 +149,11 @@ export default class WalletsController {
 
       // Ensure this operation is idempotent
       if (transaction.status === TransactionStatusesEnum.Completed) {
-        return { successMessage: 'Wallet topup already completed.', statusCode: 200 }
+        return {
+          successMessage: 'Wallet topup already completed.',
+          statusCode: 200,
+          amount: transaction.amount,
+        }
       }
 
       const providerResponseAmount = Number(providerResponse.data.amount)
@@ -227,7 +231,13 @@ export default class WalletsController {
     }
 
     if ('successMessage' in result) {
-      return response.status(result.statusCode).json({ message: result.successMessage })
+      return response.status(result.statusCode).json({
+        message: result.successMessage,
+        data: {
+          status: TransactionStatusesEnum.Completed,
+          amount: convertAmountToMainUnit(Number(result.amount)),
+        },
+      })
     }
 
     const transaction = result

@@ -155,12 +155,18 @@ test.group('Wallets / Topup / Verify', (group) => {
 
       response.assertStatus(200)
 
-      if (condition === 'transaction_already_completed') {
-        return response.assertBodyContains({ message: 'Wallet topup already completed.' })
-      }
-
       await transaction!.refresh()
       assert.equal(transaction!.status, TransactionStatusesEnum.Completed)
+
+      if (condition === 'transaction_already_completed') {
+        return response.assertBodyContains({
+          message: 'Wallet topup already completed.',
+          data: {
+            status: transaction!.status,
+            amount: amountInMainUnit,
+          },
+        })
+      }
 
       response.assertBodyContains({
         message: `Wallet topup processed with status: ${transaction!.status}.`,
