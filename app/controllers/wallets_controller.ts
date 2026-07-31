@@ -204,10 +204,7 @@ export default class WalletsController {
          * Because the provider may allow for retry on the interface.
          *
          * Use a background job to mark as failed any transaction that
-         * is pending for more than 24 hours.
-         */
-        /**
-         * @todo
+         * is pending for more than 48 hours.
          */
         logger.warn(
           {
