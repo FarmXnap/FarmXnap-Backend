@@ -1263,6 +1263,207 @@ NB: For a healthy crop, the `disease` field is `null` and no `get_treatments` li
 }
 ```
 
+### **18. Wallet topup initialization**
+
+- **Endpoint:** `POST /wallets/topup/initialize`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` or `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Request Body:**
+
+JSON
+
+```json
+{
+  "amount": "4000" // Amount in Main Unit (Naira)
+}
+```
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "message": "Wallet topup initialized successfully.",
+  "data": {
+    "access_code": "cgoog5o4s96yf33",
+    "authorization_url": "https://checkout.paystack.com/cgoog5o4s96yf33",
+    "reference": "FXP-49C52AAD-1785477071905"
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": ["Amount is required.", "Amount must be a number."]
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No profile found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No wallet found for the user."
+}
+```
+
+### **19. Wallet topup verification**
+
+- **Endpoint:** `GET /wallets/topup/verify`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` or `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Querystring:**
+
+JSON
+
+```json
+{
+  "reference": "FXP-49C52AAD-1785477071905"
+}
+```
+
+e.g `GET /wallets/topup/verify?reference=FXP-49C52AAD-1785477071905`
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "message": "Wallet topup processed with status: pending.",
+  "data": {
+    "status": "pending", // pending | completed | failed
+    "amount": 4000
+  }
+}
+```
+
+200 (Ok)
+
+```json
+{
+  "message": "Wallet topup already completed."
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": ["Reference is required."]
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No profile found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No wallet found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "Transaction not found for the reference."
+}
+```
+
+400 (Bad Request)
+
+```json
+{
+  "error": "Transaction verification failed due to amount mismatch."
+}
+```
+
+### **20. View wallet balance**
+
+- **Endpoint:** `GET /wallets/me`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` or `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "message": "Wallet balance retrieved successfully.",
+  "data": {
+    "id": "pgifmuyrum12d9yxk7uxbaji",
+    "currency": "NGN",
+    "balance": 4000.0,
+    "locked_balance": 1000.0,
+    "available_balance": 3000.0
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No profile found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No wallet found for the user."
+}
+```
+
 ---
 
 ## **Admin Endpoints**
