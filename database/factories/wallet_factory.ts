@@ -1,5 +1,6 @@
 import factory from '@adonisjs/lucid/factories'
 import Wallet from '#models/wallet'
+import { TransactionFactory } from './transaction_factory.js'
 
 export const WalletFactory = factory
   .define(Wallet, async ({ faker }) => {
@@ -8,4 +9,5 @@ export const WalletFactory = factory
       locked_balance: faker.number.int({ min: 5_000_00, max: 7_000_00 }),
     }
   })
+  .relation('transactions', () => TransactionFactory)
   .build()

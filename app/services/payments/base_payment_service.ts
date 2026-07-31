@@ -13,6 +13,7 @@ import crypto from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import Transaction, { TransactionStatusesEnum } from '#models/transaction'
 import app from '@adonisjs/core/services/app'
+import { DateTime } from 'luxon'
 
 export default abstract class BasePaymentService extends BaseService {
   protected abstract providerName: PaymentProviderName
@@ -415,6 +416,36 @@ export default abstract class BasePaymentService extends BaseService {
         `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Wallet balance incremented and Transaction updated successfully.`
       )
     })
+  }
+
+  /**
+   * Transition stale pending transactions to expired
+   */
+  public async expireStaleTransactions() {
+    const cutoffTime = DateTime.now().minus({ hours: 48 }).toJSDate()
+
+    // Batch update pending transactions created 48 hours ago and over
+    const updatedRows = await Transaction.query()
+      .where('status', TransactionStatusesEnum.Pending)
+      .where('created_at', '<=', cutoffTime)
+      .update({
+        status: TransactionStatusesEnum.Expired,
+      })
+      .returning('id')
+
+    const count = updatedRows.length
+
+    this.logger.info(
+      {
+        count,
+        cutoffTime,
+        // Only capture up to the first 5 IDs as a sample
+        sampleIds: count ? updatedRows.slice(0, 5).map((row) => row.id) : [],
+      },
+      '[BasePaymentService.expireStaleTransactions] Stale transactions expired successfully.'
+    )
+
+    return count
   }
 
   /**

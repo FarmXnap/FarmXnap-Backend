@@ -12,6 +12,8 @@ export default class PaymentsWorker implements AppWorker {
 
   public static readonly processPaymentWebhookJobName = 'process-payment-webhook'
 
+  public static readonly expireStaleTransactionsJobName = 'expire-stale-transactions'
+
   /**
    * Register bindings to the container
    */
@@ -44,6 +46,9 @@ export default class PaymentsWorker implements AppWorker {
       paymentsQueueName,
       async (job: Job) => {
         try {
+          // Resolve the payment service once for all jobs
+          const paymentService = await app.container.make(BasePaymentService)
+
           if (job.name === PaymentsWorker.processPaymentWebhookJobName) {
             const { payload } = job.data
 
@@ -52,14 +57,19 @@ export default class PaymentsWorker implements AppWorker {
               '[Queue Provider] Payment Webhook job picked up by worker.'
             )
 
-            // Call the payment service
-            const paymentService = await app.container.make(BasePaymentService)
             await paymentService.processWebhookPayload(payload)
+          } else if (job.name === PaymentsWorker.expireStaleTransactionsJobName) {
+            logger.info(
+              { jobId: job.id, jobName: job.name },
+              '[Queue Provider] Expire stale transactions job picked up by worker.'
+            )
+
+            await paymentService.expireStaleTransactions()
           }
         } catch (error) {
           logger.error(
             { err: error, jobId: job.id, jobName: job.name },
-            `[Queue Provider] Payment webhook job failed.`
+            `[Queue Provider] ${job.name} failed.`
           )
           throw error // Re-throw error for retry attempt.
         }
@@ -70,9 +80,20 @@ export default class PaymentsWorker implements AppWorker {
     this.#worker.on('error', (error) => {
       logger.error({ err: error }, '[Queue Provider] Payments worker error.')
     })
-    // Note: Add the job to the queue in the controller.
 
-    //
+    // Note: The job "processPaymentWebhookJobName" is added to the queue in the controller.
+
+    await this.#queue.add(
+      PaymentsWorker.expireStaleTransactionsJobName,
+      {},
+      {
+        repeat: {
+          pattern: '0 * * * *', // Runs at top of every hour
+        },
+        jobId: PaymentsWorker.expireStaleTransactionsJobName,
+      }
+    )
+
     return { queueName: this.#queueName, queue: this.#queue, worker: this.#worker }
   }
 
