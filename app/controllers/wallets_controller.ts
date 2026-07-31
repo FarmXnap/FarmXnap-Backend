@@ -203,7 +203,7 @@ export default class WalletsController {
          * CRITICAL: Do not explicitly mark the transaction as failed even if the provider response is 'failed'.
          * Because the provider may allow for retry on the interface.
          *
-         * Use a background job to mark as failed any transaction that
+         * Use a background job to mark as `expired` any transaction that
          * is pending for more than 48 hours.
          */
         logger.warn(
