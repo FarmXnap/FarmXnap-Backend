@@ -395,6 +395,18 @@ export default abstract class BasePaymentService extends BaseService {
         )
       }
 
+      if (transaction.status === TransactionStatusesEnum.Expired) {
+        this.logger.warn(
+          {
+            transactionId: transaction.id,
+            walletId: transaction.wallet_id,
+            reference,
+            previousStatus: transaction.status,
+          },
+          `[BasePaymentService.processWebhookPayload -> ${this.providerName}] Late payment received: Marking an expired transaction as completed.`
+        )
+      }
+
       await transaction
         .useTransaction(trx)
         .merge({ status: TransactionStatusesEnum.Completed })

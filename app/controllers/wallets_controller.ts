@@ -174,6 +174,19 @@ export default class WalletsController {
       const providerResponseDataStatus = providerResponse.data.status
 
       if (providerResponseDataStatus === 'success') {
+        if (transaction.status === TransactionStatusesEnum.Expired) {
+          logger.warn(
+            {
+              transactionId: transaction.id,
+              walletId: wallet.id,
+              paymentProviderName,
+              reference: transaction.reference,
+              previousStatus: transaction.status,
+            },
+            `[WalletsController.verifyTopup] Late verification: Marking an expired transaction as completed.`
+          )
+        }
+
         await transaction
           .useTransaction(trx)
           .merge({ status: TransactionStatusesEnum.Completed })
