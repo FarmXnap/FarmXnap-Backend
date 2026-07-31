@@ -253,7 +253,7 @@ export default abstract class BasePaymentService extends BaseService {
     }
 
     this.logger.info(
-      { walletId, reference },
+      { walletId, reference, data: data.data },
       `[PaymentService.initializeWalletTopup -> ${this.providerName}] Wallet Topup initialization successful.`
     )
 
