@@ -54,6 +54,7 @@ export const TransactionStatusesEnum = {
   Pending: 'pending',
   Completed: 'completed',
   Failed: 'failed',
+  Expired: 'expired',
 } as const
 
 export const transactionStatuses = Object.values(TransactionStatusesEnum)

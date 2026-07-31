@@ -174,6 +174,19 @@ export default class WalletsController {
       const providerResponseDataStatus = providerResponse.data.status
 
       if (providerResponseDataStatus === 'success') {
+        if (transaction.status === TransactionStatusesEnum.Expired) {
+          logger.warn(
+            {
+              transactionId: transaction.id,
+              walletId: wallet.id,
+              paymentProviderName,
+              reference: transaction.reference,
+              previousStatus: transaction.status,
+            },
+            `[WalletsController.verifyTopup] Late verification: Marking an expired transaction as completed.`
+          )
+        }
+
         await transaction
           .useTransaction(trx)
           .merge({ status: TransactionStatusesEnum.Completed })
@@ -203,11 +216,8 @@ export default class WalletsController {
          * CRITICAL: Do not explicitly mark the transaction as failed even if the provider response is 'failed'.
          * Because the provider may allow for retry on the interface.
          *
-         * Use a background job to mark as failed any transaction that
-         * is pending for more than 24 hours.
-         */
-        /**
-         * @todo
+         * Use a background job to mark as `expired` any transaction that
+         * is pending for more than 48 hours.
          */
         logger.warn(
           {
