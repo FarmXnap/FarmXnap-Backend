@@ -1263,6 +1263,235 @@ NB: For a healthy crop, the `disease` field is `null` and no `get_treatments` li
 }
 ```
 
+### **18. Wallet topup initialization**
+
+- **Endpoint:** `POST /wallets/topup/initialize`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` or `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Request Body:**
+
+JSON
+
+```json
+{
+  "amount": "4000" // Amount in Main Unit (Naira)
+}
+```
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "message": "Wallet topup initialized successfully.",
+  "data": {
+    "access_code": "cgoog5o4s96yf33",
+    "authorization_url": "https://checkout.paystack.com/cgoog5o4s96yf33",
+    "reference": "FXP-49C52AAD-1785477071905"
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": ["Amount is required.", "Amount must be a number."]
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No profile found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No wallet found for the user."
+}
+```
+
+### **19. Wallet topup verification**
+
+- **Endpoint:** `GET /wallets/topup/verify`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` or `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Querystring:**
+
+JSON
+
+```json
+{
+  "reference": "FXP-49C52AAD-1785477071905"
+}
+```
+
+e.g `GET /wallets/topup/verify?reference=FXP-49C52AAD-1785477071905`
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "message": "Wallet topup processed with status: pending.",
+  "data": {
+    "status": "pending", // pending | completed | failed
+    "amount": 4000
+  }
+}
+```
+
+If the verification has already been processed by a webhook with a success event, this response is returned:
+
+200 (Ok)
+
+```json
+{
+  "message": "Wallet topup already completed.",
+  "data": {
+    "status": "completed",
+    "amount": 4000
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+422 (Unprocessable Entity)
+
+```json
+{
+  "errors": ["Reference is required."]
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No profile found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No wallet found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "Transaction not found for the reference."
+}
+```
+
+400 (Bad Request)
+
+```json
+{
+  "error": "Transaction verification failed due to amount mismatch."
+}
+```
+
+### **20. View wallet balance**
+
+- **Endpoint:** `GET /wallets/me`
+- **Auth Required:** Yes
+- **Authorization:** `farmer` or `agrodealer` role
+- **Content-Type:** `application/json`
+
+**Success Response (200 Ok):**
+
+```json
+{
+  "message": "Wallet balance retrieved successfully.",
+  "data": {
+    "id": "pgifmuyrum12d9yxk7uxbaji",
+    "currency": "NGN",
+    "balance": 4000.0,
+    "locked_balance": 1000.0,
+    "available_balance": 3000.0
+  }
+}
+```
+
+**Error Responses**
+
+401 (Unauthorized)
+
+```json
+{
+  "error": "Unauthorized access"
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No profile found for the user."
+}
+```
+
+404 (Not Found)
+
+```json
+{
+  "error": "No wallet found for the user."
+}
+```
+
+### **Frontend Implementation Note**
+
+1. Initialization & Redirection: Call `POST /wallets/topup/initialize` with the top-up amount (in Naira). Redirect the user's browser/WebView directly to the `authorization_url` returned in the response payload.
+
+2. Return & Verification Handling:
+
+- When payment completes, Paystack redirects the browser back to the app with query parameters: `https://farm-xnap.vercel.app/dashboard?trxref=FXP-49C52AAD-1785477071905&reference=FXP-49C52AAD-1785477071905`
+
+- Extract Reference: On page load, check the URL query parameters for `reference` (or fallback to trxref).
+
+- Call Verification: Call `GET /wallets/topup/verify?reference=<REFERENCE>`.
+
+3. UI State (What to render based on `/verify` response):
+
+- If data.status === `completed`, show a Success Modal / Toast: "Top-up of ₦4,000 successful!". Immediately call `GET /wallets/me` to refresh the wallet balance displayed in the app header/dashboard. Clear the reference parameter from the browser URL.
+
+- If data.status === `pending`: Show a Processing Banner / Spinner: "We are confirming your payment with Paystack...". Poll the verification endpoint (`GET /wallets/topup/verify?reference=...`) up to 3 times, waiting 3 seconds between each request. If it transitions to completed during polling, trigger the Success state above. If it stays pending after 3 attempts, stop polling and show an informational card: "Your payment is currently being processed. Your balance will update automatically once confirmed."
+
+- If API returns 400 (Amount Mismatch) or 404 (Transaction Not Found), show an Error Alert: "Payment verification failed. Please contact support if you were charged.". Clear the reference parameter from the URL.
+
+> NOTE: All response amounts are returned in Main Unit (Naira).
+
 ---
 
 ## **Admin Endpoints**

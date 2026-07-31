@@ -38,6 +38,16 @@ export default class Wallet extends BaseModel {
   public static assignCuid(order: Wallet) {
     order.id = cuid()
   }
+
+  public get availableBalance(): number {
+    if (this.balance === undefined || this.locked_balance === undefined) {
+      throw new Error(
+        `[Wallet.availableBalance] Cannot calculate available balance. Ensure both 'balance' and 'locked_balance' are selected.`
+      )
+    }
+
+    return Number(this.balance) - Number(this.locked_balance)
+  }
 }
 
 export const WalletOwnerTypesEnum = {
