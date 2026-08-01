@@ -16,7 +16,7 @@ import app from '@adonisjs/core/services/app'
 import { DateTime } from 'luxon'
 
 export default abstract class BasePaymentService extends BaseService {
-  protected abstract providerName: PaymentProviderName
+  public abstract providerName: PaymentProviderName
   protected abstract getBanksEndpoint: string
   protected abstract resolveVerifyBankAccountEndpoint(
     bankCode: string,
@@ -257,7 +257,7 @@ export default abstract class BasePaymentService extends BaseService {
       `[PaymentService.initializeWalletTopup -> ${this.providerName}] Wallet Topup initialization successful.`
     )
 
-    return { data: data.data, paymentProviderName: this.providerName }
+    return { data: data.data }
   }
 
   public async verifyWalletTopup({ reference }: { reference: string }) {
@@ -306,7 +306,7 @@ export default abstract class BasePaymentService extends BaseService {
       `[PaymentService.verifyWalletTopup -> ${this.providerName}] Wallet Topup verification successful.`
     )
 
-    return { response: data, paymentProviderName: this.providerName }
+    return { response: data }
   }
 
   public verifyWebhookSignature(request: HttpContext['request']): boolean {

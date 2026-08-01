@@ -63,23 +63,22 @@ export default class WalletsController {
 
     const amountInMinorUnit = convertAmountToMinorUnit(amountInMainUnit)
 
-    const transaction = await Transaction.create({
+    await Transaction.create({
       category: TransactionCategoriesEnum.Topup,
       type: TransactionTypesEnum.Credit,
       status: TransactionStatusesEnum.Pending,
       reference: ref,
       wallet_id: walletId,
       amount: amountInMinorUnit,
+      provider: this.paymentService.providerName,
     })
 
-    const { data, paymentProviderName } = await this.paymentService.initializeWalletTopup({
+    const { data } = await this.paymentService.initializeWalletTopup({
       email,
       amount: amountInMinorUnit,
       walletId,
       reference: ref,
     })
-
-    await transaction.merge({ provider: paymentProviderName }).save()
 
     const { access_code: accessCode, authorization_url: authorizationUrl, reference } = data
 
@@ -124,10 +123,11 @@ export default class WalletsController {
       return response.notFound({ error: 'No wallet found for the user.' })
     }
 
-    const { response: providerResponse, paymentProviderName } =
-      await this.paymentService.verifyWalletTopup({
-        reference,
-      })
+    const { response: providerResponse } = await this.paymentService.verifyWalletTopup({
+      reference,
+    })
+
+    const paymentProviderName = this.paymentService.providerName
 
     const result = await db.transaction(async (trx) => {
       const transaction = await Transaction.query({ client: trx })

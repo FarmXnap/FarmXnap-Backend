@@ -3,7 +3,7 @@ import env from '#start/env'
 import BasePaymentService from './base_payment_service.js'
 
 export default class PaystackProvider extends BasePaymentService {
-  protected providerName: PaymentProviderName = 'paystack'
+  public providerName: PaymentProviderName = 'paystack'
 
   #baseUrl: string = paystackBaseUrl
 
