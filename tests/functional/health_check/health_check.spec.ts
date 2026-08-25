@@ -9,8 +9,9 @@ test.group('Health Check', () => {
 
       const body = response.body()
 
-      assert.equal(body.status, 'OK')
-      assert.exists(body.uptime)
+      assert.equal(body.status, 'ok')
+      assert.equal(body.database, 'connected')
+      assert.exists(body.uptimeInSeconds)
       assert.exists(body.timestamp)
     })
     .tags(['health_check'])
