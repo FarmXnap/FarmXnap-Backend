@@ -25,7 +25,7 @@ export default class AuthController {
     const user = await User.query().select(['id']).where('phone_number', phoneNumber).first()
 
     if (!user) {
-      return response.notFound({ message: 'User not found' })
+      return response.notFound({ error: 'User not found.' })
     }
 
     const otpCode = generateOtp()

@@ -17,18 +17,30 @@ test.group('Auth / Login', (group) => {
       /**
        * @todo: test validation and other cases.
        */
+      'user_not_found',
     ] as const)
-    .run(async ({ assert, client, route }) => {
+    .run(async ({ assert, client, route }, condition) => {
       const payload = {
         phone_number: '+2348012345678',
       }
 
-      const user = await User.create({
-        phone_number: payload.phone_number,
-        role: UserRolesEnum.Farmer,
-      })
+      let user: User | null = null
+
+      if (condition !== 'user_not_found') {
+        user = await User.create({
+          phone_number: payload.phone_number,
+          role: UserRolesEnum.Farmer,
+        })
+      }
 
       const response = await client.post(route('api.v1.login_request')).json(payload)
+
+      if (condition === 'user_not_found') {
+        response.assertStatus(404)
+        return response.assertBodyContains({
+          error: 'User not found.',
+        })
+      }
 
       response.assertStatus(200)
 
@@ -47,8 +59,8 @@ test.group('Auth / Login', (group) => {
       const responseData = response.body().data
       assert.exists(responseData?.OTP)
 
-      await user.load('OTP')
-      assert.isTrue(await hash.verify(user.OTP.code, responseData.OTP))
+      await user!.load('OTP')
+      assert.isTrue(await hash.verify(user!.OTP.code, responseData.OTP))
     })
     .tags(['auth', 'login', 'login_request'])
 

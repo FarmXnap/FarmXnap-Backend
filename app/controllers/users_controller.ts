@@ -29,6 +29,10 @@ export default class UsersController {
       },
     })
 
+    /**
+     * @todo: Sanitize phone number
+     */
+
     if (await db.from('users').where({ phone_number: phoneNumber }).whereNotNull('role').first()) {
       return response.badRequest({ error: 'Phone Number already in use for a profile.' })
     }
