@@ -2,10 +2,15 @@
 
 ## Base URL
 
-The base URL for all API requests is:
-`https://farmxnap.onrender.com/api/v1` [!deprecated]
+Base URL:
+The Base URL for all requests is:
+`https://farmxnap.onrender.com` [!deprecated]
+
+API Prefix: All endpoints must be prefixed with `/api/v1` before making requests.
 
 The endpoints are **HATEOAS-compliant** i.e relevant action links are returned in the responses.
+
+All HATEOAS href fields returned in response bodies are root-relative (e.g. `/api/v1/auth/login_verify`) and should be appended directly to the Base URL.
 
 ### **Authentication**
 
