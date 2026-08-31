@@ -35,7 +35,7 @@ JSON
 
 ```json
 {
-  "phone_number": "+2348012345678"
+  "phone_number": "8012345678"
 }
 ```
 
@@ -50,7 +50,7 @@ JSON
     "token": "oat_NQ.Yk15TkJZV3J...",
     "user": {
       "id": "hbj6l649zdfw0jc425yu5d9y",
-      "phone_number": "+2348012345678"
+      "phone_number": "8012345678"
     },
     "OTP": "345097",
     "links": {
@@ -380,7 +380,7 @@ JSON
 
 ```json
 {
-  "phone_number": "+2348012345678"
+  "phone_number": "8012345678"
 }
 ```
 
@@ -435,7 +435,7 @@ JSON
 
 ```json
 {
-  "phone_number": "+2348012345678",
+  "phone_number": "8012345678",
   "otp": "123456"
 }
 ```
@@ -452,7 +452,7 @@ JSON
     "user": {
       "id": "clx1234567890abcdefg",
       "role": "farmer",
-      "phone_number": "+2348012345678"
+      "phone_number": "8012345678"
     }
   }
 }
