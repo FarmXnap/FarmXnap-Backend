@@ -417,7 +417,7 @@ JSON
 
 ```json
 {
-  "error": "User not found."
+  "error": "User not found. Complete your profile registration."
 }
 ```
 
