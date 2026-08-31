@@ -15,23 +15,27 @@ export default class UsersController {
   public async store({ request, response }: HttpContext) {
     const { phone_number: phoneNumber } = await request.validate({
       schema: schema.create({
-        phone_number: schema.string([rules.trim(), rules.stripTags(), rules.mobile()]),
+        phone_number: schema.string([
+          rules.sanitisePhoneNumber(),
+          rules.minLength(10),
+          rules.maxLength(10),
+          rules.mobile(),
+        ]),
         // email: schema.string([...stringRules, rules.email()]),
         // password: schema.string([rules.minLength(8)]),
       }),
       messages: {
         'phone_number.required': 'Phone Number is required.',
         'phone_number.mobile': 'Phone Number is not valid.',
+        'phone_number.minLength': 'Phone Number is not valid.',
+        'phone_number.maxLength': 'Phone Number is not valid.',
+
         // 'email.required': 'Email is required.',
         // 'email.email': 'Email is not valid.',
         // 'password.required': 'Password is required.',
         // 'password.minLength': 'Password must be at least 8 characters.',
       },
     })
-
-    /**
-     * @todo: Sanitize phone number
-     */
 
     if (await db.from('users').where({ phone_number: phoneNumber }).whereNotNull('role').first()) {
       return response.badRequest({ error: 'Phone Number already in use for a profile.' })

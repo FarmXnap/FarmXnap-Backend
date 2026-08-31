@@ -22,10 +22,14 @@ export default class AuthController {
       },
     })
 
-    const user = await User.query().select(['id']).where('phone_number', phoneNumber).first()
+    const user = await User.query()
+      .select(['id'])
+      .where('phone_number', phoneNumber)
+      .whereNotNull('role')
+      .first()
 
     if (!user) {
-      return response.notFound({ error: 'User not found.' })
+      return response.notFound({ error: 'User not found. Complete your profile registration.' })
     }
 
     const otpCode = generateOtp()
@@ -67,6 +71,7 @@ export default class AuthController {
     const user = await User.query()
       .select(['id', 'role', 'phone_number'])
       .where('phone_number', phoneNumber)
+      .whereNotNull('role')
       .preload('OTP', (otpQuery) => {
         otpQuery.select(['code'])
       })
