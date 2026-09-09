@@ -10,8 +10,10 @@ services:
       - ./certbot/www:/var/www/certbot:ro
       - ${SSL_PATH}:/etc/letsencrypt:ro
       # For frontend static assets:
-      # Uses APP_ENV if set (staging), defaults to 'production' if unset
-      - ./frontend/dist:/var/www/farmxnap-frontend/${APP_ENV:-production}:ro
+      # Production uses standard local relative mount
+      - ./frontend/dist:/var/www/farmxnap-frontend/production:ro
+      # Staging uses the env variable path. NB: This variable should be set in the production env since the Nginx container is managed from the production directory.
+      - ${STAGING_FRONTEND_DIST_PATH}:/var/www/farmxnap-frontend/staging:ro
     depends_on:
       - app
     networks:
