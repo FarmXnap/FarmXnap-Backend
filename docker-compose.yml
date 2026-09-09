@@ -9,7 +9,8 @@ services:
       - ./infra/nginx/params:/etc/nginx/params:ro
       - ./certbot/www:/var/www/certbot:ro
       - ${SSL_PATH}:/etc/letsencrypt:ro
-      - ./frontend/dist:/var/www/farmxnap-frontend
+      # For frontend static assets
+      - ./frontend/dist:/var/www/farmxnap-frontend/${NODE_ENV}:ro
     depends_on:
       - app
     networks:
