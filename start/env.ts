@@ -54,11 +54,11 @@ export default await Env.create(new URL('../', import.meta.url), {
   INTERSWITCH_PAY_ITEM_ID: Env.schema.string(),
   INTERSWITCH_SECRET_KEY: Env.schema.string(),
   PAYSTACK_SECRET_KEY: Env.schema.string(),
-  PAYSTACK_PAYMENT_CALLBACK_URL: Env.schema.string({ format: 'url' }),
   REDIS_HOST: Env.schema.string({ format: 'host' }),
   REDIS_PORT: Env.schema.number(),
   REDIS_PASSWORD: Env.schema.string.optional(),
   REDIS_DB: Env.schema.number(),
 
   PAYMENT_PROVIDER: Env.schema.enum(['Paystack', 'Flutterwave']),
+  ALLOWED_PAYMENT_CALLBACK_ORIGINS: Env.schema.string(),
 })

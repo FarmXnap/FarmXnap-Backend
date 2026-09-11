@@ -35,6 +35,8 @@ test.group('Wallets / Topup / Initialize', (group) => {
       'amount_not_number',
       'no_profile',
       'no_wallet',
+      'callback_url_not_provided',
+      'callback_url_not_allowed',
     ] as const)
     .run(async ({ client, route, assert }, condition) => {
       let reference = ''
@@ -99,6 +101,12 @@ test.group('Wallets / Topup / Initialize', (group) => {
         .post(route('api.v1.wallets.topup.initialize'))
         .json({
           amount: amountInMainUnit,
+          callback_url:
+            condition === 'callback_url_not_provided'
+              ? undefined
+              : condition === 'callback_url_not_allowed'
+                ? 'https://google.com'
+                : 'http://localhost:5173/dashboard',
         })
         .bearerToken(tokenValue)
 
@@ -122,6 +130,20 @@ test.group('Wallets / Topup / Initialize', (group) => {
         return response.assertBodyContains({
           errors: ['Amount must be a number.'],
         })
+      }
+
+      if (condition === 'callback_url_not_provided') {
+        response.assertStatus(422)
+
+        return response.assertBodyContains({
+          errors: ['Callback URL is required.'],
+        })
+      }
+
+      if (condition === 'callback_url_not_allowed') {
+        response.assertStatus(400)
+
+        return response.assertBodyContains({ error: 'Invalid callback URL domain.' })
       }
 
       if (condition === 'no_profile') {

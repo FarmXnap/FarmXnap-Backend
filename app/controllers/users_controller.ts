@@ -27,8 +27,8 @@ export default class UsersController {
       messages: {
         'phone_number.required': 'Phone Number is required.',
         'phone_number.mobile': 'Phone Number is not valid.',
-        'phone_number.minLength': 'Phone Number is not valid.',
-        'phone_number.maxLength': 'Phone Number is not valid.',
+        'phone_number.minLength': 'Phone Number must be 10 digits.',
+        'phone_number.maxLength': 'Phone Number must be 10 digits.',
 
         // 'email.required': 'Email is required.',
         // 'email.email': 'Email is not valid.',
