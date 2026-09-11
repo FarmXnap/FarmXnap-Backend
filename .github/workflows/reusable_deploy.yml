@@ -38,6 +38,7 @@ jobs:
           username: ${{secrets.REMOTE_USER}}
           key: ${{secrets.SSH_PRIVATE_KEY}}
           script: |
+            set -e
             cd ~/farmxnap/${{inputs.folder}}
             git pull origin ${{inputs.branch}}
             docker compose --profile ${{inputs.profile}} up --build -d
