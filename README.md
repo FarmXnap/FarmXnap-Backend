@@ -1281,7 +1281,8 @@ JSON
 
 ```json
 {
-  "amount": "4000" // Amount in Main Unit (Naira)
+  "amount": "4000", // Amount in Main Unit (Naira)
+  "callback_url": "https://farmxnap.vercel.app/farmer/dashboard" // Frontend URL to redirect to from payment checkout screen
 }
 ```
 
@@ -1312,7 +1313,15 @@ JSON
 
 ```json
 {
-  "errors": ["Amount is required.", "Amount must be a number."]
+  "errors": ["Amount is required.", "Amount must be a number.", "Callback URL is required."]
+}
+```
+
+400 (Bad Request)
+
+```json
+{
+  "error": "Invalid callback URL domain."
 }
 ```
 

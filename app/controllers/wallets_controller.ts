@@ -20,6 +20,7 @@ import Wallet from '#models/wallet'
 import app from '@adonisjs/core/services/app'
 import User, { UserRolesEnum } from '#models/user'
 import { AccessToken } from '@adonisjs/auth/access_tokens'
+import env from '#start/env'
 
 @inject()
 export default class WalletsController {
@@ -33,15 +34,29 @@ export default class WalletsController {
   public async initializeTopup({ request, response, auth }: HttpContext) {
     const user = auth.user!
 
-    const { amount: amountInMainUnit } = await request.validate({
+    const { amount: amountInMainUnit, callback_url: callbackUrl } = await request.validate({
       schema: schema.create({
         amount: schema.number(),
+        callback_url: schema.string([rules.trim(), rules.stripTags()]),
       }),
       messages: {
         'amount.required': 'Amount is required.',
         'amount.number': 'Amount must be a number.',
+        'callback_url.required': 'Callback URL is required.',
       },
     })
+
+    // Validate the callback_url
+    const parsedUrl = new URL(callbackUrl)
+
+    const allowedPaymentCallbackOrigins = env
+      .get('ALLOWED_PAYMENT_CALLBACK_ORIGINS')
+      .split(',')
+      .map((origin) => origin.trim())
+
+    if (!allowedPaymentCallbackOrigins.includes(parsedUrl.origin)) {
+      return response.badRequest({ error: 'Invalid callback URL domain.' })
+    }
 
     const ownerId = await getOwnerId(user)
 
@@ -78,6 +93,7 @@ export default class WalletsController {
       amount: amountInMinorUnit,
       walletId,
       reference: ref,
+      callbackUrl,
     })
 
     const { access_code: accessCode, authorization_url: authorizationUrl, reference } = data

@@ -21,8 +21,6 @@ export default class PaystackProvider extends BasePaymentService {
     return `${this.#baseUrl}/transaction/verify/${reference}`
   }
 
-  protected paymentCallbackUrl: string = env.get('PAYSTACK_PAYMENT_CALLBACK_URL')
-
   protected webhookSignatureHeaderKey: string = 'x-paystack-signature'
 
   protected webhookHashingAlgorithm: string = 'sha512'

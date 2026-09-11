@@ -27,8 +27,6 @@ export default abstract class BasePaymentService extends BaseService {
 
   protected abstract resolveVerifyWalletTopupEndpoint(reference: string): string
 
-  protected abstract paymentCallbackUrl: string
-
   protected abstract secretKey: string
 
   protected abstract webhookSignatureHeaderKey: string
@@ -179,11 +177,13 @@ export default abstract class BasePaymentService extends BaseService {
     amount,
     walletId,
     reference,
+    callbackUrl,
   }: {
     email: string
     amount: number
     walletId: string
     reference: string
+    callbackUrl: string
   }) {
     let response: Response
     try {
@@ -206,7 +206,7 @@ export default abstract class BasePaymentService extends BaseService {
           currency: naira_ISO_4217_Code,
           channels: ['card', 'bank', 'ussd', 'bank_transfer'],
           reference,
-          callback_url: this.paymentCallbackUrl,
+          callback_url: callbackUrl,
           metadata: {
             wallet_id: walletId,
           },
