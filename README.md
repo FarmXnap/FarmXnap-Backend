@@ -77,7 +77,11 @@ JSON
 
 ```json
 {
-  "errors": ["Phone Number is required.", "Phone Number is not valid."]
+  "errors": [
+    "Phone Number is required.",
+    "Phone Number is not valid.",
+    "Phone Number must be 10 digits."
+  ]
 }
 ```
 

@@ -51,7 +51,7 @@ test.group('Users / Store', (group) => {
         response.assertStatus(422)
 
         return response.assertBodyContains({
-          errors: ['Phone Number is not valid.'],
+          errors: ['Phone Number must be 10 digits.'],
         })
       }
 
