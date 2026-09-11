@@ -8,7 +8,7 @@ services:
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./infra/nginx/params:/etc/nginx/params:ro
       - ./certbot/www:/var/www/certbot:ro
-      # NB: These variables should be set in the production env since the Nginx container is managed from the production directory.
+      # NB: Even though the Nginx container is managed from the production directory, set these variables in both prod and staging envs to prevent the staging workflow from silently erroring on missing env vars in docker compose, and thus not updating the remote build.
       - ${SSL_PATH}:/etc/letsencrypt:ro
       # For frontend static assets:
       - ${PRODUCTION_FRONTEND_DIST_PATH}:/var/www/farmxnap-frontend/production:ro
