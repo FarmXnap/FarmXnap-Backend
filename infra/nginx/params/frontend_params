@@ -1,11 +1,15 @@
 # Frontend Settings
 index index.html;
 
+# Aggressively cache bundled JS/CSS/Images (Vite hashed files)
 location /assets/ {
     expires 1y;
     add_header Cache-Control "public, immutable";
 }
 
+# SPA Fallback + Disable caching for HTML document requests
 location / {
     try_files $uri $uri/ /index.html;
+    add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
+    expires -1;
 }
