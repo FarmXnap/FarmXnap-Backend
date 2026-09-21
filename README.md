@@ -1123,6 +1123,14 @@ const getMatchLabel = (rank) => {
 }
 ```
 
+502 (Bad Gateway)
+
+```json
+{
+  "error": "Diagnosis service currently unavailable."
+}
+```
+
 If the image is not of a crop:
 
 400 (Bad request)

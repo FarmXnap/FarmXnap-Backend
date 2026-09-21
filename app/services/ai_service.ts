@@ -8,7 +8,10 @@ const genAI = new GoogleGenerativeAI(env.get('GEMINI_API_KEY'))
 export default class AiService extends BaseService {
   public static async diagnose(imageBuffer: Buffer, mimeType: string): Promise<AIDiagnosis> {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      /**
+       * @todo: Much later, check out the Interactions API.
+       */
+      model: 'gemini-3.6-flash',
     })
 
     const prompt = `
