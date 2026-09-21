@@ -96,14 +96,15 @@ export default class CropScansController {
 
     const mimeType = image.extname === 'jpg' ? 'image/jpeg' : `image/${image.extname}`
 
-    let aiResult: AIDiagnosis | null = null
+    let aiResult: AIDiagnosis
 
     try {
       aiResult = await AiService.diagnose(imageBuffer, mimeType)
-    } catch {}
-
-    if (!aiResult) {
-      return response.ok({ data: [] })
+    } catch (error) {
+      if (error instanceof Error) {
+        return response.badGateway({ error: error.message })
+      }
+      throw error
     }
 
     if (aiResult.crop === 'INVALID') {
