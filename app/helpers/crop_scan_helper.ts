@@ -25,6 +25,7 @@ export async function getCropTreatmentResults(aiDiagnosis: AIDiagnosis | CropSca
         adp.business_name,
         adp.business_address,
         adp.state,
+        adp.lga,
         adp.bank_name,
         adp.bank_account_number,
         adp.bank_account_name,
@@ -76,6 +77,7 @@ export type cropTreatmentResult = {
   target_problems: string
   business_name: string
   business_address: string
+  lga: string
   state: string
   bank_name: string
   bank_account_number: string

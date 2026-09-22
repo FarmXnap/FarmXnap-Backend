@@ -90,6 +90,7 @@ export async function assertTreatmentResults({
       'target_problems',
       'business_name',
       'business_address',
+      'lga',
       'state',
       'bank_name',
       'bank_account_number',
