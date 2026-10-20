@@ -58,6 +58,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   REDIS_PORT: Env.schema.number(),
   REDIS_PASSWORD: Env.schema.string.optional(),
   REDIS_DB: Env.schema.number(),
+  REDIS_PREFIX: Env.schema.string(),
 
   PAYMENT_PROVIDER: Env.schema.enum(['Paystack', 'Flutterwave']),
   ALLOWED_PAYMENT_CALLBACK_ORIGINS: Env.schema.string(),
