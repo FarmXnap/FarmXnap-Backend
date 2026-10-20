@@ -22,7 +22,7 @@ const redisConfig = defineConfig({
       password: env.get('REDIS_PASSWORD', ''),
       db: env.get('REDIS_DB'),
       tls: {},
-      keyPrefix: '',
+      keyPrefix: env.get('REDIS_PREFIX'),
       retryStrategy(times) {
         return times > 10 ? null : times * 50
       },

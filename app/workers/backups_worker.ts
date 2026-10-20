@@ -24,6 +24,7 @@ export default class BackupsWorker implements AppWorker {
       port: env.get('REDIS_PORT'),
       password: env.get('REDIS_PASSWORD'),
       tls: {},
+      keyPrefix: env.get('REDIS_PREFIX'),
     }
 
     // Create the queue
