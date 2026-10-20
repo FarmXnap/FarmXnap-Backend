@@ -24,13 +24,13 @@ export default class BackupsWorker implements AppWorker {
       port: env.get('REDIS_PORT'),
       password: env.get('REDIS_PASSWORD'),
       tls: {},
-      keyPrefix: env.get('REDIS_PREFIX'),
     }
 
     // Create the queue
     const backupsQueueName = 'backups'
     this.#queue = new Queue(backupsQueueName, {
       connection,
+      prefix: env.get('REDIS_PREFIX'),
       defaultJobOptions: {
         attempts: 3,
         backoff: {
