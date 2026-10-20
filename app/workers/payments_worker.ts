@@ -23,7 +23,12 @@ export default class PaymentsWorker implements AppWorker {
    * The container bindings have booted
    */
   async boot(): Promise<WorkerBootResult> {
-    const connection = { host: env.get('REDIS_HOST'), port: env.get('REDIS_PORT') }
+    const connection = {
+      host: env.get('REDIS_HOST'),
+      port: env.get('REDIS_PORT'),
+      password: env.get('REDIS_PASSWORD'),
+      tls: {},
+    }
 
     // Create the queue
     const paymentsQueueName = 'payments'
