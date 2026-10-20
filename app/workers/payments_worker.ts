@@ -28,13 +28,14 @@ export default class PaymentsWorker implements AppWorker {
       port: env.get('REDIS_PORT'),
       password: env.get('REDIS_PASSWORD'),
       tls: {},
-      keyPrefix: env.get('REDIS_PREFIX'),
+      // keyPrefix: env.get('REDIS_PREFIX'), // DON'T add this
     }
 
     // Create the queue
     const paymentsQueueName = 'payments'
     this.#queue = new Queue(paymentsQueueName, {
       connection,
+      prefix: env.get('REDIS_PREFIX'), // ADD this instead.
       defaultJobOptions: {
         attempts: 5,
         backoff: {
