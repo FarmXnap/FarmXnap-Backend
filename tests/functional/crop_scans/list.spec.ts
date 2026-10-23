@@ -86,6 +86,7 @@ test.group('Crop Scans / List Crop Scans', (group) => {
           farmer_profile_id: cropScan.farmer_profile_id,
           crop: cropScan.crop,
           disease: cropScan.disease,
+          instructions: cropScan.instructions,
           created_at: cropScan.created_at.toISO(),
           links: {
             get_treatments: cropScan.disease
