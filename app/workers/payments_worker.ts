@@ -27,7 +27,7 @@ export default class PaymentsWorker implements AppWorker {
       host: env.get('REDIS_HOST'),
       port: env.get('REDIS_PORT'),
       password: env.get('REDIS_PASSWORD'),
-      tls: {},
+      ...(app.inProduction ? { tls: {} } : {}),
       // keyPrefix: env.get('REDIS_PREFIX'), // DON'T add this
     }
 
@@ -85,6 +85,9 @@ export default class PaymentsWorker implements AppWorker {
     )
 
     this.#worker.on('error', (error) => {
+      /**
+       * @todo: Fix "cannot read properties of undefined" error
+       */
       logger.error({ err: error }, '[Queue Provider] Payments worker error.')
     })
 

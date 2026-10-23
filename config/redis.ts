@@ -1,4 +1,5 @@
 import env from '#start/env'
+import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/redis'
 import { InferConnections } from '@adonisjs/redis/types'
 
@@ -21,7 +22,7 @@ const redisConfig = defineConfig({
       port: env.get('REDIS_PORT'),
       password: env.get('REDIS_PASSWORD', ''),
       db: env.get('REDIS_DB'),
-      tls: {},
+      ...(app.inProduction ? { tls: {} } : {}),
       keyPrefix: env.get('REDIS_PREFIX'),
       retryStrategy(times) {
         return times > 10 ? null : times * 50
