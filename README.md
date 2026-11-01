@@ -1162,6 +1162,7 @@ If the image is not of a crop:
       "farmer_profile_id": "lbap3onpjxz49st1u857e6p1",
       "crop": "Maize",
       "disease": "Eyespot",
+      "instructions": "Apply a recommended fungicide containing active ingredients like Azoxystrobin to control the spread of the disease.",
       "created_at": "2026-03-22T14:11:48.959+00:00",
       "links": {
         "get_treatments": {
@@ -1175,6 +1176,7 @@ If the image is not of a crop:
       "farmer_profile_id": "lbap3onpjxz49st1u857e6p1",
       "crop": "Maize",
       "disease": null, // Healthy crop
+      "instructions": "Your crop looks healthy! Keep up the good work with regular weeding and watering.",
       "created_at": "2026-03-22T14:11:48.959+00:00",
       "links": {
         /*No `get_treatments` link*/

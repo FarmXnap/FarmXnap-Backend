@@ -18,7 +18,7 @@ export default class CropScansController {
 
     const scans = await CropScan.query()
       .where('farmer_profile_id', user.farmerProfile!.id)
-      .select(['id', 'farmer_profile_id', 'crop', 'disease', 'created_at'])
+      .select(['id', 'farmer_profile_id', 'crop', 'disease', 'instructions', 'created_at'])
       .orderBy('created_at', 'desc')
 
     return response.ok({
